@@ -1,0 +1,139 @@
+# HL7 File Processing Scripts
+
+This repository contains PowerShell scripts for generating and processing HL7 files, particularly useful for testing and troubleshooting HL7 interfaces.
+
+Importantly, no script is destructive, meaning that no original files or content within any files or folders are altered in any way.
+
+## Scripts Overview
+
+### 1. Generate Test HL7 File (`generate-test-hl7.ps1`)
+
+This script generates a test HL7 file with a specified number of messages. You can also specify which messages if any should contain errors. The script adds clear text identifiers to messages before and after error messages to make troubleshooting easier.
+
+### 2. Split HL7 File with an Error Message (`split-hl7-file-with-error.ps1`)
+
+This script helps you extract and remove error messages from an HL7 file. It can either split the file into two separate files (one with the error message and one with the remaining messages) or create a new clean file with the error message removed.
+
+It is recommended to split the file to eliminate the need to reprocess the entire file in eMaRC Lite, as all messages encountered before the error message will have been correctly processed already.
+
+There are two ways to verify which message is incorrectly formatted and throwing the error in eMaRC Lite:
+
+1. If eMaRC Lite hangs on message 50 of 100, for example, the actual error is at message 51, and eMaRC Lite is stalled because it cannot process this message.
+2. In the reports folder, the all correctly processed messages will have a corresponding report. In the above example, messages 1-50 would have a report. Since it is message 51 with the error, there should be no report for message 50.
+
+No destructive action is performed, meaning the original file content and the file itself is unchanged in the event of an issue or if re-processing is needed.
+
+## Usage Instructions
+
+### Generating a Test HL7 File
+
+```powershell
+.\generate-test-hl7.ps1 -OutputFile "test.hl7" -MessageCount 100 -ErrorMessageNumbers @(51)
+```
+
+#### Parameters:
+
+- **OutputFile** (Optional): The path where the generated HL7 file will be saved. If not specified, a file will be automatically created in the script directory with a name based on the message count and error locations.
+- **MessageCount** (Optional): The number of messages to generate (default: 100).
+- **ErrorMessageNumbers** (Optional): An array of message numbers where errors should be inserted (e.g., @(51) or @(51, 75, 90)).
+
+#### Examples:
+
+```powershell
+# Generate a file with 200 messages and errors at messages 51, 75, and 100 at a specified location with a specified filename
+.\generate-test-hl7.ps1 -OutputFile "C:\temp\test-multiple-errors.hl7" -MessageCount 200 -ErrorMessageNumbers @(51, 75, 100)
+
+# Generate a file with 100 messages and errors at 51
+.\generate-test-hl7.ps1 -OutputFile "C:\temp\test-error-at-51.hl7" -ErrorMessageNumbers @(51)
+
+# Generate a file with default settings and auto-generated filename in the current directory (i.e., the folder where the script is located)
+.\generate-test-hl7.ps1 -ErrorMessageNumbers @(51)
+```
+
+#### Message Identification:
+
+The script adds special identifiers to messages around errors:
+
+- Messages before an error will contain: "I'm the message BEFORE the error at message #X"
+- Error messages will contain: "I'm the ERROR message at message #X"
+- Messages after an error will contain: "I'm the message AFTER the error at message #X"
+
+This makes it easy to verify that the error was inserted at the correct location and that the split-hl7-file script is working correctly.
+
+### Splitting an HL7 File
+
+```powershell
+.\split-hl7-file.ps1 -FilePath "path\to\your\file.hl7" -ErrorMessageNumber 51 -SplitFile $true
+```
+
+#### Parameters:
+
+- **FilePath** (Optional): The path to the HL7 file you want to process. If not provided, you'll be prompted to enter it or browse for the file.
+- **ErrorMessageNumber** (Optional): The message number containing the error. If not provided, you'll be prompted to enter it.
+- **SplitFile** (Optional): Whether to split the file into two files (true) or create a clean file with the error removed (false). Default is true.
+
+#### Interactive Mode:
+
+If you run the script without parameters, it will guide you through the process:
+
+```powershell
+.\split-hl7-file.ps1
+```
+
+You'll be prompted to:
+
+1. Enter the file path or type 'browse' to select the file using a file dialog
+2. Enter the error message number. Note that if eMaRC Lite hangs at message 50 of 100, for example, the actual error is message 51, not
+3. Choose whether to split the file or just remove the error message
+
+#### Output Files:
+
+When splitting the file (`SplitFile = $true`):
+
+- **[basename]\_[error_number]\_removed.hl7**: Contains only the error message
+- **[basename]\_[error_number+1]-remaining.hl7**: Contains all messages after the error message
+
+This method is preferred when the error message is found far into the processing of a larger batch (e.g., Solution Health) because it eliminates the need to re-process messages that have already been processed. However, it does require concatenation of output files (the reportable .hl7 created before the error was encountered with the -remaining .hl7 file) at the end of processing.
+
+When creating a clean file (`SplitFile = $false`):
+
+- **[basename]\_[error_number]\_removed.hl7**: Contains only the error message
+- **[basename]\_clean.hl7**: Contains all messages except the error message
+
+This method is viable for smaller batches that process fast in eMaRC Lite since the clean file can just be processed again and no concatenation of multiple output files is required.
+
+## Tips for Using the Scripts
+
+### File Path Entry
+
+When prompted for a file path, you can:
+
+- (RECOMMENDED) Enter the full path (e.g., `C:\path\to\file.hl7`)
+- Type `browse` to open a file selection dialog (THIS HAS NOT BEEN TESTED THOROUGHLY)
+
+### Error Message Numbers
+
+Error message numbers are 1-based (the first message is number 1). When specifying an error message number, make sure it doesn't exceed the total number of messages in the file.
+
+### Processing Large Files
+
+For large HL7 files, splitting the file is recommended for faster processing, especially if you need to process the remaining messages separately.
+
+## Troubleshooting
+
+### File Browser Not Working
+
+If the file browser option doesn't work, you can:
+
+1. Try running PowerShell as an administrator
+2. Manually enter the full file path
+3. Make sure you have Microsoft Excel installed (used for the primary file dialog method)
+
+### Path Correction
+
+The script automatically attempts to correct common path issues, such as missing backslashes after drive letters (e.g., `C:Users\...` will be corrected to `C:\Users\...`).
+
+## Requirements
+
+- Windows PowerShell 5.1 or later
+- For the file browser functionality: Microsoft Excel (preferred) or .NET Framework 4.5+
