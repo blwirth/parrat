@@ -10,11 +10,74 @@ Importantly, no script is destructive, meaning that no original files or content
 
 This script generates a test HL7 file with a specified number of messages. You can also specify which messages if any should contain errors. The script adds clear text identifiers to messages before and after error messages to make troubleshooting easier.
 
-### 2. Split HL7 File with an Error Message (`split-hl7-file-with-error.ps1`)
+The generated HL7 messages contain realistic data, including segments that might contain "MSH" text within the content (such as in OBX segments) to ensure proper message splitting.
 
-This script helps you extract and remove error messages from an HL7 file. It can either split the file into two separate files (one with the error message and one with the remaining messages) or create a new clean file with the error message removed.
+### 2. Split HL7 File with an Error Message (`split-hl7-with-error.ps1`)
 
-It is recommended to split the file to eliminate the need to reprocess the entire file in eMaRC Lite, as all messages encountered before the error message will have been correctly processed already.
+This script helps you extract and remove error messages from an HL7 file. It can either split the file into two separate files (one with the error message and one with the remaining messages) or create a clean file with the error message removed.
+
+### 3. Split HL7 File at Multiple Positions (`split-hl7-at-positions.ps1`)
+
+This script splits an HL7 file at multiple specified message positions, creating separate files for each chunk of messages. For example, splitting at positions 50 and 100 will create three files: messages 1-50, 51-100, and 101-end.
+
+### 4. Concatenate HL7 Files (`concatenate-hl7.ps1`)
+
+This script combines multiple HL7 files into a single file. Files are concatenated in order of their last modified date (oldest first). The script provides multiple ways to select files: all files in a folder, specific files selected from a folder, files matching a pattern, or individually specified files.
+
+### 5. Generate Test JSON Results (`generate-test-JSON-results.ps1`)
+
+This script generates test JSON files that simulate result data with EntityType 0 records. It's useful for testing and development purposes.
+
+```powershell
+# Generate test files in the script's directory
+.\generate-test-JSON-results.ps1
+
+# Generate test files in a specific location
+.\generate-test-JSON-results.ps1 -OutputPath "C:\path\to\output\folder"
+```
+
+#### Parameters:
+
+- **OutputPath** (Optional): The directory where the test JSON files will be created. If not specified, files will be created in the script's directory.
+
+The script generates 10 JSON files with the naming pattern `originalfile_[random number]_result.json`. Each file contains an EntityType 0 record with predefined test data.
+
+### 6. Read JSON Results (`read-JSON-results.ps1`)
+
+This script processes JSON result files, extracts EntityType 0 records, and compiles them into a CSV report.
+
+```powershell
+# Process files in the script's directory
+.\read-JSON-results.ps1
+
+# Process files from a specific input location
+.\read-JSON-results.ps1 -InputPath "C:\path\to\input\folder"
+
+# Process files and save report to a specific location
+.\read-JSON-results.ps1 -InputPath "C:\input\folder" -OutputPath "C:\output\folder\report.csv"
+```
+
+#### Parameters:
+
+- **InputPath** (Optional): The directory containing JSON files to process. If not specified, uses the script's directory.
+- **OutputPath** (Optional): The path for the output CSV file. If not specified, creates a timestamped file in the input directory.
+
+The script processes files matching the pattern `*_[number]_result.json` and extracts the following information from EntityType 0 records:
+
+- File Name
+- Entity Phrase
+- Negation Status and Type
+- Negation Phrase
+- Codes
+- Non-Reportable Status
+- Conditional Phrase
+
+The results are saved to a CSV file, and a summary is displayed showing:
+
+- Total files processed
+- Files containing EntityType 0 records
+- Count of NegationType 1 records
+- Location of the output CSV file
 
 There are two ways to verify which message is incorrectly formatted and throwing the error in eMaRC Lite:
 
@@ -22,6 +85,22 @@ There are two ways to verify which message is incorrectly formatted and throwing
 2. In the reports folder, the all correctly processed messages will have a corresponding report. In the above example, messages 1-50 would have a report. Since it is message 51 with the error, there should be no report for message 50.
 
 No destructive action is performed, meaning the original file content and the file itself is unchanged in the event of an issue or if re-processing is needed.
+
+## Technical Details
+
+### Message Splitting Logic
+
+The script uses a regular expression pattern that specifically matches "MSH|" at the beginning of a line:
+
+```powershell
+$messages = $content -split "(?m)^MSH\|"
+```
+
+This ensures that "MSH" text that might appear within message content (such as in OBX segments) won't cause incorrect splitting. The `(?m)` modifier enables multi-line mode, and `^` anchors the match to the beginning of a line.
+
+### Message Reconstruction
+
+Since the splitting removes the "MSH|" prefix from each message (except possibly the first one), the script adds it back when writing messages to output files.
 
 ## Usage Instructions
 
@@ -101,6 +180,118 @@ When creating a clean file (`SplitFile = $false`):
 - **[basename]\_clean.hl7**: Contains all messages except the error message
 
 This method is viable for smaller batches that process fast in eMaRC Lite since the clean file can just be processed again and no concatenation of multiple output files is required.
+
+### Splitting an HL7 File at Multiple Positions
+
+```powershell
+.\split-hl7-at-positions.ps1 -FilePath "path\to\your\file.hl7" -SplitPositions @(50, 100)
+```
+
+#### Parameters:
+
+- **FilePath** (Optional): The path to the HL7 file you want to process. If not provided, you'll be prompted to enter it or browse for the file.
+- **SplitPositions** (Optional): An array of message positions where you want to split the file. If not provided, you'll be prompted to enter them.
+
+#### Interactive Mode:
+
+If you run the script without parameters, it will guide you through the process:
+
+```powershell
+.\split-hl7-at-positions.ps1
+```
+
+You'll be prompted to:
+
+1. Enter the file path or type 'browse' to select the file using a file dialog
+2. Enter the message positions to split at (comma-separated)
+
+#### Output Files:
+
+The script creates multiple files based on the split positions:
+
+- **[basename]\_1-49.hl7**: Contains messages 1 through 49
+- **[basename]\_50-99.hl7**: Contains messages 50 through 99
+- **[basename]\_100-[end].hl7**: Contains messages 100 through the end of the file
+
+The original file is never modified.
+
+#### Example:
+
+```powershell
+# Split a file at messages 50, 100, and 150
+.\split-hl7-at-positions.ps1 -FilePath "C:\temp\large-file.hl7" -SplitPositions @(50, 100, 150)
+```
+
+This will create four files:
+
+- large-file_1-49.hl7
+- large-file_50-99.hl7
+- large-file_100-149.hl7
+- large-file_150-[end].hl7
+
+### Concatenating HL7 Files
+
+```powershell
+.\concatenate-hl7.ps1 -FolderPath "C:\path\to\folder" -OutputFile "combined.hl7" -Mode "All" -AppendMessageCount $true
+```
+
+#### Parameters:
+
+- **FolderPath** (Optional): The path to a folder containing HL7 files to concatenate.
+- **FilePaths** (Optional): An array of specific file paths to concatenate.
+- **OutputFile** (Optional): The path where the combined HL7 file will be saved. If not provided, you'll be prompted to specify it.
+- **Mode** (Optional): How to select files from the folder. Options are:
+  - "All": All HL7 files in the folder (default)
+  - "Select": Interactively select specific files from the folder
+  - "Pattern": Files matching a custom pattern
+- **FilePattern** (Optional): The file pattern to use when Mode is "All" (default is "\*.hl7").
+- **AppendMessageCount** (Optional): Whether to append the total message count to the output filename (default is $true).
+
+#### Output Filename:
+
+When `AppendMessageCount` is set to `$true` (the default), the script will automatically append the total message count to the output filename:
+
+```
+original_name_123msgs.hl7
+```
+
+This makes it easy to identify how many messages are in each file without having to open it.
+
+#### Interactive Mode:
+
+If you run the script without parameters, it will guide you through the process:
+
+```powershell
+.\concatenate-hl7.ps1
+```
+
+You'll be prompted to:
+
+1. Choose between selecting files from a folder or specifying individual files
+2. If using a folder, select the folder and choose a selection mode
+3. Specify the output file path
+4. Choose whether to append the message count to the filename
+
+#### Examples:
+
+```powershell
+# Concatenate all HL7 files in a folder with automatic message count in filename
+.\concatenate-hl7.ps1 -FolderPath "C:\temp\hl7-files" -OutputFile "C:\temp\combined.hl7"
+
+# Concatenate specific files without adding message count to filename
+.\concatenate-hl7.ps1 -FilePaths @("C:\temp\file1.hl7", "C:\temp\file2.hl7") -OutputFile "C:\temp\combined.hl7" -AppendMessageCount $false
+
+# Interactively select files from a folder
+.\concatenate-hl7.ps1 -FolderPath "C:\temp\hl7-files" -Mode "Select" -OutputFile "C:\temp\combined.hl7"
+```
+
+#### File Ordering:
+
+Files are concatenated in order of their last modified date (oldest first). This ensures that messages maintain a chronological order in the combined file.
+
+#### Message Preservation:
+
+The script preserves the exact content of each message without adding extra spacing between messages, ensuring that the combined file maintains the correct HL7 format.
 
 ## Tips for Using the Scripts
 

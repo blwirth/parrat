@@ -116,3 +116,17 @@ for ($i = 0; $i -lt 12; $i++) {
 }
 
 Write-Host "All folders created (or already existed) successfully." -ForegroundColor Green
+
+# Ask if user wants to run again
+Write-Host "`nWould you like to create folders in another location?" -ForegroundColor Cyan
+$runAgain = Read-Host "Enter 'Y' to run again, or press Enter to exit"
+
+if ($runAgain -eq 'Y' -or $runAgain -eq 'y') {
+    # Get the path to the current script
+    $scriptPath = $MyInvocation.MyCommand.Path
+    # Run the script again
+    & $scriptPath
+} else {
+    Write-Host "`nPress Enter to exit..." -ForegroundColor Cyan
+    Read-Host
+}
