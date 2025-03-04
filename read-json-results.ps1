@@ -1,7 +1,7 @@
 # This script reads JSON files from a folder and extracts EntityType: 0 records, then saves the results to a CSV file.
 # It can be run from the command line with the -InputPath and -OutputPath parameters.
 # If no parameters are specified, it will use the script's directory for the input path and create an output path with a timestamp in the input folder.
-# .\read-json-results.ps1
+# .\read-json-results.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\test_filter_analysis" -OutputPath "N:\eMaRC_lite\reports\SNH\test_filter_analysis\FilteredReport.csv"
 
 param(
     [Parameter(Mandatory=$false)]
@@ -17,6 +17,9 @@ param(
 if (-not $OutputPath) {
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
     $OutputPath = Join-Path $InputPath "FilteredReport_$timestamp.csv"
+} elseif (Test-Path $OutputPath -PathType Container) {
+    # If OutputPath is a folder, append a filename to it
+    $OutputPath = Join-Path $OutputPath "FilteredReport.csv"
 }
 
 # Function to extract EntityType: 0 from JSON files
@@ -38,22 +41,30 @@ function Get-EntityTypeZeroData {
 
         if (!$entities) { return $null }  # Skip if no matching entities
 
+		# Extract the message number from the filename
+        $fileName = (Get-Item $filePath).Name
+        $messageNumber = if ($fileName -match '_(\d+)_result\.json$') { $matches[1] } else { "Unknown" }
+
         # Return structured results
         return $entities | ForEach-Object {
             [PSCustomObject]@{
-                FileName         = (Get-Item $filePath).Name
-                EntityPhrase     = $_.EntityPhrase
-                IsNegated        = $_.IsNegated
-                NegationType     = $_.NegationType
-                NegationPhrase   = $_.NegationPhrase
-                Code             = $_.Code
-                AdditionalCode   = $_.AdditionalCode
-                IsNonReportable  = $_.IsNonReportableTerm
-                ConditionalPhrase= $_.ConditionalPhrase
+                FileName                   = $fileName
+                MessageNumber              = $messageNumber
+                Id                         = $_.Id
+                EntityPhrase               = $_.EntityPhrase
+                IsNegated                  = $_.IsNegated
+                NegationType               = $_.NegationType
+                NegationPhrase             = $_.NegationPhrase
+                Code                       = $_.Code
+                AdditionalCode             = $_.AdditionalCode
+                IsNonreportableSkinHistology = $_.IsNonreportableSkinHistology
+                IsSkinSite                 = $_.IsSkinSite
+                IsNonReportableTerm        = $_.IsNonReportableTerm
+                SiteCriteria               = $_.SiteCriteria
             }
         }
     } catch {
-        Write-Host "Error processing file: $filePath" -ForegroundColor Red
+        Write-Host "`nError processing file: $filePath" -ForegroundColor Red
         Write-Host "Error Message: $_" -ForegroundColor Red
         return $null
     }
@@ -70,7 +81,7 @@ function Get-Folder {
     Write-Host "Found $($jsonFiles.Count) files matching the pattern *_[number]_result.json"
 
     # Initialize CSV with headers
-    "FileName,EntityPhrase,IsNegated,NegationType,NegationPhrase,Code,AdditionalCode,IsNonReportable,ConditionalPhrase" | Out-File -FilePath $outputPath -Encoding UTF8
+    "FileName,MessageNumber,Id,EntityPhrase,IsNegated,NegationType,NegationPhrase,Code,AdditionalCode,IsNonreportableSkinHistology,IsSkinSite,IsNonReportableTerm,SiteCriteria" | Out-File -FilePath $outputPath -Encoding UTF8
 
     # Initialize tracking variables
     $totalFiles = 0
