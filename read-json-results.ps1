@@ -1,116 +1,153 @@
-# This script reads JSON files from a folder and extracts EntityType: 0 records, then saves the results to a CSV file.
-# It can be run from the command line with the -InputPath and -OutputPath parameters.
-# If no parameters are specified, it will use the script's directory for the input path and create an output path with a timestamp in the input folder.
-# .\read-json-results.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\test_filter_analysis" -OutputPath "N:\eMaRC_lite\reports\SNH\test_filter_analysis\FilteredReport.csv"
+# .\read-json-results-3.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\2025_02_Feb" -OutputPath "N:\eMaRC_lite\reports\SNH\2025_02_Feb\output"
 
+# Define script parameters
 param(
     [Parameter(Mandatory=$false)]
-    # Default input path is the script's directory
     [string]$InputPath = "$PSScriptRoot",
 
     [Parameter(Mandatory=$false)]
-    # If not specified, output path will be "[script directory]\FilteredReport_[timestamp].csv"
     [string]$OutputPath
 )
 
-# If no output path specified, create one with timestamp in the input folder
+# Ensure OutputPath is a folder
 if (-not $OutputPath) {
-    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $OutputPath = Join-Path $InputPath "FilteredReport_$timestamp.csv"
-} elseif (Test-Path $OutputPath -PathType Container) {
-    # If OutputPath is a folder, append a filename to it
-    $OutputPath = Join-Path $OutputPath "FilteredReport.csv"
+    $OutputPath = $InputPath
 }
+
+# Ensure the output directory exists
+if (!(Test-Path -Path $OutputPath)) {
+    New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+}
+
+# Define output CSV paths
+$SummaryCSV  = Join-Path $OutputPath "SummaryReport.csv"
+$EntityCSV   = Join-Path $OutputPath "EntitySummary.csv"
+$MessagesCSV = Join-Path $OutputPath "MessagesSummary.csv"
+
+# Initialize tracking dictionaries (MUST be outside loop to persist across files)
+$entityCounts = @{}
+$entityMap = @{}   # Stores unique entity definitions mapped to a single CustomId
+$totalMessages = 0
+$totalReportableMessages = 0
+$totalNonReportableMessages = 0
 
 # Function to extract EntityType: 0 from JSON files
 function Get-EntityTypeZeroData {
     param ($filePath)
 
     try {
-        # Read JSON content
         $jsonContent = Get-Content -Path $filePath -Raw | ConvertFrom-Json -ErrorAction Stop
+        if (-not $jsonContent.PSObject.Properties["Entities"]) { return $null }
 
-        # Ensure Entities exist (some messages don't have entities)
-        if (-not $jsonContent.PSObject.Properties["Entities"] -or !$jsonContent.Entities) {
-            Write-Host "Skipping file due to missing 'Entities': $filePath" -ForegroundColor Yellow
-            return $null
-        }
+        # Extract reportability from the JSON file
+        $reportableStatus = if ($jsonContent.PSObject.Properties["Reportable"]) { $jsonContent.Reportable } else { $false }
 
-        # Extract EntityType: 0 records
         $entities = $jsonContent.Entities | Where-Object { $_.EntityType -eq 0 }
-
-        if (!$entities) { return $null }  # Skip if no matching entities
-
-		# Extract the message number from the filename
+        # Extract the message number from the filename
         $fileName = (Get-Item $filePath).Name
         $messageNumber = if ($fileName -match '_(\d+)_result\.json$') { $matches[1] } else { "Unknown" }
 
-        # Return structured results
-        return $entities | ForEach-Object {
-            [PSCustomObject]@{
-                FileName                   = $fileName
-                MessageNumber              = $messageNumber
-                Id                         = $_.Id
-                EntityPhrase               = $_.EntityPhrase
-                IsNegated                  = $_.IsNegated
-                NegationType               = $_.NegationType
-                NegationPhrase             = $_.NegationPhrase
-                Code                       = $_.Code
-                AdditionalCode             = $_.AdditionalCode
-                IsNonreportableSkinHistology = $_.IsNonreportableSkinHistology
-                IsSkinSite                 = $_.IsSkinSite
-                IsNonReportableTerm        = $_.IsNonReportableTerm
-                SiteCriteria               = $_.SiteCriteria
-            }
+        return @{
+            Entities = $entities
+            Reportable = $reportableStatus
+            FileName = $fileName
+            MessageNumber = $messageNumber
         }
     } catch {
-        Write-Host "`nError processing file: $filePath" -ForegroundColor Red
-        Write-Host "Error Message: $_" -ForegroundColor Red
+        Write-Host "Error processing file: $filePath" -ForegroundColor Red
         return $null
     }
 }
 
-# Function to process all JSON files in the folder
+# Function to process JSON files
 function Get-Folder {
-    param ($folderPath, $outputPath)
+    param ($folderPath)
 
-    # Get JSON files matching the naming pattern
-    $jsonFiles = Get-ChildItem -Path $folderPath -Filter "*.json" | 
-                Where-Object { $_.Name -match '_\d+_result\.json$' }
-
+    $jsonFiles = Get-ChildItem -Path $folderPath -Filter "*.json" | Where-Object { $_.Name -match '_\d+_result\.json$' }
     Write-Host "Found $($jsonFiles.Count) files matching the pattern *_[number]_result.json"
 
-    # Initialize CSV with headers
-    "FileName,MessageNumber,Id,EntityPhrase,IsNegated,NegationType,NegationPhrase,Code,AdditionalCode,IsNonreportableSkinHistology,IsSkinSite,IsNonReportableTerm,SiteCriteria" | Out-File -FilePath $outputPath -Encoding UTF8
+    # Initialize CSV headers
+    "Category,Count" | Out-File -FilePath $SummaryCSV -Encoding UTF8
+    "EntityId,CustomId,EntityPhrase,IsNegated,NegationType,NegationPhrase,Code,AdditionalCode,IsNonreportableSkinHistology,IsSkinSite,IsNonReportableTerm,SiteCriteria,Count" | Out-File -FilePath $EntityCSV -Encoding UTF8
+    "FileName,Reportable,MessageNumber,CustomEntityIds" | Out-File -FilePath $MessagesCSV -Encoding UTF8
 
-    # Initialize tracking variables
-    $totalFiles = 0
-    $filesWithEntities = 0
-    $negationType1Count = 0
-
-    # Process each file
     foreach ($file in $jsonFiles) {
-        $totalFiles++
         Write-Host "`nProcessing file: $($file.Name)"
+        $fileData = Get-EntityTypeZeroData -filePath $file.FullName
+        $totalMessages++
 
-        $fileResults = Get-EntityTypeZeroData -filePath $file.FullName
+        if (!$fileData) { continue }  # We no longer skip reports
 
-        if ($fileResults) {
-            $filesWithEntities++
-            $negationType1Count += ($fileResults | Where-Object { $_.NegationType -eq 1 }).Count
-            $fileResults | Export-Csv -Path $outputPath -Append -NoTypeInformation -Encoding UTF8
-            Write-Host "Found $(($fileResults | Measure-Object).Count) EntityType 0 records"
+        $fileResults = $fileData.Entities
+        $reportableStatus = if ($fileData.Reportable) { "Yes" } else { "No" }
+        $messageNumber = $fileData.MessageNumber
+
+        # Track reportable & non-reportable counts
+        if ($fileData.Reportable) {
+            $totalReportableMessages++
         } else {
-            Write-Host "No EntityType 0 records found in this file"
+            $totalNonReportableMessages++
         }
+
+        # Store all CustomIds for this message
+        $customEntityIds = @()
+
+        foreach ($record in $fileResults) {
+            # Generate a unique key based on all defining attributes
+            $entityKey = "$($record.Id)-$($record.EntityPhrase)-$($record.IsNegated)-$($record.NegationType)-$($record.NegationPhrase)-$($record.Code)-$($record.AdditionalCode)-$($record.IsNonreportableSkinHistology)-$($record.IsSkinSite)-$($record.IsNonReportableTerm)-$($record.SiteCriteria)"
+
+            # Check if the entity already exists in the dictionary
+            if ($entityMap.ContainsKey($entityKey)) {
+                $customId = $entityMap[$entityKey]  # Reuse the existing CustomId
+            } else {
+                # Generate a new CustomId and store it
+                $customId = "E" + [math]::Abs($entityKey.GetHashCode())
+                $entityMap[$entityKey] = $customId  # Save this ID for future occurrences
+            }
+
+            # Add to list of entity IDs for this message
+            $customEntityIds += $customId
+
+            # Store entity details in the summary
+            if (-not $entityCounts.ContainsKey($entityKey)) {
+                $entityCounts[$entityKey] = @{
+                    EntityId = $record.Id
+                    CustomId = $customId
+                    EntityPhrase = $record.EntityPhrase
+                    IsNegated = $record.IsNegated
+                    NegationType = $record.NegationType
+                    NegationPhrase = $record.NegationPhrase
+                    Code = $record.Code
+                    AdditionalCode = $record.AdditionalCode
+                    IsNonreportableSkinHistology = $record.IsNonReportableSkinHistology
+                    IsSkinSite = $record.IsSkinSite
+                    IsNonReportableTerm = $record.IsNonReportableTerm
+                    SiteCriteria = $record.SiteCriteria
+                    Count = 1
+                }
+            } else {
+                $entityCounts[$entityKey].Count++
+            }
+        }
+
+        # Save Messages Summary (using custom entity IDs)
+        "$($fileData.FileName),$reportableStatus,$messageNumber,$($customEntityIds -join ', ')" | Out-File -FilePath $MessagesCSV -Append -Encoding UTF8
     }
 
-    # Display summary
-    Write-Host "`nProcessing Summary:"
-    Write-Host "Total Files Processed: $totalFiles"
-    Write-Host "Files with EntityType 0: $filesWithEntities"
-    Write-Host "Entities with NegationType 1: $negationType1Count"
-    Write-Host "Results saved to: $outputPath"
+    # Save Entity Summary
+    foreach ($entity in $entityCounts.Values) {
+        # Ensure EntityPhrase is enclosed in double quotes to handle commas
+        $entityPhrase = '"' + $entity.EntityPhrase + '"'
+
+        "$($entity.EntityId),$($entity.CustomId),$entityPhrase,$($entity.IsNegated),$($entity.NegationType),$($entity.NegationPhrase),$($entity.Code),$($entity.AdditionalCode),$($entity.IsNonreportableSkinHistology),$($entity.IsSkinSite),$($entity.IsNonReportableTerm),$($entity.SiteCriteria),$($entity.Count)" | Out-File -FilePath $EntityCSV -Append -Encoding UTF8
+    }
+
+    # Save Summary Report
+    "Total Messages Processed,$totalMessages" | Out-File -FilePath $SummaryCSV -Append -Encoding UTF8
+    "Total Reportable Messages,$totalReportableMessages" | Out-File -FilePath $SummaryCSV -Append -Encoding UTF8
+    "Total Non-Reportable Messages,$totalNonReportableMessages" | Out-File -FilePath $SummaryCSV -Append -Encoding UTF8
+
+    Write-Host "`nProcessing Complete!"
 }
 
 # Execute script
