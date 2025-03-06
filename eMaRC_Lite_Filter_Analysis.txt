@@ -51,6 +51,7 @@ messages [icon:mail,color:black] {
 message_entities [color:red,icon:link] {
   message_id TEXT REFERENCES messages(message_id) ON DELETE CASCADE
   custom_id TEXT REFERENCES entity_master(custom_id) ON DELETE CASCADE
+  count INTEGER NOT NULL
   primary KEY (message_id, custom_id)
 }
 
