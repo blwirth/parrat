@@ -1,0 +1,72 @@
+// Eraser.io syntax
+
+title Monthly ePath Processing
+direction right
+
+What step is the monthly load at?[shape:diamond,icon:play]
+
+PowerShell[color:blue] {
+
+"Which facility are you working on?"[shape:diamond,icon:building]
+
+"New files are automatically received in \\nhscr-fileserv\\DataReceiving\\Nextgen\\SouthernNH/Elliot/Concord/"[color:yellow,shape:document,icon:folder]
+
+"Copy .txt files from \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter\\ePTH<Month><Year>\\ePTH<Month><Year> to \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter"[icon:file]
+
+"Sort by 'Date Modified' to see what months need to be processed"[icon:sort]
+
+"cd \\nhscr-fileserv\\DataPreProcessing\\ePath\\"[typeface:mono,color:blue,icon:code]
+
+".\\SortCleanConcatArch.ps1"[typeface:mono,color:blue,icon:code]
+
+"The original raw transmissions are archived automatically in \\nhscr-fileserv\\DataPreProcessing\\ePath\\archive_raw_files and the processed .hl7 file is in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus"[color:yellow,shape:document,icon:folder]
+
+"Update the corresponding year status table: Ready for eMaRC Lite"[color:green,icon:table]
+
+}
+
+Lite[color:purple] {
+
+"Copy processed .hl7 file from \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to \\nhscr-fileserv\\DataPreProcessing\\ePath\\eMaRC_lite\\source"[icon:file]
+
+
+"Process .hl7 via eMaRC Lite"[icon:app]
+
+"Move and rename filtered reportable .hl7 output file(s) to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus and move pre-processed original .hl7 to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus\\pre_eMaRC_Lite"[icon:file]
+
+"Update the corresponding year status table: Ready for eMaRC Plus"[color:green,icon:table]
+
+}
+
+Plus[color:yellow] {
+
+"Upload processed .hl7 file(s) in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to eMaRC Plus"[icon:app]
+
+"Move uploaded .hl7 files to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus\\uploaded_to_emarc"[icon:file]
+
+"Update corresponding year status table: Complete"[color:green,icon:table]
+}
+
+// Start
+"What step is the monthly load at?" > "Which facility are you working on?":1. Ready for PowerShell
+"What step is the monthly load at?" > "Copy processed .hl7 file from \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to \\nhscr-fileserv\\DataPreProcessing\\ePath\\eMaRC_lite\\source":2. Ready for eMaRC Lite
+"What step is the monthly load at?" > "Upload processed .hl7 file(s) in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to eMaRC Plus":3. Ready for eMaRC Plus
+
+// PowerShell Relationships
+"Which facility are you working on?" > "New files are automatically received in \\nhscr-fileserv\\DataReceiving\\Nextgen\\SouthernNH/Elliot/Concord/":Elliot / Southern NH / Concord
+"Which facility are you working on?" > "Copy .txt files from \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter\\ePTH<Month><Year>\\ePTH<Month><Year> to \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter":Exeter
+
+"New files are automatically received in \\nhscr-fileserv\\DataReceiving\\Nextgen\\SouthernNH/Elliot/Concord/">"Sort by 'Date Modified' to see what months need to be processed"
+
+"Copy .txt files from \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter\\ePTH<Month><Year>\\ePTH<Month><Year> to \\nhscr-fileserv\\DataReceiving\\ePath\\WebPlus\\Exeter" > "Sort by 'Date Modified' to see what months need to be processed"
+
+"Sort by 'Date Modified' to see what months need to be processed">"cd \\nhscr-fileserv\\DataPreProcessing\\ePath\\">".\\SortCleanConcatArch.ps1"-"The original raw transmissions are archived automatically in \\nhscr-fileserv\\DataPreProcessing\\ePath\\archive_raw_files and the processed .hl7 file is in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus">"Update the corresponding year status table: Ready for eMaRC Lite"
+
+"Update the corresponding year status table: Ready for eMaRC Lite">"Copy processed .hl7 file from \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to \\nhscr-fileserv\\DataPreProcessing\\ePath\\eMaRC_lite\\source":Proceed to eMaRC Lite
+
+// Lite Relationships
+"Copy processed .hl7 file from \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to \\nhscr-fileserv\\DataPreProcessing\\ePath\\eMaRC_lite\\source" > "Process .hl7 via eMaRC Lite" > "Move and rename filtered reportable .hl7 output file(s) to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus and move pre-processed original .hl7 to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus\\pre_eMaRC_Lite" > "Update the corresponding year status table: Ready for eMaRC Plus"
+"Update the corresponding year status table: Ready for eMaRC Plus">"Upload processed .hl7 file(s) in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to eMaRC Plus":Proceed to eMaRC Plus
+
+// Plus Relationships
+"Upload processed .hl7 file(s) in \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus to eMaRC Plus" > "Move uploaded .hl7 files to \\nhscr-fileserv\\DataPreProcessing\\ePath\\load_eMaRC_Plus\\uploaded_to_emarc" > "Update corresponding year status table: Complete"[color:green]

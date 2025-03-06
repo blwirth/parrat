@@ -1,0 +1,62 @@
+// Eraser.io syntax
+
+title eMaRC Lite Filter Analysis
+
+facilities [icon: building, color: blue] {
+  id TEXT CHECK (char_length(id) = 7) PRIMARY KEY
+  name TEXT NOT NULL
+}
+
+entity_master [icon:book,color:green] {
+    custom_id TEXT PRIMARY KEY
+    entity_id TEXT
+    entity_phrase TEXT NOT NULL
+    is_negated BOOLEAN
+    negation_type TEXT
+    negation_phrase TEXT
+    code TEXT
+    additional_code TEXT
+    is_nonreportable_skin_histology BOOLEAN
+    is_skin_skite BOOLEAN
+    is_nonreportable_term BOOLEAN
+    site_criteria TEXT
+}
+
+summary_reports [color:purple,icon:report] {
+    facility_id TEXT REFERENCES facilities(id) ON DELETE CASCADE
+    year INTEGER NOT NULL CHECK (Year BETWEEN 2023 AND 2025) 
+    month INTEGER NOT NULL CHECK (Month BETWEEN 1 AND 12) 
+    category TEXT 
+    count INTEGER
+    primary KEY (facility_id, year, month, category)
+}
+
+entity_counts [color:orange,icon:graph] {
+    facility_id TEXT REFERENCES facilities(id) ON DELETE CASCADE
+    year INTEGER NOT NULL CHECK (Year BETWEEN 2023 AND 2025)
+    month INTEGER NOT NULL CHECK (Month BETWEEN 1 AND 12)
+    custom_id TEXT REFERENCES entity_master(custom_id) ON DELETE CASCADE
+    count INTEGER DEFAULT 0
+    primary KEY (facility_id, year, month, custom_id)
+}
+
+messages [icon:mail,color:black] {
+    message_id TEXT PRIMARY KEY
+    facility_id TEXT REFERENCES facilities(id) ON DELETE CASCADE
+    year INTEGER NOT NULL CHECK (Year BETWEEN 2023 AND 2025)
+    month INTEGER NOT NULL CHECK (Month BETWEEN 1 AND 12)
+    reportable TEXT CHECK (Reportable IN ('Yes', 'No'))
+}
+
+message_entities [color:red,icon:link] {
+  message_id TEXT REFERENCES messages(message_id) ON DELETE CASCADE
+  custom_id TEXT REFERENCES entity_master(custom_id) ON DELETE CASCADE
+  primary KEY (message_id, custom_id)
+}
+
+facilities.id > entity_counts.facility_id
+facilities.id > summary_reports.facility_id
+entity_master.custom_id <> message_entities.custom_id
+messages.message_id <> message_entities.message_id
+entity_master.custom_id > entity_counts.custom_id
+facilities.id > messages.facility_id
