@@ -44,47 +44,78 @@ The script generates 10 JSON files with the naming pattern `originalfile_[random
 
 ### 6. Read JSON Results (`read-JSON-results.ps1`)
 
-This script processes JSON result files, extracts EntityType 0 records, and compiles them into a CSV report.
+This script processes JSON result files, extracts EntityType 0 records, and maintains a centralized tracking system for entities across multiple facilities and processing runs.
 
 ```powershell
-# Process files in the script's directory
-.\read-JSON-results.ps1
+# Process files with minimum required parameters
+.\read-JSON-results.ps1 -Year "2025" -Month "02"
 
-# Process files from a specific input location
-.\read-JSON-results.ps1 -InputPath "C:\path\to\input\folder"
-
-# Process files and save report to a specific location
-.\read-JSON-results.ps1 -InputPath "C:\input\folder" -OutputPath "C:\output\folder\report.csv"
+# Process files with all parameters
+.\read-JSON-results.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\2025_02_Feb" `
+                       -OutputPath "N:\eMaRC_lite\reports\SNH\2025_02_Feb\output" `
+                       -Facility "SNH" `
+                       -FacilityNumber "6120290" `
+                       -Year "2025" `
+                       -Month "02"
 ```
 
 #### Parameters:
 
 - **InputPath** (Optional): The directory containing JSON files to process. If not specified, uses the script's directory.
-- **OutputPath** (Optional): The path for the output CSV file. If not specified, creates a timestamped file in the input directory.
+- **OutputPath** (Optional): The directory for output files. If not specified, uses the input directory.
+- **Facility** (Optional): The facility name identifier.
+- **FacilityNumber** (Optional): The 7-digit facility number. Defaults to "9999999" if not provided.
+- **Year** (Required): The year of the data being processed.
+- **Month** (Required): The month of the data being processed.
 
-The script processes files matching the pattern `*_[number]_result.json` and extracts the following information from EntityType 0 records:
+#### Centralized Files:
 
-- File Name
+The script maintains several centralized files in its directory:
+
+- **Facilities.csv**: Tracks all facilities and their facility numbers
+- **EntityMaster.csv**: Master dictionary of all unique entities ever encountered
+- **EntityCounts.csv**: Monthly entity counts per facility
+- **SummaryReport.csv**: Monthly processing statistics per facility
+
+#### Per-Run Output:
+
+For each processing run, the script generates:
+
+- **[Facility]_[Year]_[Month]\_MessagesSummary.csv**: Details about each processed message including:
+  - File Name
+  - Reportable Status
+  - Message Number
+  - Custom Entity IDs found in the message
+
+The script processes files matching the pattern `*_[number]_result.json` and tracks:
+
+- Unique entities with consistent CustomIDs across all runs
+- Entity occurrence counts per facility per month
+- Facility-specific processing statistics
+- Message-level entity associations
+
+#### Entity Tracking:
+
+Each entity is assigned a unique CustomID that remains consistent across all processing runs and facilities. The script tracks:
+
 - Entity Phrase
 - Negation Status and Type
 - Negation Phrase
-- Codes
+- Codes and Additional Codes
 - Non-Reportable Status
-- Conditional Phrase
+- Skin-specific criteria
+- Monthly occurrence counts per facility
 
-The results are saved to a CSV file, and a summary is displayed showing:
+#### Summary Statistics:
 
-- Total files processed
-- Files containing EntityType 0 records
-- Count of NegationType 1 records
-- Location of the output CSV file
+For each processing run, the script records:
 
-There are two ways to verify which message is incorrectly formatted and throwing the error in eMaRC Lite:
+- Total messages processed
+- Total reportable messages
+- Total non-reportable messages
+- Entity occurrence counts
 
-1. If eMaRC Lite hangs on message 50 of 100, for example, the actual error is at message 51, and eMaRC Lite is stalled because it cannot process this message.
-2. In the reports folder, the all correctly processed messages will have a corresponding report. In the above example, messages 1-50 would have a report. Since it is message 51 with the error, there should be no report for message 50.
-
-No destructive action is performed, meaning the original file content and the file itself is unchanged in the event of an issue or if re-processing is needed.
+The centralized tracking system allows for cross-facility analysis and ensures consistent entity identification across multiple processing runs.
 
 ## Technical Details
 
