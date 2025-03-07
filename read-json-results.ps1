@@ -1,4 +1,4 @@
-# .\read-json-results.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\Archive\2025_02_Feb" -OutputPath "N:\eMaRC_lite\reports\SNH\Archive\2025_02_Feb\output" -FacilityName "SNH" -FacilityId "6120290" -Year "2025" -Month "02"
+# .\read-json-results.ps1 -InputPath "N:\eMaRC_lite\reports\SNH\Archive\test_filter_analysis_3" -OutputPath "N:\eMaRC_lite\reports\SNH\Archive\test_filter_analysis_3\output" -FacilityName "SNH" -FacilityId "6120290" -Year "2025" -Month "02"
 
 # Define script parameters
 param(
@@ -48,10 +48,13 @@ if ($Year -notmatch '^\d{4}$' -or $Year -lt 2023 -or $Year -gt 2025) {
     Write-Log "ERROR: Invalid year: $Year" "ERROR"
     exit 1
 }
-if ($Month -notmatch '^(0[1-9]|1[0-2])$') {
-    Write-Log "ERROR: Invalid month: $Month" "ERROR"
+
+# Validate month and pad with leading zero if needed
+if ($Month -lt 1 -or $Month -gt 12) {
+    Write-Log "ERROR: Invalid month: $Month (must be between 1 and 12)" "ERROR"
     exit 1
 }
+$Month = $Month.ToString("00")  # Pad with leading zero for consistency
 
 # Ensure facility_id is a 7-digit number (default to 9999999 if missing)
 if (-not $FacilityId -or $FacilityId -notmatch '^\d{7}$') {
@@ -75,11 +78,11 @@ $MessageEntitiesCSV = Join-Path $OutputPath "$FacilityId`_$Year`_$Month`_message
 
 # Ensure CSV files exist and create headers if missing
 $CsvHeaders = @{
-    $FacilitiesCSV     = "facility_id,facility_name"
+    $FacilitiesCSV     = "id,name"
     $EntityMasterCSV   = "custom_id,entity_id,entity_phrase,is_negated,negation_type,negation_phrase,code,additional_code,is_nonreportable_skin_histology,is_skin_site,is_nonreportable_term,site_criteria"
     $EntityCountsCSV   = "facility_id,year,month,custom_id,count"
     $MessagesCSV       = "message_id,facility_id,year,month,reportable"
-    $MessageEntitiesCSV = "message_id,custom_id,entity_count"
+    $MessageEntitiesCSV = "message_id,custom_id,count"
     $SummaryCSV        = "facility_id,year,month,category,count"
 }
 
