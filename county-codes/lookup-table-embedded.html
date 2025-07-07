@@ -1,0 +1,3078 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NH Town Lookup</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+
+      .container {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+        font-size: 24px;
+      }
+
+      .search-container {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .search-box {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 12px;
+        box-sizing: border-box;
+      }
+
+      .search-box:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+      }
+
+      .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+      }
+
+      .autocomplete-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+      }
+
+      .autocomplete-item:hover,
+      .autocomplete-item.selected {
+        background-color: #f8f9fa;
+      }
+
+      .autocomplete-item:last-child {
+        border-bottom: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0px;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      th {
+        background-color: #007bff;
+        color: white;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+      }
+
+      tr:hover {
+        background-color: #f8f9fa;
+      }
+
+      .nhscr-code {
+        font-weight: bold;
+        color: black;
+        font-size: 12px;
+      }
+
+      .result-count {
+        margin-bottom: 10px;
+        color: #666;
+        font-size: 12px;
+      }
+
+      .table-container {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .no-results {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- <h1>NH Town Lookup</h1> -->
+
+      <div class="search-container">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-box"
+          placeholder="Start typing a town name..."
+          autocomplete="off"
+        />
+        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+      </div>
+
+      <div class="result-count" id="resultCount"></div>
+
+      <div class="table-container">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Town Name</th>
+              <th>ZIP Name</th>
+              <th>ZIP Code</th>
+              <th>County</th>
+              <th>NHSCR Code</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const nhData = [
+        {
+          townName: "ACWORTH,NH",
+          zipName: "ACWORTH,NH",
+          zipCode: "03601",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "ACWORTH,NH",
+          zipName: "SOUTH ACWORTH, NH",
+          zipCode: "03607",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "ALBANY,NH",
+          zipName: "CONWAY,NH",
+          zipCode: "03818",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "ALEXANDRIA,NH",
+          zipName: "BRISTOL,NH",
+          zipCode: "03222",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ALLENSTOWN,NH",
+          zipName: "SUNCOOK,NH",
+          zipCode: "03275",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "ALSTEAD,NH",
+          zipName: "ALSTEAD,NH",
+          zipCode: "03602",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "ALTON BAY,NH",
+          zipName: "ALTON BAY,NH",
+          zipCode: "03810",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "ALTON,NH",
+          zipName: "ALTON,NH",
+          zipCode: "03809",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "AMHERST,NH",
+          zipName: "AMHERST,NH",
+          zipCode: "03031",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "ANDOVER,NH",
+          zipName: "ANDOVER,NH",
+          zipCode: "03216",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "ANTRIM,NH",
+          zipName: "ANTRIM,NH",
+          zipCode: "03440",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "ASHLAND,NH",
+          zipName: "ASHLAND,NH",
+          zipCode: "03217",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ASHUELOT,NH",
+          zipName: "ASHUELOT,NH",
+          zipCode: "03441",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "ATKINSON & GILMANTON,NH",
+          zipName: "ERROL,NH",
+          zipCode: "03579",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "ATKINSON,NH",
+          zipName: "ATKINSON,NH",
+          zipCode: "03811",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "AUBURN,NH",
+          zipName: "AUBURN,NH",
+          zipCode: "03032",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "BARNSTEAD,NH",
+          zipName: "BARNSTEAD,NH",
+          zipCode: "03218",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "BARRINGTON,NH",
+          zipName: "BARRINGTON,NH",
+          zipCode: "03825",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "BARTLETT,NH",
+          zipName: "BARTLETT,NH",
+          zipCode: "03812",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "BATH,NH",
+          zipName: "BATH,NH",
+          zipCode: "03740",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BEANS PURCHASE,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "BEDFORD,NH",
+          zipName: "BEDFORD,NH",
+          zipCode: "03110",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "BEEBE RIVER,NH",
+          zipName: "BEEBE RIVER,NH",
+          zipCode: "03219",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BELMONT,NH",
+          zipName: "BELMONT,NH",
+          zipCode: "03220",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "BENNINGTON,NH",
+          zipName: "BENNINGTON,NH",
+          zipCode: "03442",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "BENTON,NH",
+          zipName: "WOODSVILLE,NH",
+          zipCode: "03785",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BERLIN,NH",
+          zipName: "BERLIN,NH",
+          zipCode: "03570",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "BETHLEHEM,NH",
+          zipName: "BETHLEHEM,NH",
+          zipCode: "03574",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BLODGETT'S LANDING,NH",
+          zipName: "NEWBURY,NH",
+          zipCode: "03255",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "BOSCAWEN,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03303",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "BOW,NH",
+          zipName: "BOW,NH",
+          zipCode: "03304",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "BRADFORD,NH",
+          zipName: "BRADFORD,NH",
+          zipCode: "03221",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "BRENTWOOD,NH",
+          zipName: "EXETER,NH",
+          zipCode: "03833",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "BRETTON WOODS,NH",
+          zipName: "BRETTON WOODS,NH",
+          zipCode: "03575",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "BRIDGEWATER,NH",
+          zipName: "BRISTOL,NH",
+          zipCode: "03222",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BRISTOL,NH",
+          zipName: "BRISTOL,NH",
+          zipCode: "03222",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "BROOKFIELD,NH",
+          zipName: "SANBORNVILLE,NH",
+          zipCode: "03872",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "BROOKLINE,NH",
+          zipName: "BROOKLINE,NH",
+          zipCode: "03033",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "BURKEHAVEN,NH",
+          zipName: "SUNAPEE,NH",
+          zipCode: "03782",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CAMBRIDGE,NH",
+          zipName: "MILAN,NH",
+          zipCode: "03588",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "CAMPTON,NH",
+          zipName: "CAMPTON,NH",
+          zipCode: "03223",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "CANAAN,NH",
+          zipName: "CANAAN,NH",
+          zipCode: "03741",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "CANDIA,NH",
+          zipName: "CANDIA,NH",
+          zipCode: "03034",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "CANTERBURY,NH",
+          zipName: "CANTERBURY,NH",
+          zipCode: "03224",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CARROLL,NH",
+          zipName: "WHITEFIELD,NH",
+          zipCode: "03598",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "CASCADE,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "CENTER BARNSTEAD,NH",
+          zipName: "CTR BARNSTEAD,NH",
+          zipCode: "03225",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "CENTER HARBOR,NH",
+          zipName: "CENTER HARBOR,NH",
+          zipCode: "03226",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "CENTER OSSIPEE,NH",
+          zipName: "CTR OSSIPEE,NH",
+          zipCode: "03814",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CENTER SANDWICH,NH",
+          zipName: "CTR SANDWICH,NH",
+          zipCode: "03227",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CENTER STRAFFORD,NH",
+          zipName: "CTR STRAFFORD,NH",
+          zipCode: "03815",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "CENTER TUFTONBORO,NH",
+          zipName: "CTR TUFTNBORO,NH",
+          zipCode: "03816",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CHARLESTOWN,NH",
+          zipName: "CHARLESTOWN,NH",
+          zipCode: "03603",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "CHATHAM,NH",
+          zipName: "CENTER CONWAY,NH",
+          zipCode: "03813",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CHESTER,NH",
+          zipName: "CHESTER,NH",
+          zipCode: "03036",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "CHESTERFIELD,NH",
+          zipName: "CHESTERFIELD,NH",
+          zipCode: "03443",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "CHICHESTER,NH",
+          zipName: "CHICHESTER,NH",
+          zipCode: "03258",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CHOCORUA,NH",
+          zipName: "CHOCORUA,NH",
+          zipCode: "03817",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CLAREMONT,NH",
+          zipName: "CLAREMONT,NH",
+          zipCode: "03743",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "CLARKSVILLE,NH",
+          zipName: "PITTSBURG,NH",
+          zipCode: "03592",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "COLEBROOK,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "COLUMBIA,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "CONCORD,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03301",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONCORD,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03302",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONCORD,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03304",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONCORD,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03305",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONCORD,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03306",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONTOOCOOK,NH",
+          zipName: "CONTOOCOOK,NH",
+          zipCode: "03229",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "CONWAY,NH",
+          zipName: "CONWAY,NH",
+          zipCode: "03818",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "CORNISH FLAT,NH",
+          zipName: "CORNISH FLAT,NH",
+          zipCode: "03746",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "CORNISH,NH",
+          zipName: "CORNISH,NH",
+          zipCode: "03745",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "CROYDON,NH",
+          zipName: "NEWPORT,NH",
+          zipCode: "03773",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "CRYSTAL,NH",
+          zipName: "GROVETON,NH",
+          zipCode: "03582",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "DALTON,NH",
+          zipName: "WHITEFIELD,NH",
+          zipCode: "03598",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "DANBURY,NH",
+          zipName: "DANBURY,NH",
+          zipCode: "03230",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "DANVILLE,NH",
+          zipName: "DANVILLE,NH",
+          zipCode: "03819",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "DEERFIELD,NH",
+          zipName: "DEERFIELD,NH",
+          zipCode: "03037",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "DEERING,NH",
+          zipName: "HILLSBORO,NH",
+          zipCode: "03244",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "DERRY,NH",
+          zipName: "DERRY,NH",
+          zipCode: "03038",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "DIXVILLE,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "DORCHESTER,NH",
+          zipName: "RUMNEY,NH",
+          zipCode: "03266",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "DOVER,NH",
+          zipName: "DOVER,NH",
+          zipCode: "03820",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "DOVER,NH",
+          zipName: "DOVER,NH",
+          zipCode: "03821",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "DOVER,NH",
+          zipName: "DOVER,NH",
+          zipCode: "03822",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "DREWSVILLE,NH",
+          zipName: "DREWSVILLE,NH",
+          zipCode: "03604",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "DUBLIN,NH",
+          zipName: "DUBLIN,NH",
+          zipCode: "03444",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "DUMMER,NH",
+          zipName: "MILAN,NH",
+          zipCode: "03588",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "DUNBARTON,NH",
+          zipName: "DUNBARTON,NH",
+          zipCode: "03046",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "DURHAM,NH",
+          zipName: "DURHAM,NH",
+          zipCode: "03824",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "EAST ANDOVER,NH",
+          zipName: "EAST ANDOVER,NH",
+          zipCode: "03231",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "EAST CANDIA,NH",
+          zipName: "EAST CANDIA,NH",
+          zipCode: "03040",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "EAST DERRY,NH",
+          zipName: "EAST DERRY,NH",
+          zipCode: "03041",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "EAST HAMPSTEAD,NH",
+          zipName: "EAST HAMPSTEAD,NH",
+          zipCode: "03826",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "EAST HEBRON,NH",
+          zipName: "EAST HEBRON,NH",
+          zipCode: "03232",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "EAST KINGSTON,NH",
+          zipName: "EAST KINGSTON,NH",
+          zipCode: "03827",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "EAST LEMPSTER,NH",
+          zipName: "EAST LEMPSTER,NH",
+          zipCode: "03605",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "EAST ROCHESTER,NH",
+          zipName: "EAST ROCHESTER,NH",
+          zipCode: "03868",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "EAST SWANZEY,NH",
+          zipName: "EAST SWANZEY,NH",
+          zipCode: "03446",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "EAST WAKEFIELD,NH",
+          zipName: "EAST WAKEFIELD,NH",
+          zipCode: "03830",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "EASTON,NH",
+          zipName: "FRANCONIA,NH",
+          zipCode: "03580",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "EATON,NH",
+          zipName: "EATON CENTER,NH",
+          zipCode: "03832",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "EFFINGHAM,NH",
+          zipName: "SOUTH EFFINGHAM,NH",
+          zipCode: "03882",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "ELKINS,NH",
+          zipName: "ELKINS,NH",
+          zipCode: "03233",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "ELLSWORTH,NH",
+          zipName: "PLYMOUTH,NH",
+          zipCode: "03264",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ENFIELD CENTER,NH",
+          zipName: "ENFIELD CTR,NH",
+          zipCode: "03749",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ENFIELD,NH",
+          zipName: "ENFIELD,NH",
+          zipCode: "03748",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "EPPING,NH",
+          zipName: "EPPING,NH",
+          zipCode: "03042",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "EPSOM,NH",
+          zipName: "EPSOM,NH",
+          zipCode: "03234",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "ERROL,NH",
+          zipName: "ERROL,NH",
+          zipCode: "03579",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "ERVINGS LOCATION,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "ETNA,NH",
+          zipName: "ETNA,NH",
+          zipCode: "03750",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "EXETER,NH",
+          zipName: "EXETER,NH",
+          zipCode: "03833",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "FARMINGTON,NH",
+          zipName: "FARMINGTON,NH",
+          zipCode: "03835",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "FITZWILLIAM,NH",
+          zipName: "FITZWILLIAM,NH",
+          zipCode: "03447",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "FRANCESTOWN,NH",
+          zipName: "FRANCESTOWN,NH",
+          zipCode: "03043",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "FRANCONIA,NH",
+          zipName: "FRANCONIA,NH",
+          zipCode: "03580",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "FRANKLIN,NH",
+          zipName: "FRANKLIN,NH",
+          zipCode: "03235",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "FREEDOM,NH",
+          zipName: "FREEDOM,NH",
+          zipCode: "03836",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "FREMONT,NH",
+          zipName: "FREMONT,NH",
+          zipCode: "03044",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "GEORGES MILLS,NH",
+          zipName: "GEORGES MILLS,NH",
+          zipCode: "03751",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "GERRISH,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03303",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "GILFORD,NH",
+          zipName: "GILFORD,NH",
+          zipCode: "03249",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "GILMANTON IRON WORKS,NH",
+          zipName: "GLMTN IRN WKS,NH",
+          zipCode: "03837",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "GILMANTON,NH",
+          zipName: "GILMANTON,NH",
+          zipCode: "03237",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "GILSUM,NH",
+          zipName: "GILSUM,NH",
+          zipCode: "03448",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "GLEN,NH",
+          zipName: "GLEN,NH",
+          zipCode: "03838",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "GLENCLIFF (HOME FOR,NH",
+          zipName: "WOODSVILLE,NH",
+          zipCode: "03785",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "GLENCLIFF,NH",
+          zipName: "GLENCLIFF,NH",
+          zipCode: "03238",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "GOFF'S FALLS,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03103",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "GOFFSTOWN,NH",
+          zipName: "GOFFSTOWN,NH",
+          zipCode: "03045",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "GONIC,NH",
+          zipName: "GONIC,NH",
+          zipCode: "03839",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "GOSHEN,NH",
+          zipName: "GOSHEN,NH",
+          zipCode: "03752",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "GOSSVILLE,NH",
+          zipName: "EPSOM,NH",
+          zipCode: "03234",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "GRAFTON,NH",
+          zipName: "GRAFTON,NH",
+          zipCode: "03240",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "GRANTHAM,NH",
+          zipName: "GRANTHAM,NH",
+          zipCode: "03753",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "GRASMERE,NH",
+          zipName: "GOFFSTOWN,NH",
+          zipCode: "03045",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "GREENFIELD,NH",
+          zipName: "GREENFIELD,NH",
+          zipCode: "03047",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "GREENLAND,NH",
+          zipName: "GREENLAND,NH",
+          zipCode: "03840",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "GREENS GRANT,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "GREENVILE,NH",
+          zipName: "GREENVILLE,NH",
+          zipCode: "03048",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "GROTON,NH",
+          zipName: "HEBRON,NH",
+          zipCode: "03241",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "GROVETON,NH",
+          zipName: "GROVETON,NH",
+          zipCode: "03582",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "GUILD,NH",
+          zipName: "GUILD,NH",
+          zipCode: "03754",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "HAMPSTEAD,NH",
+          zipName: "HAMPSTEAD,NH",
+          zipCode: "03841",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "HAMPTON FALLS,NH",
+          zipName: "HAMPTON FALLS,NH",
+          zipCode: "03844",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "HAMPTON,NH",
+          zipName: "HAMPTON,NH",
+          zipCode: "03842",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "HAMPTON,NH",
+          zipName: "HAMPTON",
+          zipCode: "03843",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "HANCOCK,NH",
+          zipName: "HANCOCK,NH",
+          zipCode: "03449",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "HANOVER,NH",
+          zipName: "HANOVER,NH",
+          zipCode: "03755",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "HANOVER,NH",
+          zipName: "HANOVER,NH",
+          zipCode: "03756",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "HARRISVILLE,NH",
+          zipName: "HARRISVILLE,NH",
+          zipCode: "03450",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "HARTS LOCATION,NH",
+          zipName: "BARTLETT,NH",
+          zipCode: "03812",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "HAVERHILL,NH",
+          zipName: "HAVERHILL,NH",
+          zipCode: "03765",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "HEBRON,NH",
+          zipName: "HEBRON,NH",
+          zipCode: "03241",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "HEDDING,NH",
+          zipName: "EPPING,NH",
+          zipCode: "03042",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "HENNIKER,NH",
+          zipName: "HENNIKER,NH",
+          zipCode: "03242",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "HILL,NH",
+          zipName: "HILL,NH",
+          zipCode: "03243",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "HILLSBORO, HILLSBORO,NH",
+          zipName: "HILLSBORO,NH",
+          zipCode: "03244",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "HINSDALE,NH",
+          zipName: "HINSDALE,NH",
+          zipCode: "03451",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "HOLDERNESS,NH",
+          zipName: "HOLDERNESS,NH",
+          zipCode: "03245",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "HOLLIS,NH",
+          zipName: "HOLLIS,NH",
+          zipCode: "03049",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "HOOKSETT,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03106",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "HOPKINTON,NH",
+          zipName: "CONTOOCOOK,NH",
+          zipCode: "03229",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "HUDSON,NH",
+          zipName: "HUDSON,NH",
+          zipCode: "03051",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "INTERVALE,NH",
+          zipName: "INTERVALE,NH",
+          zipCode: "03845",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "JACKSON,NH",
+          zipName: "JACKSON,NH",
+          zipCode: "03846",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "JAFFREY CENTER,NH",
+          zipName: "JAFFREY CTR,NH",
+          zipCode: "03454",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "JAFFREY,NH",
+          zipName: "JAFFREY,NH",
+          zipCode: "03452",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "JEFFERSON,NH",
+          zipName: "JEFFERSON,NH",
+          zipCode: "03583",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "KEARSARGE,NH",
+          zipName: "KEARSARGE,NH",
+          zipCode: "03847",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "KEENE,NH",
+          zipName: "KEENE,NH",
+          zipCode: "03431",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "KELLYVILLE,NH",
+          zipName: "NEWPORT,NH",
+          zipCode: "03773",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "KENSINGTON,NH",
+          zipName: "EXETER,NH",
+          zipCode: "03833",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "KILKENNY TOWNSHIP,NH",
+          zipName: "BERLIN,NH",
+          zipCode: "03570",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "KINGSTON,NH",
+          zipName: "KINGSTON,NH",
+          zipCode: "03848",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "LACONIA P.O.,NH",
+          zipName: "LACONIA,NH",
+          zipCode: "03247",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "LACONIA,NH",
+          zipName: "LACONIA,NH",
+          zipCode: "03246",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "LAKEPORT,NH",
+          zipName: "LACONIA,NH",
+          zipCode: "03246",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "LANCASTER,NH",
+          zipName: "LANCASTER,NH",
+          zipCode: "03584",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "LANDAFF,NH",
+          zipName: "LISBON,NH",
+          zipCode: "03585",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LANGDON,NH",
+          zipName: "ALSTEAD,NH",
+          zipCode: "03602",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "LEBANON,NH",
+          zipName: "LEBANON,NH",
+          zipCode: "03766",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LEE,NH",
+          zipName: "DOVER,NH",
+          zipCode: "03820",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "LEMPSTER,NH",
+          zipName: "LEMPSTER,NH",
+          zipCode: "03606",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "LINCOLN,NH",
+          zipName: "LINCOLN,NH",
+          zipCode: "03251",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LISBON,NH",
+          zipName: "LISBON,NH",
+          zipCode: "03585",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LITCHFIELD,NH",
+          zipName: "LITCHFIELD,NH",
+          zipCode: "03052",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "LITTLETON,NH",
+          zipName: "LITTLETON,NH",
+          zipCode: "03561",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LIVERMORE,NH",
+          zipName: "BARTLETT,NH",
+          zipCode: "03812",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LOCHMERE,NH",
+          zipName: "LOCHMERE,NH",
+          zipCode: "03252",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "LONDONDERRY,NH",
+          zipName: "LONDONDERRY,NH",
+          zipCode: "03053",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "LOUDON,NH",
+          zipName: "LOUDON, NH",
+          zipCode: "03307",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "LYMAN,NH",
+          zipName: "LISBON,NH",
+          zipCode: "03585",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LYME CENTER,NH",
+          zipName: "LYME CENTER,NH",
+          zipCode: "03769",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LYME,NH",
+          zipName: "LYME,NH",
+          zipCode: "03768",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "LYNDEBOROUGH, LYNDEB,NH",
+          zipName: "LYNDEBOROUGH,NH",
+          zipCode: "03082",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MADBURY,NH",
+          zipName: "DOVER,NH",
+          zipCode: "03820",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "MADISON,NH",
+          zipName: "MADISON,NH",
+          zipCode: "03849",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03101",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03102",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03103",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03104",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03105",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03107",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03108",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MANCHESTER,NH",
+          zipName: "MANCHESTER,NH",
+          zipCode: "03109",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MARLBORO, MARLBOROUG,NH",
+          zipName: "MARLBOROUGH,NH",
+          zipCode: "03455",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "MARLOW,NH",
+          zipName: "MARLOW,NH",
+          zipCode: "03456",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "MARTINS LOCATION,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "MASCOMA,NH",
+          zipName: "LEBANON,NH",
+          zipCode: "03766",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "MASON,NH",
+          zipName: "GREENVILLE,NH",
+          zipCode: "03048",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MEADOWS,NH",
+          zipName: "MEADOWS,NH",
+          zipCode: "03587",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "MELVIN MILLS,NH",
+          zipName: "WARNER,NH",
+          zipCode: "03278",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "MELVIN VILLAGE,NH",
+          zipName: "MELVIN VLG,NH",
+          zipCode: "03850",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "MEREDITH,NH",
+          zipName: "MEREDITH,NH",
+          zipCode: "03253",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "MERIDEN,NH",
+          zipName: "MERIDEN,NH",
+          zipCode: "03770",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "MERRIMACK,NH",
+          zipName: "MERRIMACK,NH",
+          zipCode: "03054",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MIDDLETON,NH",
+          zipName: "UNION,NH",
+          zipCode: "03887",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "MILAN,NH",
+          zipName: "MILAN,NH",
+          zipCode: "03588",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "MILFORD,NH",
+          zipName: "MILFORD,NH",
+          zipCode: "03055",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MILLSFIELD,NH",
+          zipName: "ERROL,NH",
+          zipCode: "03579",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "MILTON MILLS,NH",
+          zipName: "MILTON MILLS,NH",
+          zipCode: "03852",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "MILTON,NH",
+          zipName: "MILTON,NH",
+          zipCode: "03851",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "MIRROR LAKE,NH",
+          zipName: "MIRROR LAKE,NH",
+          zipCode: "03853",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "MONROE,NH",
+          zipName: "MONROE,NH",
+          zipCode: "03771",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "MONT VERNON,NH",
+          zipName: "MONT VERNON,NH",
+          zipCode: "03057",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "MOULTONBORO,NH",
+          zipName: "MOULTONBORO,NH",
+          zipCode: "03254",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "MOULTONVILLE,NH",
+          zipName: "CTR OSSIPEE,NH",
+          zipCode: "03814",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "MOUNT SUNAPEE,NH",
+          zipName: "MOUNT SUNAPEE,NH",
+          zipCode: "03772",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "MOUNT WASHINGTON,NH",
+          zipName: "MT WASHINGTON,NH",
+          zipCode: "03589",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "MUNSONVILLE,NH",
+          zipName: "MUNSONVILLE,NH",
+          zipCode: "03457",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "NASHUA,NH",
+          zipName: "NASHUA,NH",
+          zipCode: "03060",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NASHUA,NH",
+          zipName: "NASHUA,NH",
+          zipCode: "03061",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NASHUA,NH",
+          zipName: "NASHUA,NH",
+          zipCode: "03062",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NASHUA,NH",
+          zipName: "NASHUA,NH",
+          zipCode: "03063",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NASHUA,NH",
+          zipName: "NASHUA,NH",
+          zipCode: "03064",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NELSON,NH",
+          zipName: "MUNSONVILLE,NH",
+          zipCode: "03457",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "NEW BOSTON,NH",
+          zipName: "NEW BOSTON,NH",
+          zipCode: "03070",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NEW CASTLE,NH",
+          zipName: "NEW CASTLE,NH",
+          zipCode: "03854",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NEW DURHAM,NH",
+          zipName: "NEW DURHAM,NH",
+          zipCode: "03855",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "NEW HAMPTON,NH",
+          zipName: "NEW HAMPTON,NH",
+          zipCode: "03256",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "NEW IPSWICH,NH",
+          zipName: "NEW IPSWICH,NH",
+          zipCode: "03071",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "NEW LONDON,NH",
+          zipName: "NEW LONDON,NH",
+          zipCode: "03257",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "NEWBURY,NH",
+          zipName: "NEWBURY,NH",
+          zipCode: "03255",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "NEWFIELDS,NH",
+          zipName: "NEWFIELDS,NH",
+          zipCode: "03856",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NEWINGTON,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03801",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NEWMARKET,NH",
+          zipName: "NEWMARKET,NH",
+          zipCode: "03857",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NEWPORT,NH",
+          zipName: "NEWPORT,NH",
+          zipCode: "03773",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "NEWTON JUNCTION,NH",
+          zipName: "NEWTON JCT,NH",
+          zipCode: "03859",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NEWTON,NH",
+          zipName: "NEWTON,NH",
+          zipCode: "03858",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NORTH CONWAY,NH",
+          zipName: "NORTH CONWAY,NH",
+          zipCode: "03860",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "NORTH HAMPTON,NH",
+          zipName: "NORTH HAMPTON,NH",
+          zipCode: "03862",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NORTH HAVERHILL,NH",
+          zipName: "NORTH HAVERHILL,NH",
+          zipCode: "03774",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "NORTH SALEM,NH",
+          zipName: "NORTH SALEM,NH",
+          zipCode: "03073",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NORTH SANDWICH,NH",
+          zipName: "NORTH SANDWICH,NH",
+          zipCode: "03259",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "NORTH SUTTTON,NH",
+          zipName: "NORTH SUTTON,NH",
+          zipCode: "03260",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "NORTH WALPOLE,NH",
+          zipName: "NORTH WALPOLE,NH",
+          zipCode: "03609",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "NORTH WOODSTOCK,NH",
+          zipName: "NORTH WOODSTOCK,NH",
+          zipCode: "03262",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "NORTHFIELD,NH",
+          zipName: "TILTON,NH",
+          zipCode: "03276",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "NORTHUMBERLAND,NH",
+          zipName: "GROVETON,NH",
+          zipCode: "03582",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "NORTHWOOD,NH",
+          zipName: "NORTHWOOD,NH",
+          zipCode: "03261",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "NOTTINGHAM,NH",
+          zipName: "NOTTINGHAM,NH",
+          zipCode: "03290",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "ODELL,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "ORANGE,NH",
+          zipName: "CANAAN,NH",
+          zipCode: "03741",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ORFORD,NH",
+          zipName: "ORFORD,NH",
+          zipCode: "03777",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "ORFORDVILLE,NH",
+          zipName: "ORFORD,NH",
+          zipCode: "03777",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "OSSIPEE,NH",
+          zipName: "OSSIPEE,NH",
+          zipCode: "03864",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "PELHAM,NH",
+          zipName: "PELHAM,NH",
+          zipCode: "03076",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "PEMBROKE,NH",
+          zipName: "SUNCOOK,NH",
+          zipCode: "03275",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "PENACOOK,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03303",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "PERCY,NH",
+          zipName: "GROVETON,NH",
+          zipCode: "03582",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "PIERMONT,NH",
+          zipName: "PIERMONT,NH",
+          zipCode: "03779",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "PIKE,NH",
+          zipName: "PIKE,NH",
+          zipCode: "03780",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "PINKHAMS GRANT,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "PITTSBURG,NH",
+          zipName: "PITTSBURG,NH",
+          zipCode: "03592",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "PITTSFIELD,NH",
+          zipName: "PITTSFIELD,NH",
+          zipCode: "03263",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "PLAINFIELD,NH",
+          zipName: "PLAINFIELD,NH",
+          zipCode: "03781",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "PLAISTOW,NH",
+          zipName: "PLAISTOW,NH",
+          zipCode: "03865",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "PLYMOUTH,NH",
+          zipName: "PLYMOUTH,NH",
+          zipCode: "03264",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "PORTSMOUTH,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03801",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "PORTSMOUTH,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03802",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "PORTSMOUTH,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03803",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "PORTSMOUTH,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03804",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "POTTER PLACE,NH",
+          zipName: "POTTER PLACE,NH",
+          zipCode: "03265",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "QUINCY,NH",
+          zipName: "RUMNEY,NH",
+          zipCode: "03266",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "RANDOLPH,NH",
+          zipName: "BERLIN,NH",
+          zipCode: "03570",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "RAYMOND,NH",
+          zipName: "RAYMOND,NH",
+          zipCode: "03077",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "REDSTONE,NH",
+          zipName: "CENTER CONWAY,NH",
+          zipCode: "03813",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "REEDS FERRY,NH",
+          zipName: "MERRIMACK,NH",
+          zipCode: "03054",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "RICHMOND,NH",
+          zipName: "WINCHESTER,NH",
+          zipCode: "03470",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "RINDGE,NH",
+          zipName: "RINDGE,NH",
+          zipCode: "03461",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "RIVERHILL,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03303",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "RIVERSIDE,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "RIVERTON,NH",
+          zipName: "JEFFERSON,NH",
+          zipCode: "03583",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "ROCHESTER,NH",
+          zipName: "ROCHESTER",
+          zipCode: "03866",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "ROCHESTER,NH",
+          zipName: "ROCHESTER,NH",
+          zipCode: "03867",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "ROLLINSFORD,NH",
+          zipName: "ROLLINSFORD,NH",
+          zipCode: "03869",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "ROXBURY,NH",
+          zipName: "KEENE,NH",
+          zipCode: "03431",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "RUMNEY,NH",
+          zipName: "RUMNEY,NH",
+          zipCode: "03266",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "RYE BEACH,NH",
+          zipName: "RYE BEACH,NH",
+          zipCode: "03871",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "RYE,NH",
+          zipName: "RYE,NH",
+          zipCode: "03870",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SALEM,NH",
+          zipName: "SALEM,NH",
+          zipCode: "03079",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SALISBURY,NH",
+          zipName: "SALISBURY,NH",
+          zipCode: "03268",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SALMON FALLS,NH",
+          zipName: "ROLLINSFORD,NH",
+          zipCode: "03869",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "SANBORNTON,NH",
+          zipName: "SANBORNTON,NH",
+          zipCode: "03269",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "SANBORNVILLE,NH",
+          zipName: "SANBORNVILLE,NH",
+          zipCode: "03872",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SANDOWN,NH",
+          zipName: "SANDOWN,NH",
+          zipCode: "03873",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SANDWICH,NH",
+          zipName: "SANDWICH,NH",
+          zipCode: "03270",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SEABROOK,NH",
+          zipName: "SEABROOK,NH",
+          zipCode: "03874",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SHARON,NH",
+          zipName: "PETERBOROUGH,NH",
+          zipCode: "03458",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "SHELBURNE,NH",
+          zipName: "GORHAM,NH",
+          zipCode: "03581",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "SHORT FALLS,NH",
+          zipName: "EPSOM,NH",
+          zipCode: "03234",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SILVER LAKE,NH",
+          zipName: "SILVER LAKE,NH",
+          zipCode: "03875",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SMITHTOWN,NH",
+          zipName: "SEABROOK,NH",
+          zipCode: "03874",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SNOWVILLE,NH",
+          zipName: "MADISON,NH",
+          zipCode: "03849",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SOMERSWORTH,NH",
+          zipName: "SOMERSWORTH,NH",
+          zipCode: "03878",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "SOUTH EFFINGHAM,NH",
+          zipName: "SOUTH EFFINGHAM,NH",
+          zipCode: "03882",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SOUTH HAMPTON,NH",
+          zipName: "EAST KINGSTON,NH",
+          zipCode: "03827",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SOUTH NEWBURY,NH",
+          zipName: "SOUTH NEWBURY,NH",
+          zipCode: "03272",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SOUTH SUTTON,NH",
+          zipName: "SOUTH SUTTON,NH",
+          zipCode: "03273",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SOUTH TAMWORTH,NH",
+          zipName: "SOUTH TAMWORTH,NH",
+          zipCode: "03883",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "SPOFFORD,NH",
+          zipName: "SPOFFORD,NH",
+          zipCode: "03462",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "SPRINGFIELD,NH",
+          zipName: "WEST SPRINGFIELD,NH",
+          zipCode: "03284",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "STARK,NH",
+          zipName: "GROVETON,NH",
+          zipCode: "03582",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "STATELINE,NH",
+          zipName: "FITZWILLIAM,NH",
+          zipCode: "03447",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "STEWARTSTOWN,NH",
+          zipName: "COLEBROOK,NH",
+          zipCode: "03576",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "STINSON LAKE,NH",
+          zipName: "STINSON LAKE,NH",
+          zipCode: "03274",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "STODDARD,NH",
+          zipName: "STODDARD,NH",
+          zipCode: "03464",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "STRAFFORD,NH",
+          zipName: "STRAFFORD,NH",
+          zipCode: "03884",
+          county: "Strafford",
+          nhscrCode: "017",
+        },
+        {
+          townName: "STRATFORD,NH",
+          zipName: "NORTH STRATFORD,NH",
+          zipCode: "03590",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "STRATHAM,NH",
+          zipName: "STRATHAM,NH",
+          zipCode: "03885",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "STRAWBERRY BANKE,NH",
+          zipName: "PORTSMOUTH,NH",
+          zipCode: "03801",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "SUCCESS, SUCCESS TOW,NH",
+          zipName: "MILAN,NH",
+          zipCode: "03588",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "SUGAR HILL,NH",
+          zipName: "LISBON,NH",
+          zipCode: "03585",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "SULLIVAN,NH",
+          zipName: "EAST SULLIVAN,NH",
+          zipCode: "03445",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "SUNAPEE,NH",
+          zipName: "SUNAPEE,NH",
+          zipCode: "03782",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "SUNCOOK,NH",
+          zipName: "SUNCOOK,NH",
+          zipCode: "03275",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SURRY,NH",
+          zipName: "KEENE,NH",
+          zipCode: "03431",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "SUTTON,NH",
+          zipName: "BRADFORD,NH",
+          zipCode: "03221",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "SWANZEY,NH",
+          zipName: "WINCHESTER,NH",
+          zipCode: "03470",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "TAMWORTH,NH",
+          zipName: "TAMWORTH,NH",
+          zipCode: "03886",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "TEMPLE,NH",
+          zipName: "TEMPLE,NH",
+          zipCode: "03084",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "THORNTON,NH",
+          zipName: "CAMPTON,NH",
+          zipCode: "03223",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "TILTON,NH",
+          zipName: "TILTON,NH",
+          zipCode: "03276",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "TROY,NH",
+          zipName: "TROY,NH",
+          zipCode: "03465",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "TUFTONBORO,NH",
+          zipName: "OSSIPEE,NH",
+          zipCode: "03864",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "TWIN MOUNTAIN,NH",
+          zipName: "TWIN MOUNTAIN,NH",
+          zipCode: "03595",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "UNION,NH",
+          zipName: "UNION,NH",
+          zipCode: "03887",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "UNITY,NH",
+          zipName: "CHARLESTOWN,NH",
+          zipCode: "03603",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "WAKEFIELD,NH",
+          zipName: "SANBORNVILLE,NH",
+          zipCode: "03872",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WALPOLE,NH",
+          zipName: "WALPOLE,NH",
+          zipCode: "03608",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WARNER,NH",
+          zipName: "WARNER,NH",
+          zipCode: "03278",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "WARREN,NH",
+          zipName: "WARREN,NH",
+          zipCode: "03279",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WASHINGTON,NH",
+          zipName: "WASHINGTON,NH",
+          zipCode: "03280",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "WATER VILLAGE,NH",
+          zipName: "OSSIPEE,NH",
+          zipCode: "03864",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WATERVILLE, WATERVIL,NH",
+          zipName: "WATERVL VLY,NH",
+          zipCode: "03215",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WEARE,NH",
+          zipName: "WEARE,NH",
+          zipCode: "03281",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "WEBSTER,NH",
+          zipName: "CONCORD,NH",
+          zipCode: "03303",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "WEIRS BEACH,NH",
+          zipName: "LACONIA,NH",
+          zipCode: "03246",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "WENDALL,NH",
+          zipName: "SUNAPEE,NH",
+          zipCode: "03782",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+        {
+          townName: "WENTWORTH,NH",
+          zipName: "WENTWORTH,NH",
+          zipCode: "03282",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WENTWORTHS LOCATION,NH",
+          zipName: "ERROL,NH",
+          zipCode: "03579",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "WEST CAANAN,NH",
+          zipName: "CANAAN,NH",
+          zipCode: "03741",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WEST CHESTERFIELD,NH",
+          zipName: "WEST CHESTERFLD,NH",
+          zipCode: "03466",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WEST LEBANON,NH",
+          zipName: "WEST LEBANON,NH",
+          zipCode: "03784",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WEST NOTTINGHAM,NH",
+          zipName: "WEST NOTTINGHAM,NH",
+          zipCode: "03291",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "WEST OSSIPEE,NH",
+          zipName: "WEST OSSIPEE,NH",
+          zipCode: "03890",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WEST PETERBOROUGH,NH",
+          zipName: "WEST PETERBORO,NH",
+          zipCode: "03468",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "WEST STEWARTSTOWN,NH",
+          zipName: "WEST STEWARTSTWN,NH",
+          zipCode: "03597",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "WEST SWANZEY,NH",
+          zipName: "WEST SWANZEY,NH",
+          zipCode: "03469",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WEST THORNTON,NH",
+          zipName: "WEST THORNTON,NH",
+          zipCode: "03285",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WESTMORELAND,NH",
+          zipName: "WESTMORELAND,NH",
+          zipCode: "03467",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WESTPORT,NH",
+          zipName: "WINCHESTER,NH",
+          zipCode: "03470",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WESTVILLE,NH",
+          zipName: "PLAISTOW,NH",
+          zipCode: "03865",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "WHITEFIELD,NH",
+          zipName: "WHITEFIELD,NH",
+          zipCode: "03598",
+          county: "Coos",
+          nhscrCode: "007",
+        },
+        {
+          townName: "WHITTIER,NH",
+          zipName: "TAMWORTH,NH",
+          zipCode: "03886",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WILLEY HOME/HOUSE,NH",
+          zipName: "BARTLETT,NH",
+          zipCode: "03812",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WILMOT, WILMOT FLAT,NH",
+          zipName: "WILMOT FLAT,NH",
+          zipCode: "03287",
+          county: "Merrimack",
+          nhscrCode: "013",
+        },
+        {
+          townName: "WILTON,NH",
+          zipName: "WILTON,NH",
+          zipCode: "03086",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "WINCHESTER,NH",
+          zipName: "WINCHESTER,NH",
+          zipCode: "03470",
+          county: "Cheshire",
+          nhscrCode: "005",
+        },
+        {
+          townName: "WINDHAM,NH",
+          zipName: "WINDHAM,NH",
+          zipCode: "03087",
+          county: "Rockingham",
+          nhscrCode: "015",
+        },
+        {
+          townName: "WINDSOR,NH",
+          zipName: "HILLSBORO,NH",
+          zipCode: "03244",
+          county: "Hillsborough",
+          nhscrCode: "011",
+        },
+        {
+          townName: "WINNISQUAM,NH",
+          zipName: "WINNISQUAM,NH",
+          zipCode: "03289",
+          county: "Belknap",
+          nhscrCode: "001",
+        },
+        {
+          townName: "WOLFEBORO FALLS,NH",
+          zipName: "WOLFEBORO FLS,NH",
+          zipCode: "03896",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WOLFEBORO,NH",
+          zipName: "WOLFEBORO,NH",
+          zipCode: "03894",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WONALANCET,NH",
+          zipName: "WONALANCET,NH",
+          zipCode: "03897",
+          county: "Carroll",
+          nhscrCode: "003",
+        },
+        {
+          townName: "WOODSTOCK,NH",
+          zipName: "WOODSTOCK,NH",
+          zipCode: "03293",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WOODSVILLE,NH",
+          zipName: "WOODSVILLE,NH",
+          zipCode: "03785",
+          county: "Grafton",
+          nhscrCode: "009",
+        },
+        {
+          townName: "WORDELL,NH",
+          zipName: "SUNAPEE,NH",
+          zipCode: "03782",
+          county: "Sullivan",
+          nhscrCode: "019",
+        },
+      ];
+      let filteredData = [];
+      let selectedIndex = -1;
+      let uniqueTowns = [];
+
+      // Load data from JSONL file
+      async function loadData() {
+        try {
+          const response = await fetch("nh_towns.jsonl");
+          const text = await response.text();
+
+          // Parse JSONL (each line is a JSON object)
+          nhData = text
+            .trim()
+            .split("\n")
+            .filter((line) => line.trim())
+            .map((line) => JSON.parse(line));
+
+          console.log(`Loaded ${nhData.length} records`);
+
+          // Get unique town names for autocomplete
+          uniqueTowns = [
+            ...new Set(nhData.map((item) => item.townName)),
+          ].sort();
+
+          // Initial render
+          filteredData = [...nhData];
+          renderTable();
+
+          // Show loading success
+          document.getElementById(
+            "resultCount"
+          ).textContent = `Loaded ${nhData.length} NH towns`;
+        } catch (error) {
+          console.error("Error loading data:", error);
+          document.getElementById("resultCount").textContent =
+            "Error loading data. Make sure nh_towns.jsonl is in the same directory.";
+          document.getElementById("tableBody").innerHTML =
+            '<tr><td colspan="5" class="no-results">Could not load data file. Please ensure nh_towns.jsonl is in the same directory as this HTML file.</td></tr>';
+        }
+      }
+
+      function renderTable() {
+        const tableBody = document.getElementById("tableBody");
+        const resultCount = document.getElementById("resultCount");
+
+        if (filteredData.length === 0) {
+          tableBody.innerHTML =
+            '<tr><td colspan="5" class="no-results">No results found</td></tr>';
+          resultCount.textContent = "No results found";
+          return;
+        }
+
+        resultCount.textContent = `Showing ${filteredData.length} result${
+          filteredData.length === 1 ? "" : "s"
+        }`;
+
+        tableBody.innerHTML = filteredData
+          .map(
+            (row) => `
+                <tr>
+                    <td>${row.townName}</td>
+                    <td>${row.zipName}</td>
+                    <td>${row.zipCode}</td>
+                    <td>${row.county}</td>
+                    <td class="nhscr-code">${row.nhscrCode}</td>
+                </tr>
+            `
+          )
+          .join("");
+      }
+
+      function filterData(searchTerm) {
+        if (searchTerm === "") {
+          filteredData = [...nhData];
+        } else {
+          filteredData = nhData.filter(
+            (row) =>
+              row.townName.toLowerCase().startsWith(searchTerm.toLowerCase())
+            // ||
+            // row.zipName.toLowerCase().startsWith(searchTerm.toLowerCase())
+          );
+        }
+        renderTable();
+      }
+
+      function showAutocomplete(searchTerm) {
+        const dropdown = document.getElementById("autocompleteDropdown");
+
+        if (searchTerm === "" || uniqueTowns.length === 0) {
+          dropdown.style.display = "none";
+          return;
+        }
+
+        const matches = uniqueTowns
+          .filter((town) =>
+            town.toLowerCase().startsWith(searchTerm.toLowerCase())
+          )
+          .slice(0, 8); // Show max 8 suggestions
+
+        if (matches.length === 0) {
+          dropdown.style.display = "none";
+          return;
+        }
+
+        dropdown.innerHTML = matches
+          .map(
+            (town, index) => `
+                <div class="autocomplete-item ${
+                  index === selectedIndex ? "selected" : ""
+                }" onclick="selectTown('${town}')">
+                    ${town}
+                </div>
+            `
+          )
+          .join("");
+
+        dropdown.style.display = "block";
+      }
+
+      function selectTown(townName) {
+        document.getElementById("searchInput").value = townName;
+        document.getElementById("autocompleteDropdown").style.display = "none";
+        selectedIndex = -1;
+        filterData(townName);
+      }
+
+      function hideAutocomplete() {
+        setTimeout(() => {
+          document.getElementById("autocompleteDropdown").style.display =
+            "none";
+          selectedIndex = -1;
+        }, 200);
+      }
+
+      // Event listeners
+      const searchInput = document.getElementById("searchInput");
+
+      searchInput.addEventListener("input", function () {
+        const searchTerm = this.value;
+        filterData(searchTerm);
+        showAutocomplete(searchTerm);
+        selectedIndex = -1;
+      });
+
+      searchInput.addEventListener("keydown", function (event) {
+        const dropdown = document.getElementById("autocompleteDropdown");
+        const items = dropdown.getElementsByClassName("autocomplete-item");
+
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          selectedIndex = (selectedIndex + 1) % items.length;
+          updateSelection();
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          selectedIndex =
+            selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+          updateSelection();
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          if (selectedIndex >= 0 && items[selectedIndex]) {
+            const townName = items[selectedIndex].textContent;
+            selectTown(townName);
+          }
+        } else if (event.key === "Escape") {
+          hideAutocomplete();
+        }
+      });
+
+      function updateSelection() {
+        const items = document.getElementsByClassName("autocomplete-item");
+        for (let i = 0; i < items.length; i++) {
+          items[i].classList.toggle("selected", i === selectedIndex);
+        }
+      }
+
+      searchInput.addEventListener("blur", hideAutocomplete);
+      searchInput.addEventListener("focus", function () {
+        if (this.value) {
+          showAutocomplete(this.value);
+        }
+      });
+
+      // Initialize when page loads
+      window.addEventListener("load", initializeApp);
+    </script>
+  </body>
+</html>
