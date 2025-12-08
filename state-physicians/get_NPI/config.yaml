@@ -1,0 +1,18 @@
+api_params:
+  number:
+  enumeration_type: NPI-1
+  taxonomy_description:
+  name_purpose: 
+  first_name: 
+  use_first_name_alias: 
+  last_name: 
+  organization_name: 
+  address_purpose: 
+  city: 
+  state: NH
+  postal_code:
+  country_code:
+  limit: # Default is 10, max is 200
+  skip: # max skip is 1000 for a total of 1200 records over 6 requests
+  pretty: false
+  version: 2.1
