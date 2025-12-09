@@ -79,6 +79,72 @@ function Read-TopographyExcel {
     return $rows
 }
 
+# Load laterality lookup table
+function Read-LateralityExcel {
+    param([string]$Path)
+
+    $excel = New-Object -ComObject Excel.Application
+    $excel.Visible = $false
+    $wb = $excel.Workbooks.Open($Path)
+    $ws = $wb.Sheets.Item(1)
+
+    $codes = @{}
+
+    $used     = $ws.UsedRange
+    $rowCount = $used.Rows.Count
+    $colCount = $used.Columns.Count
+
+    $codeCol = $null
+
+    for ($c = 1; $c -le $colCount; $c++) {
+        $header = [string]$ws.Cells.Item(1, $c).Text
+        $header = $header.Trim()
+
+        if ($header -eq "Code") {
+            $codeCol = $c
+            break
+        }
+    }
+
+    if (-not $codeCol) {
+        $wb.Close($false)
+        $excel.Quit()
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ws)   | Out-Null
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wb)   | Out-Null
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel)| Out-Null
+        throw "Could not find 'Code' header in $Path"
+    }
+
+    for ($r = 2; $r -le $rowCount; $r++) {
+        $cellCode = $ws.Cells.Item($r, $codeCol)
+        $code = [string]$cellCode.Text
+        $code = $code.Trim()
+
+        if ($code) {
+            # Normalize code format
+            if ($code -match '^\d{3}$') {
+                $code = "C$code"
+            }
+            if ($code -match '^C\d{1,3}$') {
+                $digits = $code.Substring(1)
+                $digits = $digits.PadRight(3, '0')
+                $code = "C$digits"
+            }
+            
+            $codes[$code] = $true
+        }
+    }
+
+    $wb.Close($false)
+    $excel.Quit()
+
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ws)    | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wb)    | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
+
+    return $codes
+}
+
 function Get-BestCode {
     param($Map, $TextLow)
 
@@ -104,8 +170,12 @@ function Get-BestCode {
 function Get-Laterality {
     param($TextLow)
 
-    $pLeft  = $TextLow.IndexOf("left")
-    $pRight = $TextLow.IndexOf("right")
+    # Use word boundaries to match only whole words
+    $leftMatch = [regex]::Match($TextLow, '\bleft\b')
+    $rightMatch = [regex]::Match($TextLow, '\bright\b')
+
+    $pLeft = if ($leftMatch.Success) { $leftMatch.Index } else { -1 }
+    $pRight = if ($rightMatch.Success) { $rightMatch.Index } else { -1 }
 
     if ($pLeft -lt 0 -and $pRight -lt 0) { return "" }
     if ($pLeft -ge 0 -and ($pRight -lt 0 -or $pLeft -lt $pRight)) { return "2" }
@@ -134,6 +204,7 @@ function Get-MissingFields {
 
     $topoXlsx    = Join-Path $scriptDir "Topography.xlsx"
     $melTopoXlsx = Join-Path $scriptDir "TopographyMelanoma.xlsx"
+    $latXlsx     = Join-Path $scriptDir "Laterality.xlsx"
 
     if (-not (Test-Path $topoXlsx)) {
         throw "Missing Topography.xlsx in script folder: $scriptDir"
@@ -141,8 +212,11 @@ function Get-MissingFields {
     if (-not (Test-Path $melTopoXlsx)) {
         throw "Missing TopographyMelanoma.xlsx in script folder: $scriptDir"
     }
+    if (-not (Test-Path $latXlsx)) {
+        throw "Missing Laterality.xlsx in script folder: $scriptDir"
+    }
 
-    Write-Host "Loading topography tables..." -ForegroundColor Cyan
+    Write-Host "Loading topography and laterality tables..." -ForegroundColor Cyan
 
     $topoMap = Read-TopographyExcel $topoXlsx |
         Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
@@ -150,7 +224,9 @@ function Get-MissingFields {
     $melTopoMap = Read-TopographyExcel $melTopoXlsx |
         Where-Object { $_.Code -and $_.SearchPhrase }
 
-    Write-Host ("Loaded {0} topography rules, {1} melanoma rules." -f $topoMap.Count, $melTopoMap.Count) -ForegroundColor Cyan
+    $lateralityCodes = Read-LateralityExcel $latXlsx
+
+    Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes." -f $topoMap.Count, $melTopoMap.Count, $lateralityCodes.Count) -ForegroundColor Cyan
 
     $report = @()
     $assignments = @{}
@@ -204,14 +280,34 @@ function Get-MissingFields {
 
         # Assign primary site if missing
         if (-not $hasSite) {
-            $hasMel = $low.Contains("melanoma")
-
-            if ($hasMel) {
-                $proposedSite = Get-BestCode $melTopoMap $low
-                if ($proposedSite -eq "") { $proposedSite = "C449" }
+            # Check for histology-based overrides first
+            # Invasive ductal carcinoma -> Breast
+            if ($low -match '\binvasive ductal carcinoma\b') {
+                $proposedSite = "C509"
+            }
+            # Renal cell carcinoma -> Kidney
+            elseif ($low -match '\brenal cell carcinoma\b') {
+                $proposedSite = "C649"
+            }
+            # Prostate indicators -> Prostate
+            elseif ($low -match '\b(prostatectomy|prostatic adenocarcinoma|gleason)\b') {
+                $proposedSite = "C619"
+            }
+            # Bone marrow override (must check before general bone)
+            elseif ($low -match '\bbone marrow\b') {
+                $proposedSite = "C421"
             }
             else {
-                $proposedSite = Get-BestCode $topoMap $low
+                # Standard topography lookup
+                $hasMel = $low.Contains("melanoma")
+
+                if ($hasMel) {
+                    $proposedSite = Get-BestCode $melTopoMap $low
+                    if ($proposedSite -eq "") { $proposedSite = "C449" }
+                }
+                else {
+                    $proposedSite = Get-BestCode $topoMap $low
+                }
             }
         }
 
@@ -220,21 +316,22 @@ function Get-MissingFields {
 
         # Assign laterality if missing and site requires it
         if (-not $hasLat -and $siteToCheck) {
-            if ($siteToCheck -eq "C449") {
-                $proposedLat = "0"
+            # Check if this site is in the laterality table
+            if ($lateralityCodes.ContainsKey($siteToCheck)) {
+                # Site can take laterality codes 1, 2, 5, or 9
+                $detectedLat = Get-Laterality $low
+                if ($detectedLat) {
+                    # We found "left" or "right" in the text
+                    $proposedLat = $detectedLat
+                }
+                else {
+                    # No left/right found, assign "unknown" (9)
+                    $proposedLat = "9"
+                }
             }
             else {
-                $prefix = $siteToCheck.Substring(0, 3)
-                $needsLat =
-                    ($prefix -eq "C44") -or
-                    ($prefix -eq "C50") -or
-                    ($prefix -eq "C34") -or
-                    ($siteToCheck -eq "C649") -or
-                    ($siteToCheck -eq "C569")
-
-                if ($needsLat) {
-                    $proposedLat = Get-Laterality $low
-                }
+                # Site NOT in laterality table - assign 0 (not coded)
+                $proposedLat = "0"
             }
         }
 
