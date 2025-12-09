@@ -7,10 +7,12 @@ Add-Type -AssemblyName System.Drawing
 
 # Form
 $form = New-Object System.Windows.Forms.Form
+$form = $form[0]  # ensure scalar, not array
 $form.Text   = "NAACCR XML Viewer"
-$form.Width  = 1800
-$form.Height = 1030
+# $form.Width  = 1800
+# $form.Height = 1030
 $form.StartPosition = "CenterScreen"
+$form.WindowState   = "Maximized"
 
 # Open file button
 $btnOpen = New-Object System.Windows.Forms.Button
@@ -20,7 +22,7 @@ $btnOpen.Location = New-Object System.Drawing.Point(10, 10)
 
 # Diff button
 $btnDiff = New-Object System.Windows.Forms.Button
-$btnDiff.Text = "Diff selected"
+$btnDiff.Text = "Diff"
 $btnDiff.Width = 120
 $btnDiff.Location = New-Object System.Drawing.Point(120, 10)
 
@@ -40,18 +42,18 @@ $lblStatus.Text = "No file loaded"
 $btnPrev = New-Object System.Windows.Forms.Button
 $btnPrev.Text = "<"
 $btnPrev.Width = 40
-$btnPrev.Location = New-Object System.Drawing.Point(10, 950)
+$btnPrev.Location = New-Object System.Drawing.Point(10, 980)
 $btnPrev.Enabled = $false
 
 $btnNext = New-Object System.Windows.Forms.Button
 $btnNext.Text = ">"
 $btnNext.Width = 40
-$btnNext.Location = New-Object System.Drawing.Point(60, 950)
+$btnNext.Location = New-Object System.Drawing.Point(60, 980)
 $btnNext.Enabled = $false
 
 $lblIndex = New-Object System.Windows.Forms.Label
 $lblIndex.AutoSize = $true
-$lblIndex.Location = New-Object System.Drawing.Point(130, 955)
+$lblIndex.Location = New-Object System.Drawing.Point(130, 980)
 $lblIndex.Text = ""
 
 # --- Main resizable area (panel + split containers) ---
@@ -59,14 +61,14 @@ $lblIndex.Text = ""
 # Panel to host the split containers, leaving room for top buttons and bottom nav
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Location = New-Object System.Drawing.Point(10, 40)
-$mainPanel.Size     = New-Object System.Drawing.Size(($form.Width - 40), 900)
+# will be redrawn to fit screen below but give initial size
+$mainPanel.Size     = New-Object System.Drawing.Size(1000, 800)
 $mainPanel.Anchor   = 'Top,Left,Right,Bottom'
 
 # Outer split container: left (grid) | right (inner split: path + items)
 $splitOuter = New-Object System.Windows.Forms.SplitContainer
 $splitOuter.Dock = 'Fill'
 $splitOuter.Orientation = 'Vertical'
-$splitOuter.SplitterDistance = 350         # initial width of left column
 $splitOuter.IsSplitterFixed = $false
 $splitOuter.Panel1MinSize = 200
 
@@ -74,9 +76,22 @@ $splitOuter.Panel1MinSize = 200
 $splitInner = New-Object System.Windows.Forms.SplitContainer
 $splitInner.Dock = 'Fill'
 $splitInner.Orientation = 'Vertical'
-$splitInner.SplitterDistance = 980         # initial width of middle column
 $splitInner.IsSplitterFixed = $false
 $splitInner.Panel1MinSize = 300
+
+$form.Add_Shown({
+    param($sender, $e)
+
+    # Adjust main panel to fit current client area
+    $mainPanel.Size = New-Object System.Drawing.Size(
+        [int]($sender.ClientSize.Width  - 20),
+        [int]($sender.ClientSize.Height - 100)  # leave some space at the bottom
+    )
+
+    # Set splitter distances as proportions
+    $splitOuter.SplitterDistance = [int]($splitOuter.Width * 0.20)
+    $splitInner.SplitterDistance = [int]($splitInner.Width * 0.55)
+})
 
 # Navigation grid (left column)
 $gridNav = New-Object System.Windows.Forms.DataGridView
@@ -237,6 +252,11 @@ function Show-TumorDiff {
         [int]$IndexB
     )
 
+    if (-not $script:Tumors -or $script:Tumors.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show("No tumors loaded.", "Diff Tumors")
+        return
+    }
+
     $mapA = Get-NaaccrItemMap -Index $IndexA -Tumors $script:Tumors -NsMgr $script:NsMgr
     $mapB = Get-NaaccrItemMap -Index $IndexB -Tumors $script:Tumors -NsMgr $script:NsMgr
 
@@ -293,8 +313,8 @@ function Show-TumorDiff {
     }
 
     # Diff form
-    $labelA = Get-TumorLabel -Index $IndexA -Tumors $script:Tumors -NsMgr $script:NsMgr
-    $labelB = Get-TumorLabel -Index $IndexB -Tumors $script:Tumors -NsMgr $script:NsMgr
+	$labelA = Get-TumorLabel -Index $IndexA
+	$labelB = Get-TumorLabel -Index $IndexB
 
     $diffForm = New-Object System.Windows.Forms.Form
     $diffForm.Text   = "Diff: $labelA  VS  $labelB"
