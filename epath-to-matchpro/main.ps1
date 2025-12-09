@@ -2,6 +2,7 @@
 . "$PSScriptRoot\xml-viewer.ps1"
 . "$PSScriptRoot\diff.ps1"
 . "$PSScriptRoot\deduplicate.ps1"
+. "$PSScriptRoot\assign-site-laterality.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -27,7 +28,7 @@ $btnDiff.Location = New-Object System.Drawing.Point(120, 10)
 
 # Show XML button
 $btnXml = New-Object System.Windows.Forms.Button
-$btnXml.Text = "Show XML"
+$btnXml.Text = "Show Raw XML"
 $btnXml.Width = 100
 $btnXml.Location = New-Object System.Drawing.Point(250, 10)
 
@@ -37,10 +38,15 @@ $btnDedup.Text = "Deduplicate"
 $btnDedup.Width = 100
 $btnDedup.Location = New-Object System.Drawing.Point(360, 10)
 
+$btnAssign = New-Object System.Windows.Forms.Button
+$btnAssign.Text = "Assign Site/Lat"
+$btnAssign.Width = 120
+$btnAssign.Location = New-Object System.Drawing.Point(470, 10)
+
 # Status label
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(470, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(600, 15)
 $lblStatus.Text = "No file loaded"
 
 # Navigation buttons and label (bottom left)
@@ -145,6 +151,7 @@ $form.Controls.AddRange(@(
     $btnDiff,
     $btnXml,
 	$btnDedup,
+	$btnAssign,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -471,7 +478,7 @@ $gridNav.Add_SelectionChanged({
     Show-Tumor -Index $tumorIndex
 })
 
-
+# Button handlers
 $btnPrev.Add_Click({
     if ($script:CurrentIndex -gt 0) {
         Show-Tumor -Index ($script:CurrentIndex - 1)
@@ -507,7 +514,6 @@ $btnXml.Add_Click({
     Show-RawXmlForTumor -Index $idx -Tumors $script:Tumors -NsMgr $script:NsMgr -XmlDoc $script:XmlDoc
 })
 
-# Diff button click
 $btnDiff.Add_Click({
     if ($script:Tumors.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show("No tumors loaded.", "Diff")
@@ -545,7 +551,6 @@ $btnDiff.Add_Click({
     Show-NaaccrTumorDiff -IndexA $idxA -IndexB $idxB
 })
 
-# Deduplicate button click
 $btnDedup.Add_Click({
 	if ($script:Tumors.Count -eq 0) {
 		[System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Deduplicate")
@@ -593,6 +598,48 @@ $btnDedup.Add_Click({
 			)
 			$lblStatus.Text = "Error during deduplication"
 		}
+})
+
+$btnAssign.Add_Click({
+    if ($script:Tumors.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Assign Site/Lat")
+        return
+    }
+    
+    try {
+        $lblStatus.Text = "Analyzing missing fields..."
+        $form.Refresh()
+        
+        # Run analysis
+        $result = Get-MissingFields -Tumors $script:Tumors -NsMgr $script:NsMgr
+        
+        $lblStatus.Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
+        
+        if ($result.Report.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "All tumors have primarySite and laterality assigned!",
+                "Assignment complete",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+        }
+        else {
+            # Show preview report
+            Show-AssignmentReport `
+                -Report $result.Report `
+                -Assignments $result.Assignments `
+                -OriginalFilePath $script:CurrentFilePath `
+                -XmlDoc $script:XmlDoc `
+                -Tumors $script:Tumors
+        }
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Error during analysis: $($_.Exception.Message)",
+            "Error"
+        )
+        $lblStatus.Text = "Error during analysis"
+    }
 })
 
 [void]$form.ShowDialog()
