@@ -15,7 +15,8 @@ $script:TextFieldIds = @(
     "textDxProcLabTests",
     "textDxProcPath",
     "textDxProcPe",
-    "textHistologyTitle"
+    "textHistologyTitle",
+	"textPrimarySiteTitle"
 )
 
 function Add-LineToRichTextBox {
