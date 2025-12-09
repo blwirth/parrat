@@ -19,6 +19,7 @@ function Get-PatientTumorGroups {
         $nameFirst = ""
         $dateOfBirth = ""
         $dateOfDiagnosis = ""
+		$pathReportNumber1 = ""
 
         if ($patient -ne $null) {
             $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
@@ -32,9 +33,12 @@ function Get-PatientTumorGroups {
 
         $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
         if ($dxNode) { $dateOfDiagnosis = $dxNode.InnerText }
+		
+		$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
+        if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
 
         # Create patient key
-        $key = "$nameLast|$nameFirst|$dateOfBirth|$dateOfDiagnosis"
+        $key = "$nameLast|$nameFirst|$dateOfBirth|$dateOfDiagnosis|$pathReportNumber1"
 
         if (-not $groups.ContainsKey($key)) {
             $groups[$key] = @()
@@ -61,10 +65,12 @@ function Get-TumorFingerprint {
     # Fields to ignore in comparison
     $ignoredFields = @(
         'dateCaseReportReceived',
+		'dateCaseReportLoaded',
         'pathDateSpecCollect1',
         'pathDateSpecCollect2',
         'pathDateSpecCollect3',
         'pathDateSpecCollect4',
+		'pathDateSpecCollect5',
         'physician3'
     )
 
@@ -127,8 +133,20 @@ function Apply-TiebreakerRules {
     if ($DuplicateGroup.Count -eq 1) {
         return $DuplicateGroup[0]
     }
+	
+	# New Rule 1: If there is any dateCaseReportLoaded, keep earliest
+    $withLoaded = $DuplicateGroup | Where-Object {
+        $loadDate = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
+        -not [string]::IsNullOrWhiteSpace($loadDate)
+    } | Sort-Object {
+        Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
+    }
 
-    # Rule 1: Keep earliest dateCaseReportReceived (primary rule)
+    if ($withLoaded.Count -gt 0) {
+        return $withLoaded[0]
+    }
+
+    # Rule 2: Keep earliest dateCaseReportReceived (primary rule)
     $withDates = $DuplicateGroup | Where-Object {
         $date = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
         -not [string]::IsNullOrWhiteSpace($date)
@@ -150,9 +168,9 @@ function Apply-TiebreakerRules {
             }
         }
 
-        # If multiple with same date, apply Rule 2
+        # If multiple with same date, apply Rule 3
         if ($candidates.Count -gt 1) {
-            # Rule 2: Prefer non-empty physician3
+            # Rule 3: Prefer non-empty physician3
             $withPhysician = $candidates | Where-Object {
                 $phys = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'physician3'
                 -not [string]::IsNullOrWhiteSpace($phys)
@@ -166,7 +184,7 @@ function Apply-TiebreakerRules {
         return $candidates[0]
     }
 
-    # No dates found, try Rule 2
+    # No dates found, try Rule 3
     $withPhysician = $DuplicateGroup | Where-Object {
         $phys = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'physician3'
         -not [string]::IsNullOrWhiteSpace($phys)
@@ -176,39 +194,57 @@ function Apply-TiebreakerRules {
         return $withPhysician[0]
     }
 
-    # Rule 3: Keep first occurrence (fallback)
+    # Rule 4: Keep first occurrence (fallback)
     return $DuplicateGroup[0]
 }
 
-function Find-Duplicates {
+function Get-Duplicates {
     param(
         [System.Xml.XmlNodeList]$Tumors,
         [System.Xml.XmlNamespaceManager]$NsMgr
     )
 
     Write-Host "Grouping tumors by patient identifiers..."
-    $patientGroups = Get-PatientTumorGroups -Tumors $Tumors -NsMgr $NsMgr
-
-    $duplicateReport = @()
-    $indicesToKeep = @{}
+    $patientGroups    = Get-PatientTumorGroups -Tumors $Tumors -NsMgr $NsMgr
+    $duplicateReport  = @()
+    $indicesToKeep    = @{}
 
     $groupNum = 0
+
     foreach ($key in $patientGroups.Keys) {
         $group = $patientGroups[$key]
         $groupNum++
 
-        if ($group.Count -le 1) {
-            # No duplicates in this group
-            $indicesToKeep[$group[0].Index] = $true
+        if (-not $group -or $group.Count -eq 0) {
+            # Defensive: nothing to keep
+            Write-Host "Group $groupNum ($key): empty group, skipping."
             continue
         }
 
-        Write-Host "Processing patient group $groupNum : $key (${$group.Count} tumors)"
+        if ($group.Count -eq 1) {
+            # No duplicates in this patient group; keep all entries
+            foreach ($item in $group) {
+                if ($null -eq $item) { continue }
+                if ($null -eq $item.Index) {
+                    Write-Warning "Group $groupNum ($key): item with null Index in single-entry group; skipping."
+                    continue
+                }
+                $indicesToKeep[$item.Index] = $true
+            }
+            continue
+        }
 
-        # Build fingerprints for this group
+        Write-Host "Processing patient group $groupNum : $key ($($group.Count) tumors)"
+
+        # Build fingerprints for this patient group
         $fingerprintGroups = @{}
 
         foreach ($item in $group) {
+            if ($null -eq $item) {
+                Write-Warning "Group $groupNum ($key): encountered null item; skipping."
+                continue
+            }
+
             $fingerprint = Get-TumorFingerprint -Tumor $item.Tumor -Patient $item.Patient -NsMgr $NsMgr
 
             if (-not $fingerprintGroups.ContainsKey($fingerprint)) {
@@ -218,45 +254,78 @@ function Find-Duplicates {
             $fingerprintGroups[$fingerprint] += $item
         }
 
-        # Process each fingerprint group
         foreach ($fingerprint in $fingerprintGroups.Keys) {
             $dupGroup = $fingerprintGroups[$fingerprint]
 
+            if (-not $dupGroup -or $dupGroup.Count -eq 0) {
+                Write-Host "  Fingerprint group (empty) for patient key $key, skipping."
+                continue
+            }
+
             if ($dupGroup.Count -eq 1) {
-                # Not a duplicate
-                $indicesToKeep[$dupGroup[0].Index] = $true
+                # Only one tumor with this fingerprint; keep it
+                foreach ($item in $dupGroup) {
+                    if ($null -eq $item) { continue }
+                    if ($null -eq $item.Index) {
+                        Write-Warning "  Patient ${key}: single-entry dupGroup with null Index; skipping."
+                        continue
+                    }
+                    $indicesToKeep[$item.Index] = $true
+                }
             }
             else {
-                # Found duplicates - apply tiebreaker
+                # True duplicates: apply tiebreaker
                 $winner = Apply-TiebreakerRules -DuplicateGroup $dupGroup -NsMgr $NsMgr
+
+                if ($null -eq $winner) {
+                    Write-Warning "  Patient ${key}: Apply-TiebreakerRules returned null; keeping all entries in this dupGroup."
+                    foreach ($item in $dupGroup) {
+                        if ($null -eq $item) { continue }
+                        if ($null -eq $item.Index) {
+                            Write-Warning "    dupGroup item with null Index; skipping."
+                            continue
+                        }
+                        $indicesToKeep[$item.Index] = $true
+                    }
+                    continue
+                }
+
+                if ($null -eq $winner.Index) {
+                    Write-Warning "  Patient ${key}: winner has null Index; keeping all entries in this dupGroup."
+                    foreach ($item in $dupGroup) {
+                        if ($null -eq $item) { continue }
+                        if ($null -eq $item.Index) {
+                            Write-Warning "    dupGroup item with null Index; skipping."
+                            continue
+                        }
+                        $indicesToKeep[$item.Index] = $true
+                    }
+                    continue
+                }
+
                 $indicesToKeep[$winner.Index] = $true
 
-                # Build report entry
-                $allIndices = ($dupGroup | ForEach-Object { $_.Index + 1 }) -join ","
+                $allIndices     = ($dupGroup | ForEach-Object { $_.Index + 1 }) -join ","
                 $removedIndices = ($dupGroup | Where-Object { $_.Index -ne $winner.Index } | ForEach-Object { $_.Index + 1 }) -join ","
 
-                $dateReceived = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
-                $physician3 = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'physician3'
+				$dateLoaded   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
+				$dateReceived = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
+				$physician3   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'physician3'
 
-                $reason = "Duplicate detected"
-                if (-not [string]::IsNullOrWhiteSpace($dateReceived)) {
-                    $reason = "Earliest dateCaseReportReceived"
-                }
-                elseif (-not [string]::IsNullOrWhiteSpace($physician3)) {
-                    $reason = "Non-empty physician3"
-                }
-                else {
-                    $reason = "First occurrence"
-                }
+				$reason =
+					if (-not [string]::IsNullOrWhiteSpace($dateLoaded)) { "Earliest dateCaseReportLoaded" }
+					elseif (-not [string]::IsNullOrWhiteSpace($dateReceived)) { "Earliest dateCaseReportReceived" }
+					elseif (-not [string]::IsNullOrWhiteSpace($physician3)) { "Non-empty physician3" }
+					else { "First occurrence" }
 
                 $duplicateReport += [PSCustomObject]@{
-                    PatientKey = $key
-                    AllIndices = $allIndices
-                    KeptIndex = $winner.Index + 1
+                    PatientKey     = $key
+                    AllIndices     = $allIndices
+                    KeptIndex      = $winner.Index + 1
                     RemovedIndices = $removedIndices
-                    Reason = $reason
-                    DateReceived = $dateReceived
-                    Physician3 = $physician3
+                    Reason         = $reason
+                    DateReceived   = $dateReceived
+                    Physician3     = $physician3
                 }
             }
         }
@@ -264,7 +333,7 @@ function Find-Duplicates {
 
     return @{
         IndicesToKeep = $indicesToKeep
-        Report = $duplicateReport
+        Report        = $duplicateReport
     }
 }
 
@@ -276,28 +345,26 @@ function Write-DedupedXml {
         [string]$OutputPath
     )
 
-    # Create new document with same structure
     $newDoc = New-Object System.Xml.XmlDocument
     $newDoc.XmlResolver = $null
 
-    # Copy XML declaration if present
-    $declNode = $XmlDoc.ChildNodes | Where-Object { $_ -is [System.Xml.XmlDeclaration] } | Select-Object -First 1
+    $declNode = $XmlDoc.ChildNodes |
+        Where-Object { $_ -is [System.Xml.XmlDeclaration] } |
+        Select-Object -First 1
     if ($declNode) {
         $newDecl = $newDoc.CreateXmlDeclaration($declNode.Version, $declNode.Encoding, $declNode.Standalone)
         [void]$newDoc.AppendChild($newDecl)
     }
 
-    # Copy root element with attributes
-    $root = $XmlDoc.DocumentElement
+    $root    = $XmlDoc.DocumentElement
     $newRoot = $newDoc.CreateElement($root.Prefix, $root.LocalName, $root.NamespaceURI)
     foreach ($attr in $root.Attributes) {
-        $newAttr = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
+        $newAttr       = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
         $newAttr.Value = $attr.Value
         [void]$newRoot.Attributes.Append($newAttr)
     }
     [void]$newDoc.AppendChild($newRoot)
 
-    # Copy non-Patient children of root
     foreach ($child in $root.ChildNodes) {
         if ($child.LocalName -ne "Patient") {
             $imported = $newDoc.ImportNode($child, $true)
@@ -313,11 +380,13 @@ function Write-DedupedXml {
         }
     }
 
-    # Copy Patient nodes that contain kept tumors
-    foreach ($patientNode in $root.SelectNodes("//n:Patient", $XmlDoc.CreateNavigator().GetNamespace(""))) {
-        $tumorsInPatient = $patientNode.SelectNodes("./n:Tumor", $XmlDoc.CreateNavigator().GetNamespace(""))
-        
-        # Check if this patient has any kept tumors
+    # Proper namespace manager
+    $nsMgr = New-Object System.Xml.XmlNamespaceManager($XmlDoc.NameTable)
+    $nsMgr.AddNamespace("n", $root.NamespaceURI)
+
+    foreach ($patientNode in $root.SelectNodes("./n:Patient", $nsMgr)) {
+        $tumorsInPatient = $patientNode.SelectNodes("./n:Tumor", $nsMgr)
+
         $hasKeptTumor = $false
         foreach ($tumor in $tumorsInPatient) {
             if ($keptTumorNodes.ContainsKey($tumor)) {
@@ -327,17 +396,14 @@ function Write-DedupedXml {
         }
 
         if ($hasKeptTumor) {
-            # Import the patient node
             $newPatient = $newDoc.CreateElement($patientNode.Prefix, $patientNode.LocalName, $patientNode.NamespaceURI)
-            
-            # Copy patient attributes
+
             foreach ($attr in $patientNode.Attributes) {
-                $newAttr = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
+                $newAttr       = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
                 $newAttr.Value = $attr.Value
                 [void]$newPatient.Attributes.Append($newAttr)
             }
 
-            # Copy patient-level Item nodes
             foreach ($child in $patientNode.ChildNodes) {
                 if ($child.LocalName -eq "Item") {
                     $imported = $newDoc.ImportNode($child, $true)
@@ -345,7 +411,6 @@ function Write-DedupedXml {
                 }
             }
 
-            # Copy only kept tumors
             foreach ($tumor in $tumorsInPatient) {
                 if ($keptTumorNodes.ContainsKey($tumor)) {
                     $imported = $newDoc.ImportNode($tumor, $true)
@@ -357,10 +422,9 @@ function Write-DedupedXml {
         }
     }
 
-    # Save formatted XML
-    $settings = New-Object System.Xml.XmlWriterSettings
-    $settings.Indent = $true
-    $settings.NewLineChars = "`r`n"
+    $settings                = New-Object System.Xml.XmlWriterSettings
+    $settings.Indent         = $true
+    $settings.NewLineChars   = "`r`n"
     $settings.NewLineHandling = "Replace"
 
     $writer = [System.Xml.XmlWriter]::Create($OutputPath, $settings)

@@ -1,7 +1,6 @@
 # xml-helpers.ps1
 # Shared utilities for NAACCR XML processing
 
-# NAACCR IDs to bold in the right column
 $script:BoldIds = @(
     "nameFirst",
     "nameLast",
@@ -12,7 +11,6 @@ $script:BoldIds = @(
     "laterality"
 )
 
-# NAACCR IDs that are pathology text fields (middle column)
 $script:TextFieldIds = @(
     "textDxProcLabTests",
     "textDxProcPath",
@@ -44,72 +42,6 @@ function Add-LineToRichTextBox {
     $Box.AppendText($Text + "`r`n")
 }
 
-function Get-TumorLabel {
-    param(
-        [int]$Index,
-        [System.Xml.XmlNodeList]$Tumors,
-        [System.Xml.XmlNamespaceManager]$NsMgr
-    )
-
-    $tumor   = $Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
-
-    $nameLast          = ""
-    $nameFirst         = ""
-    $dxDate            = ""
-	$pathReportNumber1 = ""
-
-    if ($patient -ne $null) {
-        $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
-        $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
-        if ($nlNode) { $nameLast  = $nlNode.InnerText }
-        if ($nfNode) { $nameFirst = $nfNode.InnerText }
-    }
-
-    $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
-    if ($dxNode) { $dxDate = $dxNode.InnerText }
-	
-	$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
-    if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
-
-    return "Idx {0} - {1}, {2} - DxDate {3} - Path Number {4}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate, $pathReportNumber1
-}
-
-function Get-NaaccrItemMap {
-    param(
-        [int]$Index,
-        [System.Xml.XmlNodeList]$Tumors,
-        [System.Xml.XmlNamespaceManager]$NsMgr
-    )
-
-    $tumor   = $Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
-
-    $map = @{}
-
-    # Patient items
-    if ($patient -ne $null) {
-        $pItems = $patient.SelectNodes("./n:Item", $NsMgr)
-        foreach ($item in $pItems) {
-            $id  = $item.GetAttribute("naaccrId")
-            $val = $item.InnerText
-            # Key format: "P|naaccrId"
-            $map["P|$id"] = $val
-        }
-    }
-
-    # Tumor items
-    $tItems = $tumor.SelectNodes("./n:Item", $NsMgr)
-    foreach ($item in $tItems) {
-        $id  = $item.GetAttribute("naaccrId")
-        $val = $item.InnerText
-        # Key format: "T|naaccrId"
-        $map["T|$id"] = $val
-    }
-
-    return $map
-}
-
 function Format-Xml {
     param(
         [string]$Xml
@@ -124,9 +56,9 @@ function Format-Xml {
     $doc.LoadXml($Xml)
 
     $settings = New-Object System.Xml.XmlWriterSettings
-    $settings.Indent = $true
-    $settings.NewLineChars = "`r`n"
-    $settings.NewLineHandling = "Replace"
+    $settings.Indent           = $true
+    $settings.NewLineChars     = "`r`n"
+    $settings.NewLineHandling  = "Replace"
 
     $sw = New-Object System.IO.StringWriter
     $xw = [System.Xml.XmlWriter]::Create($sw, $settings)

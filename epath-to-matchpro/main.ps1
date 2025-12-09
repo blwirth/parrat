@@ -1,16 +1,15 @@
 . "$PSScriptRoot\xml-helpers.ps1"
 . "$PSScriptRoot\xml-viewer.ps1"
 . "$PSScriptRoot\diff.ps1"
+. "$PSScriptRoot\deduplicate.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Form
 $form = New-Object System.Windows.Forms.Form
-$form = $form[0]  # ensure scalar, not array
+$form = $form[0]  # ensure scalar type, not array
 $form.Text   = "NAACCR XML Viewer"
-# $form.Width  = 1800
-# $form.Height = 1030
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
@@ -32,10 +31,16 @@ $btnXml.Text = "Show XML"
 $btnXml.Width = 100
 $btnXml.Location = New-Object System.Drawing.Point(250, 10)
 
+# Deduplicate Button
+$btnDedup = New-Object System.Windows.Forms.Button
+$btnDedup.Text = "Deduplicate"
+$btnDedup.Width = 100
+$btnDedup.Location = New-Object System.Drawing.Point(360, 10)
+
 # Status label
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(370, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(470, 15)
 $lblStatus.Text = "No file loaded"
 
 # Navigation buttons and label (bottom left)
@@ -96,15 +101,17 @@ $form.Add_Shown({
 # Navigation grid (left column)
 $gridNav = New-Object System.Windows.Forms.DataGridView
 $gridNav.Dock = 'Fill'
-$gridNav.ReadOnly = $true
-$gridNav.SelectionMode = "FullRowSelect"
-$gridNav.MultiSelect = $true      # allow multi-select for diff
 $gridNav.AllowUserToAddRows = $false
 $gridNav.AllowUserToDeleteRows = $false
-$gridNav.AllowUserToResizeRows = $false
-$gridNav.AllowUserToResizeColumns = $true
 $gridNav.RowHeadersVisible = $false
-$gridNav.AutoSizeColumnsMode = "Fill"
+
+# Bind table BEFORE re-setting selection-related properties
+$gridNav.DataSource = $table
+
+# Now enforce multi-select
+$gridNav.ReadOnly = $true
+$gridNav.MultiSelect = $true
+$gridNav.SelectionMode = 'FullRowSelect'
 
 # Middle column: pathology text fields
 $rtbPath = New-Object System.Windows.Forms.RichTextBox
@@ -137,6 +144,7 @@ $form.Controls.AddRange(@(
     $btnOpen,
     $btnDiff,
     $btnXml,
+	$btnDedup,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -145,11 +153,12 @@ $form.Controls.AddRange(@(
 ))
 
 # State
-$script:Tumors       = @()
-$script:CurrentIndex = -1
-$script:NsMgr        = $null
-$script:NavTable     = $null
-$script:XmlDoc       = $null
+$script:Tumors          = @()
+$script:CurrentIndex    = -1
+$script:NsMgr           = $null
+$script:NavTable        = $null
+$script:XmlDoc          = $null
+$script:CurrentFilePath = $null
 
 function Show-Tumor {
     param(
@@ -360,6 +369,7 @@ $btnOpen.Add_Click({
             $xml.Load($ofd.FileName)
 
             $script:XmlDoc = $xml  # keep full document for grabbing the file-level headers, e.g., the namespace 
+			$script:CurrentFilePath = $ofd.FileName # storing filepath for deduplication
 
             $nsUri = $xml.DocumentElement.NamespaceURI
             $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
@@ -444,11 +454,13 @@ $btnOpen.Add_Click({
 # Grid row selection -> show that tumor (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
     if ($script:Tumors.Count -eq 0) { return }
-    if ($gridNav.SelectedRows.Count -eq 0) { return }
 
-    # Use the first selected row for main viewer navigation
-    $selectedRow = $gridNav.SelectedRows[0]
-    $indexValObj = $selectedRow.Cells["Index"].Value
+    # Only navigate when exactly one row is selected.
+    # If user selects multiple rows (Ctrl/Shift), do nothing here.
+    if ($gridNav.SelectedRows.Count -ne 1) { return }
+
+    $selectedRow  = $gridNav.SelectedRows[0]
+    $indexValObj  = $selectedRow.Cells["Index"].Value
     if ($indexValObj -eq $null) { return }
 
     $tumorIndex = [int]$indexValObj - 1
@@ -458,6 +470,7 @@ $gridNav.Add_SelectionChanged({
 
     Show-Tumor -Index $tumorIndex
 })
+
 
 $btnPrev.Add_Click({
     if ($script:CurrentIndex -gt 0) {
@@ -529,7 +542,57 @@ $btnDiff.Add_Click({
         return
     }
 
-    Show-NaaccrTumorDiff -Tumors $script:Tumors -NsMgr $script:NsMgr -IndexA $idxA -IndexB $idxB
+    Show-NaaccrTumorDiff -IndexA $idxA -IndexB $idxB
+})
+
+# Deduplicate button click
+$btnDedup.Add_Click({
+	if ($script:Tumors.Count -eq 0) {
+		[System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Deduplicate")
+		return
+	}
+	
+	if (-not $script:CurrentFilePath) {
+		[System.Windows.Forms.MessageBox]::Show("No file path available.", "Deduplicate")
+		return
+	}
+	
+	try {
+		$lblStatus.Text = "Analyzing duplicates..."
+		$form.Refresh()
+		
+		# Run dedup analysis
+		$result = Get-Duplicates -Tumors $script:Tumors -NsMgr $script:NsMgr
+		
+		$lblStatus.Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
+		
+		if ($result.Report.Count -eq 0) {
+			[System.Windows.Forms.MessageBox]::Show(
+			"No duplicates found!",
+			"Deduplication complete",
+			[System.Windows.Forms.MessageBoxButtons]::OK,
+			[System.Windows.Forms.MessageBoxIcon]::Information
+			)
+		}
+		else {
+			# Show Report
+			Show-DeduplicationReport `
+				-Report $result.Report `
+				-IndicesToKeep $result.IndicesToKeep `
+				-OriginalCount $script:Tumors.Count `
+				-OriginalFilePath $script:CurrentFilePath `
+				-XmlDoc $script:XmlDoc `
+				-Tumors $script:Tumors 
+			}
+		}
+		catch {
+			[System.Windows.Forms.MessageBox]::Show("Error during deduplication: $($_.Exception.Message)",
+			"Error", 
+			[System.Windows.Forms.MessageBoxButtons]::OK,
+			[System.Windows.Forms.MessageBoxIcon]::Error
+			)
+			$lblStatus.Text = "Error during deduplication"
+		}
 })
 
 [void]$form.ShowDialog()
