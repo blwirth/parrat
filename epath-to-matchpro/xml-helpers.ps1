@@ -54,9 +54,10 @@ function Get-TumorLabel {
     $tumor   = $Tumors[$Index]
     $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
 
-    $nameLast  = ""
-    $nameFirst = ""
-    $dxDate    = ""
+    $nameLast          = ""
+    $nameFirst         = ""
+    $dxDate            = ""
+	$pathReportNumber1 = ""
 
     if ($patient -ne $null) {
         $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
@@ -67,8 +68,11 @@ function Get-TumorLabel {
 
     $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
     if ($dxNode) { $dxDate = $dxNode.InnerText }
+	
+	$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
+    if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
 
-    return "Idx {0} - {1}, {2} - Dx {3}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate
+    return "Idx {0} - {1}, {2} - DxDate {3} - Path Number {4}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate, $pathReportNumber1
 }
 
 function Get-NaaccrItemMap {
