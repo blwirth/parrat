@@ -1,7 +1,5 @@
-# cd into dir where script is
 # .\[script-name] -InputFile "[filepath]"
 # The inputfile MUST have a facility number for the RepHosp to be assigned.
-# Will output a file in the same dir as input file
 
 param(
     [Parameter(Mandatory = $true)]
