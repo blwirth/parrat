@@ -36,29 +36,39 @@ function Get-NaaccrItemMap {
 
 function Get-TumorLabel {
     param(
-        [System.Xml.XmlNode[]]$Tumors,
-        [System.Xml.XmlNamespaceManager]$NsMgr,
         [int]$Index
     )
 
-    $tumor   = $Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
+    # Use script-scope state
+    if (-not $script:Tumors -or $script:Tumors.Count -eq 0) {
+        throw "Get-TumorLabel: script:Tumors is null or empty."
+    }
+    if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) {
+        throw "Get-TumorLabel: Index $Index is out of range (0..$($script:Tumors.Count - 1))."
+    }
 
-    $nameLast  = ""
-    $nameFirst = ""
-    $dxDate    = ""
+    $tumor   = $script:Tumors[$Index]
+    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
+
+    $nameLast          = ""
+    $nameFirst         = ""
+    $dxDate            = ""
+	$pathReportNumber1 = ""
 
     if ($patient -ne $null) {
-        $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
-        $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
+        $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $script:NsMgr)
+        $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $script:NsMgr)
         if ($nlNode) { $nameLast  = $nlNode.InnerText }
         if ($nfNode) { $nameFirst = $nfNode.InnerText }
     }
 
-    $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
+    $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $script:NsMgr)
     if ($dxNode) { $dxDate = $dxNode.InnerText }
+	
+	$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $script:NsMgr)
+    if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
 
-    return "Idx {0} - {1}, {2} - Dx {3}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate
+    return "Idx {0} - {1}, {2} - Dx {3} - Path Number {4}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate, $pathReportNumber1
 }
 
 function Show-NaaccrTumorDiff {
