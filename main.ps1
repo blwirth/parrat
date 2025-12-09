@@ -3,53 +3,54 @@
 . "$PSScriptRoot\diff.ps1"
 . "$PSScriptRoot\deduplicate.ps1"
 . "$PSScriptRoot\assign-site-laterality.ps1"
+. "$PSScriptRoot\assign-facility.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Form
 $form = New-Object System.Windows.Forms.Form
 $form = $form[0]  # ensure scalar type, not array
 $form.Text   = "NAACCR XML Viewer"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
-# Open file button
+# Top nav
 $btnOpen = New-Object System.Windows.Forms.Button
 $btnOpen.Text = "Open XML..."
 $btnOpen.Width = 100
 $btnOpen.Location = New-Object System.Drawing.Point(10, 10)
 
-# Diff button
 $btnDiff = New-Object System.Windows.Forms.Button
 $btnDiff.Text = "Diff"
-$btnDiff.Width = 120
-$btnDiff.Location = New-Object System.Drawing.Point(120, 10)
+$btnDiff.Width = 100
+$btnDiff.Location = New-Object System.Drawing.Point(110, 10)
 
-# Show XML button
 $btnXml = New-Object System.Windows.Forms.Button
 $btnXml.Text = "Show Raw XML"
 $btnXml.Width = 100
-$btnXml.Location = New-Object System.Drawing.Point(250, 10)
+$btnXml.Location = New-Object System.Drawing.Point(220, 10)
 
-# Deduplicate Button
 $btnDedup = New-Object System.Windows.Forms.Button
 $btnDedup.Text = "Deduplicate"
 $btnDedup.Width = 100
-$btnDedup.Location = New-Object System.Drawing.Point(360, 10)
+$btnDedup.Location = New-Object System.Drawing.Point(330, 10)
 
 $btnAssign = New-Object System.Windows.Forms.Button
 $btnAssign.Text = "Assign Site/Lat"
-$btnAssign.Width = 120
-$btnAssign.Location = New-Object System.Drawing.Point(470, 10)
+$btnAssign.Width = 100
+$btnAssign.Location = New-Object System.Drawing.Point(440, 10)
 
-# Status label
+$btnFacility = New-Object System.Windows.Forms.Button
+$btnFacility.Text = "Assign Facility"
+$btnFacility.Width = 100
+$btnFacility.Location = New-Object System.Drawing.Point(550, 10)
+
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(600, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(660, 15)
 $lblStatus.Text = "No file loaded"
 
-# Navigation buttons and label (bottom left)
+# Bottom nav
 $btnPrev = New-Object System.Windows.Forms.Button
 $btnPrev.Text = "<"
 $btnPrev.Width = 40
@@ -152,6 +153,7 @@ $form.Controls.AddRange(@(
     $btnXml,
 	$btnDedup,
 	$btnAssign,
+	$btnFacility,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -639,6 +641,115 @@ $btnAssign.Add_Click({
             "Error"
         )
         $lblStatus.Text = "Error during analysis"
+    }
+})
+
+$btnFacility.Add_Click({
+    if ($script:Tumors.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Assign Facility")
+        return
+    }
+    
+    if (-not $script:CurrentFilePath) {
+        [System.Windows.Forms.MessageBox]::Show("No file path available.", "Assign Facility")
+        return
+    }
+    
+    try {
+        # Try to extract facility number from filename
+        $facilityNum = Get-FacilityFromFilename -FilePath $script:CurrentFilePath
+        
+        # If not found in filename, prompt user
+        if (-not $facilityNum) {
+            $inputForm = New-Object System.Windows.Forms.Form
+            $inputForm.Text = "Enter Facility Number"
+            $inputForm.Width = 350
+            $inputForm.Height = 170
+            $inputForm.StartPosition = "CenterScreen"
+            
+            $lblPrompt = New-Object System.Windows.Forms.Label
+            $lblPrompt.Location = New-Object System.Drawing.Point(10, 10)
+            $lblPrompt.Size = New-Object System.Drawing.Size(320, 60)
+            $lblPrompt.Text = "No 7-digit facility number found in filename.`nPlease enter the facility number (will be padded to 10 digits):"
+            
+            $txtFacility = New-Object System.Windows.Forms.TextBox
+            $txtFacility.Location = New-Object System.Drawing.Point(10, 70)
+            $txtFacility.Width = 320
+            
+            $btnOk = New-Object System.Windows.Forms.Button
+            $btnOk.Text = "OK"
+            $btnOk.Location = New-Object System.Drawing.Point(150, 100)
+            $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            
+            $btnCancel = New-Object System.Windows.Forms.Button
+            $btnCancel.Text = "Cancel"
+            $btnCancel.Location = New-Object System.Drawing.Point(230, 100)
+            $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            
+            $inputForm.Controls.AddRange(@($lblPrompt, $txtFacility, $btnOk, $btnCancel))
+            $inputForm.AcceptButton = $btnOk
+            $inputForm.CancelButton = $btnCancel
+            
+            $result = $inputForm.ShowDialog()
+            
+            if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+                $userInput = $txtFacility.Text.Trim()
+                
+                # Validate input is numeric and has reasonable length
+                if ($userInput -match '^\d+$') {
+                    $facilityNum = $userInput.PadLeft(10, '0')
+                }
+                else {
+                    [System.Windows.Forms.MessageBox]::Show(
+                        "Invalid facility number. Must be numeric.",
+                        "Error",
+                        [System.Windows.Forms.MessageBoxButtons]::OK,
+                        [System.Windows.Forms.MessageBoxIcon]::Error
+                    )
+                    return
+                }
+            }
+            else {
+                # User cancelled
+                return
+            }
+        }
+        
+        $lblStatus.Text = "Analyzing facilities numbers..."
+        $form.Refresh()
+        
+        # Run analysis
+        $result = Get-FacilityAssignments -Tumors $script:Tumors -NsMgr $script:NsMgr -FacilityNumber $facilityNum
+        
+        $lblStatus.Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
+        
+        if ($result.Report.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "All tumors already have valid facility numbers!",
+                "Assignment complete",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+        }
+        else {
+            # Show preview report
+            Show-FacilityAssignmentReport `
+                -Report $result.Report `
+                -Assignments $result.Assignments `
+                -FacilityNumber $facilityNum `
+                -OriginalFilePath $script:CurrentFilePath `
+                -XmlDoc $script:XmlDoc `
+                -Tumors $script:Tumors
+        }
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Error during facility assignment: $($_.Exception.Message)",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+        $lblStatus.Text = "Error during facility assignment"
     }
 })
 
