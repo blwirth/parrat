@@ -1,3 +1,5 @@
+. "$PSScriptRoot\xml-helpers.ps1"
+. "$PSScriptRoot\xml-viewer.ps1"
 . "$PSScriptRoot\diff.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -52,7 +54,7 @@ $lblIndex.AutoSize = $true
 $lblIndex.Location = New-Object System.Drawing.Point(130, 955)
 $lblIndex.Text = ""
 
-# --- Main resizable area (panel + split containers) -------------------------
+# --- Main resizable area (panel + split containers) ---
 
 # Panel to host the split containers, leaving room for top buttons and bottom nav
 $mainPanel = New-Object System.Windows.Forms.Panel
@@ -67,7 +69,6 @@ $splitOuter.Orientation = 'Vertical'
 $splitOuter.SplitterDistance = 350         # initial width of left column
 $splitOuter.IsSplitterFixed = $false
 $splitOuter.Panel1MinSize = 200
-# No Panel2MinSize here; let Windows handle it
 
 # Inner split container: middle (path text) | right (other items)
 $splitInner = New-Object System.Windows.Forms.SplitContainer
@@ -76,7 +77,6 @@ $splitInner.Orientation = 'Vertical'
 $splitInner.SplitterDistance = 980         # initial width of middle column
 $splitInner.IsSplitterFixed = $false
 $splitInner.Panel1MinSize = 300
-# No Panel2MinSize here either
 
 # Navigation grid (left column)
 $gridNav = New-Object System.Windows.Forms.DataGridView
@@ -135,74 +135,6 @@ $script:CurrentIndex = -1
 $script:NsMgr        = $null
 $script:NavTable     = $null
 $script:XmlDoc       = $null
-
-# NAACCR IDs to bold in the right column
-$script:BoldIds = @(
-    "nameFirst",
-    "nameLast",
-    "nameMiddle",
-    "dateOfBirth",
-    "dateOfDiagnosis",
-    "primarySite",
-    "laterality"
-)
-
-# NAACCR IDs that are pathology text fields (middle column)
-$script:TextFieldIds = @(
-    "textDxProcLabTests",
-    "textDxProcPath",
-    "textDxProcPe",
-    "textHistologyTitle"
-)
-
-function Add-LineToRichTextBox {
-    param(
-        [System.Windows.Forms.RichTextBox]$Box,
-        [string]$Text,
-        [bool]$Bold = $false
-    )
-
-    $Box.SelectionStart  = $Box.TextLength
-    $Box.SelectionLength = 0
-
-    if ($Bold) {
-        $Box.SelectionFont = New-Object System.Drawing.Font(
-            $Box.Font.FontFamily,
-            $Box.Font.Size,
-            [System.Drawing.FontStyle]::Bold
-        )
-    }
-    else {
-        $Box.SelectionFont = $Box.Font
-    }
-
-    $Box.AppendText($Text + "`r`n")
-}
-
-function Get-TumorLabel {
-    param(
-        [int]$Index
-    )
-
-    $tumor   = $script:Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
-
-    $nameLast  = ""
-    $nameFirst = ""
-    $dxDate    = ""
-
-    if ($patient -ne $null) {
-        $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $script:NsMgr)
-        $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $script:NsMgr)
-        if ($nlNode) { $nameLast  = $nlNode.InnerText }
-        if ($nfNode) { $nameFirst = $nfNode.InnerText }
-    }
-
-    $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $script:NsMgr)
-    if ($dxNode) { $dxDate = $dxNode.InnerText }
-
-    return "Idx {0} - {1}, {2} - Dx {3}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate
-}
 
 function Show-Tumor {
     param(
@@ -299,47 +231,14 @@ function Show-Tumor {
     $btnNext.Enabled = ($Index -lt ($script:Tumors.Count - 1))
 }
 
-function Get-NaaccrItemMap {
-    param(
-        [int]$Index
-    )
-
-    $tumor   = $script:Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
-
-    $map = @{}
-
-    # Patient items
-    if ($patient -ne $null) {
-        $pItems = $patient.SelectNodes("./n:Item", $script:NsMgr)
-        foreach ($item in $pItems) {
-            $id  = $item.GetAttribute("naaccrId")
-            $val = $item.InnerText
-            # Key format: "P|naaccrId"
-            $map["P|$id"] = $val
-        }
-    }
-
-    # Tumor items
-    $tItems = $tumor.SelectNodes("./n:Item", $script:NsMgr)
-    foreach ($item in $tItems) {
-        $id  = $item.GetAttribute("naaccrId")
-        $val = $item.InnerText
-        # Key format: "T|naaccrId"
-        $map["T|$id"] = $val
-    }
-
-    return $map
-}
-
 function Show-TumorDiff {
     param(
         [int]$IndexA,
         [int]$IndexB
     )
 
-    $mapA = Get-NaaccrItemMap -Index $IndexA
-    $mapB = Get-NaaccrItemMap -Index $IndexB
+    $mapA = Get-NaaccrItemMap -Index $IndexA -Tumors $script:Tumors -NsMgr $script:NsMgr
+    $mapB = Get-NaaccrItemMap -Index $IndexB -Tumors $script:Tumors -NsMgr $script:NsMgr
 
     # Combined key set
     $keys = New-Object System.Collections.Generic.HashSet[string]
@@ -394,8 +293,8 @@ function Show-TumorDiff {
     }
 
     # Diff form
-    $labelA = Get-TumorLabel -Index $IndexA
-    $labelB = Get-TumorLabel -Index $IndexB
+    $labelA = Get-TumorLabel -Index $IndexA -Tumors $script:Tumors -NsMgr $script:NsMgr
+    $labelB = Get-TumorLabel -Index $IndexB -Tumors $script:Tumors -NsMgr $script:NsMgr
 
     $diffForm = New-Object System.Windows.Forms.Form
     $diffForm.Text   = "Diff: $labelA  VS  $labelB"
@@ -440,7 +339,7 @@ $btnOpen.Add_Click({
             $xml.XmlResolver = $null
             $xml.Load($ofd.FileName)
 
-			$script:XmlDoc = $xml  # keep full document for grabbing the file-level headers, e.g., the namespace 
+            $script:XmlDoc = $xml  # keep full document for grabbing the file-level headers, e.g., the namespace 
 
             $nsUri = $xml.DocumentElement.NamespaceURI
             $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
@@ -470,7 +369,7 @@ $btnOpen.Add_Click({
                 [void]$table.Columns.Add("nameLast",        [string])
                 [void]$table.Columns.Add("nameFirst",       [string])
                 [void]$table.Columns.Add("dateOfDiagnosis", [string])
-				[void]$table.Columns.Add("pathReportNumber1", [string])
+                [void]$table.Columns.Add("pathReportNumber1", [string])
 
                 for ($i = 0; $i -lt $script:Tumors.Count; $i++) {
                     $tumor   = $script:Tumors[$i]
@@ -479,6 +378,7 @@ $btnOpen.Add_Click({
                     $nameLast  = ""
                     $nameFirst = ""
                     $dxDate    = ""
+                    $pathReportNumber1 = ""
 
                     if ($patient -ne $null) {
                         $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $script:NsMgr)
@@ -490,15 +390,15 @@ $btnOpen.Add_Click({
 
                     $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $script:NsMgr)
                     if ($dxNode) { $dxDate = $dxNode.InnerText }
-					
-					$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $script:NsMgr)
-                    if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
+                    
+                    $pathNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $script:NsMgr)
+                    if ($pathNode) { $pathReportNumber1 = $pathNode.InnerText }
 
                     $row = $table.NewRow()
                     $row["Index"]             = $i + 1
                     $row["nameLast"]          = $nameLast
                     $row["nameFirst"]         = $nameFirst
-					$row["pathReportNumber1"] = $pathReportNumber1
+                    $row["pathReportNumber1"] = $pathReportNumber1
                     $row["dateOfDiagnosis"]   = $dxDate
 
                     [void]$table.Rows.Add($row)
@@ -539,126 +439,6 @@ $gridNav.Add_SelectionChanged({
     Show-Tumor -Index $tumorIndex
 })
 
-function Format-Xml {
-    param(
-        [string]$Xml
-    )
-
-    if ([string]::IsNullOrWhiteSpace($Xml)) {
-        return $Xml
-    }
-
-    $doc = New-Object System.Xml.XmlDocument
-    $doc.PreserveWhitespace = $false
-    $doc.LoadXml($Xml)
-
-    $settings = New-Object System.Xml.XmlWriterSettings
-    $settings.Indent = $true
-    $settings.NewLineChars = "`r`n"
-    $settings.NewLineHandling = "Replace"
-
-    $sw = New-Object System.IO.StringWriter
-    $xw = [System.Xml.XmlWriter]::Create($sw, $settings)
-    $doc.Save($xw)
-    $xw.Flush()
-    $sw.ToString()
-}
-
-function Show-RawXmlForTumor {
-    param(
-        [int]$Index
-    )
-
-    if (-not $script:XmlDoc) {
-        [System.Windows.Forms.MessageBox]::Show("No XML document loaded.", "Show XML")
-        return
-    }
-    if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) {
-        [System.Windows.Forms.MessageBox]::Show("Index out of range.", "Show XML")
-        return
-    }
-
-    $origDoc = $script:XmlDoc
-    $root    = $origDoc.DocumentElement
-    if (-not $root) {
-        [System.Windows.Forms.MessageBox]::Show("Root <NaaccrData> element not found.", "Show XML")
-        return
-    }
-
-    $tumor   = $script:Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
-
-    if (-not $patient) {
-        [System.Windows.Forms.MessageBox]::Show("Patient node for selected tumor not found.", "Show XML")
-        return
-    }
-
-    # Build a new minimal NAACCR document:
-    # - same <NaaccrData> element name/ns and attributes
-    # - all non-Patient children (root-level Item nodes, etc.)
-    # - only the selected Patient subtree
-
-    $newDoc = New-Object System.Xml.XmlDocument
-    $newDoc.XmlResolver = $null
-
-    # Create NaaccrData root with same name/ns/attributes
-    $newRoot = $newDoc.CreateElement($root.Prefix, $root.LocalName, $root.NamespaceURI)
-    foreach ($attr in $root.Attributes) {
-        $newAttr = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
-        $newAttr.Value = $attr.Value
-        [void]$newRoot.Attributes.Append($newAttr)
-    }
-    [void]$newDoc.AppendChild($newRoot)
-
-    # Copy top-level non-Patient children (e.g. root-level Item nodes)
-    foreach ($child in $root.ChildNodes) {
-        if ($child.LocalName -eq "Patient") { continue }
-        $imported = $newDoc.ImportNode($child, $true)
-        [void]$newRoot.AppendChild($imported)
-    }
-
-    # Import only the selected Patient subtree
-    $importedPatient = $newDoc.ImportNode($patient, $true)
-    [void]$newRoot.AppendChild($importedPatient)
-
-    # Serialize new document; reuse original XML declaration if present
-    $bodyXml = $newDoc.OuterXml
-
-    $declNode = $origDoc.ChildNodes |
-        Where-Object { $_ -is [System.Xml.XmlDeclaration] } |
-        Select-Object -First 1
-
-    if ($declNode) {
-        $finalXml = $declNode.OuterXml + "`r`n" + $bodyXml
-    }
-    else {
-        $finalXml = $bodyXml
-    }
-	
-	$finalXml = Format-Xml -Xml $finalXml
-
-    $label = Get-TumorLabel -Index $Index
-
-    $xmlForm = New-Object System.Windows.Forms.Form
-    $xmlForm.Text   = "Raw XML - $label" 
-    $xmlForm.Width  = 1400
-    $xmlForm.Height = 900
-    $xmlForm.StartPosition = "CenterScreen"
-
-    $rtb = New-Object System.Windows.Forms.RichTextBox
-    $rtb.Dock = 'Fill'
-    $rtb.ReadOnly = $true
-    $rtb.Font = New-Object System.Drawing.Font("Consolas", 10)
-    $rtb.WordWrap = $false
-    $rtb.ScrollBars = "Both"
-
-    $rtb.Text = $finalXml
-
-    $xmlForm.Controls.Add($rtb)
-    [void]$xmlForm.ShowDialog()
-}
-
-
 $btnPrev.Add_Click({
     if ($script:CurrentIndex -gt 0) {
         Show-Tumor -Index ($script:CurrentIndex - 1)
@@ -691,9 +471,8 @@ $btnXml.Add_Click({
     }
 
     $idx = [int]$val - 1
-    Show-RawXmlForTumor -Index $idx
+    Show-RawXmlForTumor -Index $idx -Tumors $script:Tumors -NsMgr $script:NsMgr -XmlDoc $script:XmlDoc
 })
-
 
 # Diff button click
 $btnDiff.Add_Click({
