@@ -5,6 +5,7 @@
 . "$PSScriptRoot\assign-site-laterality.ps1"
 . "$PSScriptRoot\assign-facility.ps1"
 . "$PSScriptRoot\concatenate-xml.ps1"
+. "$PSScriptRoot\concatenate-hl7.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -46,14 +47,19 @@ $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
 $btnFacility.Location = New-Object System.Drawing.Point(550, 10)
 
-$btnConcatenate = New-Object System.Windows.Forms.Button
-$btnConcatenate.Text = "Concatenate XMLs"
-$btnConcatenate.Width = 120
-$btnConcatenate.Location = New-Object System.Drawing.Point(660, 10)
+$btnConcatenateXml = New-Object System.Windows.Forms.Button
+$btnConcatenateXml.Text = "Concatenate XMLs"
+$btnConcatenateXml.Width = 120
+$btnConcatenateXml.Location = New-Object System.Drawing.Point(660, 10)
+
+$btnConcatenateHl7 = New-Object System.Windows.Forms.Button
+$btnConcatenateHl7.Text = "Concatenate HL7s"
+$btnConcatenateHl7.Width = 120
+$btnConcatenateHl7.Location = New-Object System.Drawing.Point(790, 10)
 
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(790, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(920, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -160,7 +166,8 @@ $form.Controls.AddRange(@(
 	$btnDedup,
 	$btnAssign,
 	$btnFacility,
-	$btnConcatenate,
+	$btnConcatenateXml,
+	$btnConcatenateHl7,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -760,8 +767,12 @@ $btnFacility.Add_Click({
     }
 })
 
-$btnConcatenate.Add_Click({
+$btnConcatenateXml.Add_Click({
     Start-ConcatenateXml
+})
+
+$btnConcatenateHl7.Add_Click({
+    Start-ConcatenateHl7
 })
 
 [void]$form.ShowDialog()
