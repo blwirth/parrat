@@ -492,4 +492,3 @@ function Start-ConcatenateXml {
         Show-ConcatenationPreview -XmlFiles $ofd.FileNames
     }
 }
-
