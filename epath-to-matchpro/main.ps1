@@ -25,41 +25,41 @@ $btnOpen.Location = New-Object System.Drawing.Point(10, 10)
 $btnDiff = New-Object System.Windows.Forms.Button
 $btnDiff.Text = "Diff"
 $btnDiff.Width = 100
-$btnDiff.Location = New-Object System.Drawing.Point(110, 10)
+$btnDiff.Location = New-Object System.Drawing.Point(120, 10)
 
 $btnXml = New-Object System.Windows.Forms.Button
 $btnXml.Text = "Show Raw XML"
 $btnXml.Width = 100
-$btnXml.Location = New-Object System.Drawing.Point(220, 10)
+$btnXml.Location = New-Object System.Drawing.Point(230, 10)
 
 $btnDedup = New-Object System.Windows.Forms.Button
 $btnDedup.Text = "Deduplicate"
 $btnDedup.Width = 100
-$btnDedup.Location = New-Object System.Drawing.Point(330, 10)
+$btnDedup.Location = New-Object System.Drawing.Point(340, 10)
 
 $btnAssign = New-Object System.Windows.Forms.Button
 $btnAssign.Text = "Assign Site/Lat"
 $btnAssign.Width = 100
-$btnAssign.Location = New-Object System.Drawing.Point(440, 10)
+$btnAssign.Location = New-Object System.Drawing.Point(450, 10)
 
 $btnFacility = New-Object System.Windows.Forms.Button
 $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
-$btnFacility.Location = New-Object System.Drawing.Point(550, 10)
+$btnFacility.Location = New-Object System.Drawing.Point(560, 10)
 
 $btnConcatenateXml = New-Object System.Windows.Forms.Button
 $btnConcatenateXml.Text = "Concatenate XMLs"
 $btnConcatenateXml.Width = 120
-$btnConcatenateXml.Location = New-Object System.Drawing.Point(660, 10)
+$btnConcatenateXml.Location = New-Object System.Drawing.Point(670, 10)
 
 $btnConcatenateHl7 = New-Object System.Windows.Forms.Button
 $btnConcatenateHl7.Text = "Concatenate HL7s"
 $btnConcatenateHl7.Width = 120
-$btnConcatenateHl7.Location = New-Object System.Drawing.Point(790, 10)
+$btnConcatenateHl7.Location = New-Object System.Drawing.Point(800, 10)
 
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(920, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(930, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -123,6 +123,13 @@ $gridNav.Dock = 'Fill'
 $gridNav.AllowUserToAddRows = $false
 $gridNav.AllowUserToDeleteRows = $false
 $gridNav.RowHeadersVisible = $false
+
+$table = New-Object System.Data.DataTable
+[void]$table.Columns.Add("Index", [int])
+[void]$table.Columns.Add("nameLast", [string])
+[void]$table.Columns.Add("nameFirst", [string])
+[void]$table.Columns.Add("dateOfDiagnosis", [string])
+[void]$table.Columns.Add("pathReportNumber1", [string])
 
 # Bind table BEFORE re-setting selection-related properties
 $gridNav.DataSource = $table
