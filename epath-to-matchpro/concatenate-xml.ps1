@@ -198,7 +198,7 @@ function Show-ConcatenationPreview {
     $refInfo = $validation.ReferenceInfo
     
     # Calculate totals
-    $totalTumors = ($headerInfos | Measure-Object -Property { $_.Info.TumorCount } -Sum).Sum
+    $totalTumors = ($headerInfos | ForEach-Object { $_.Info.TumorCount } | Measure-Object -Sum).Sum
     
     # Create preview form
     $previewForm = New-Object System.Windows.Forms.Form
