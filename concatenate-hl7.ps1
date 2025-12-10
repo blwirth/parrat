@@ -432,4 +432,3 @@ function Start-ConcatenateHl7 {
         Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames
     }
 }
-
