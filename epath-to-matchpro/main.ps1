@@ -4,6 +4,7 @@
 . "$PSScriptRoot\deduplicate.ps1"
 . "$PSScriptRoot\assign-site-laterality.ps1"
 . "$PSScriptRoot\assign-facility.ps1"
+. "$PSScriptRoot\concatenate-xml.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -45,9 +46,14 @@ $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
 $btnFacility.Location = New-Object System.Drawing.Point(550, 10)
 
+$btnConcatenate = New-Object System.Windows.Forms.Button
+$btnConcatenate.Text = "Concatenate XMLs"
+$btnConcatenate.Width = 120
+$btnConcatenate.Location = New-Object System.Drawing.Point(660, 10)
+
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(660, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(790, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -154,6 +160,7 @@ $form.Controls.AddRange(@(
 	$btnDedup,
 	$btnAssign,
 	$btnFacility,
+	$btnConcatenate,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -751,6 +758,10 @@ $btnFacility.Add_Click({
         )
         $lblStatus.Text = "Error during facility assignment"
     }
+})
+
+$btnConcatenate.Add_Click({
+    Start-ConcatenateXml
 })
 
 [void]$form.ShowDialog()
