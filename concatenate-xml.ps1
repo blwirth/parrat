@@ -229,7 +229,7 @@ function Show-ConcatenationPreview {
     $gridFiles.AllowUserToAddRows = $false
     $gridFiles.AllowUserToDeleteRows = $false
     $gridFiles.RowHeadersVisible = $false
-    $gridFiles.AutoSizeColumnsMode = "Fill"
+    $gridFiles.AutoSizeColumnsMode = "AllCells"
     $gridFiles.SelectionMode = 'FullRowSelect'
     $gridFiles.MultiSelect = $false
     
@@ -257,7 +257,7 @@ function Show-ConcatenationPreview {
     $gridTumors.AllowUserToAddRows = $false
     $gridTumors.AllowUserToDeleteRows = $false
     $gridTumors.RowHeadersVisible = $false
-    $gridTumors.AutoSizeColumnsMode = "Fill"
+    $gridTumors.AutoSizeColumnsMode = "AllCells"
     $gridTumors.SelectionMode = 'FullRowSelect'
     $gridTumors.MultiSelect = $false
     

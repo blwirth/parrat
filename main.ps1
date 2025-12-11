@@ -171,6 +171,7 @@ $gridNav.DataSource = $table
 $gridNav.ReadOnly = $false
 $gridNav.MultiSelect = $true
 $gridNav.SelectionMode = 'FullRowSelect'
+$gridNav.AutoSizeColumnsMode = 'AllCells'
 
 # Note: Column configuration will be done after data is loaded
 
