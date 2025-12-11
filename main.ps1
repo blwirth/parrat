@@ -258,6 +258,7 @@ function Show-Tumor {
     if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) { return }
 
     $script:CurrentIndex = $Index
+    $script:ScriptVars['CurrentIndex'] = $Index
     $tumor = $script:Tumors[$Index]
 
     # Clear text boxes
