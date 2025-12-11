@@ -14,7 +14,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form = $form[0]  # ensure scalar type, not array
-$form.Text   = "NAACCR XML Viewer"
+$form.Text   = "XML and HL7 Utilities"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
