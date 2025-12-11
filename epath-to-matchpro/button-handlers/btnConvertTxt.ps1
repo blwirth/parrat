@@ -93,7 +93,7 @@ function Get-BtnConvertTxtHandler {
             $dgvCases.ReadOnly = $true
             $dgvCases.SelectionMode = [System.Windows.Forms.DataGridViewSelectionMode]::FullRowSelect
             $dgvCases.MultiSelect = $false
-            $dgvCases.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::Fill
+            $dgvCases.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::AllCells
 
             $splitContainer.Panel1.Controls.Add($dgvCases)
             $splitContainer.Panel1.Controls.Add($lblCases)  # label on top

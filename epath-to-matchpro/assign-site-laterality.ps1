@@ -543,7 +543,7 @@ function Show-AssignmentReport {
     $grid.AllowUserToAddRows = $false
     $grid.AllowUserToDeleteRows = $false
     $grid.RowHeadersVisible = $false
-    $grid.AutoSizeColumnsMode = "Fill"
+    $grid.AutoSizeColumnsMode = "AllCells"
     $grid.SelectionMode = 'FullRowSelect'
     $grid.MultiSelect = $false
 

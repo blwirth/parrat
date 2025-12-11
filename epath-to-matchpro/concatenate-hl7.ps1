@@ -157,7 +157,7 @@ function Show-Hl7ConcatenationPreview {
     $gridFiles.AllowUserToAddRows = $false
     $gridFiles.AllowUserToDeleteRows = $false
     $gridFiles.RowHeadersVisible = $false
-    $gridFiles.AutoSizeColumnsMode = "Fill"
+    $gridFiles.AutoSizeColumnsMode = "AllCells"
     $gridFiles.SelectionMode = 'FullRowSelect'
     $gridFiles.MultiSelect = $false
     
@@ -188,7 +188,7 @@ function Show-Hl7ConcatenationPreview {
     $gridMessages.AllowUserToAddRows = $false
     $gridMessages.AllowUserToDeleteRows = $false
     $gridMessages.RowHeadersVisible = $false
-    $gridMessages.AutoSizeColumnsMode = "Fill"
+    $gridMessages.AutoSizeColumnsMode = "AllCells"
     $gridMessages.SelectionMode = 'FullRowSelect'
     $gridMessages.MultiSelect = $false
     

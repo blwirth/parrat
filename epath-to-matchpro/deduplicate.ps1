@@ -467,7 +467,7 @@ function Show-DeduplicationReport {
     $grid.AllowUserToAddRows = $false
     $grid.AllowUserToDeleteRows = $false
     $grid.RowHeadersVisible = $false
-    $grid.AutoSizeColumnsMode = "Fill"
+    $grid.AutoSizeColumnsMode = "AllCells"
 
     # Build DataTable
     $table = New-Object System.Data.DataTable
