@@ -298,7 +298,7 @@ function Show-PatientIdReport {
         try {
             $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($OriginalFilePath)
             $directory = [System.IO.Path]::GetDirectoryName($OriginalFilePath)
-            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-with-patientid.xml")
+            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-pid.xml")
 
             $nsMgr = New-Object System.Xml.XmlNamespaceManager($XmlDoc.NameTable)
             $nsMgr.AddNamespace("n", $XmlDoc.DocumentElement.NamespaceURI)
