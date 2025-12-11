@@ -18,7 +18,7 @@ function Get-BtnXmlHandler {
         # Use the first selected row for XML display
         $row = $Controls['gridNav'].SelectedRows[0]
         $val = $row.Cells["Index"].Value
-        if ($null -ne $val) {
+        if ($null -eq $val) {
             [System.Windows.Forms.MessageBox]::Show("Unable to determine index for selected row.", "Show XML")
             return
         }

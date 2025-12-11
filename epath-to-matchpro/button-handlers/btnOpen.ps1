@@ -16,15 +16,21 @@ function Get-BtnOpenHandler {
                 $xml.Load($ofd.FileName)
 
                 $ScriptVars['XmlDoc'] = $xml
+                $script:XmlDoc = $xml
                 $ScriptVars['CurrentFilePath'] = $ofd.FileName
+                $script:CurrentFilePath = $ofd.FileName
 
                 $nsUri = $xml.DocumentElement.NamespaceURI
                 $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
                 $nsMgr.AddNamespace("n", $nsUri)
 
                 $ScriptVars['NsMgr'] = $nsMgr
-                $ScriptVars['Tumors'] = $xml.SelectNodes("//n:Tumor", $nsMgr)
+                $script:NsMgr = $nsMgr
+                $tumors = $xml.SelectNodes("//n:Tumor", $nsMgr)
+                $ScriptVars['Tumors'] = $tumors
+                $script:Tumors = $tumors
                 $ScriptVars['CurrentIndex'] = -1
+                $script:CurrentIndex = -1
 
                 if ($ScriptVars['Tumors'].Count -eq 0) {
                     [System.Windows.Forms.MessageBox]::Show("No <Tumor> elements found in this file.", "No Tumors")
