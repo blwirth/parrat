@@ -69,9 +69,14 @@ $btnAddPid.Text = "Add PID"
 $btnAddPid.Width = 100
 $btnAddPid.Location = New-Object System.Drawing.Point(1040, 10)
 
+$btnExport = New-Object System.Windows.Forms.Button
+$btnExport.Text = "Export Selected"
+$btnExport.Width = 120
+$btnExport.Location = New-Object System.Drawing.Point(1150, 10)
+
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1150, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(1270, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -137,6 +142,7 @@ $gridNav.AllowUserToDeleteRows = $false
 $gridNav.RowHeadersVisible = $false
 
 $table = New-Object System.Data.DataTable
+[void]$table.Columns.Add("Selected", [bool])
 [void]$table.Columns.Add("Index", [int])
 [void]$table.Columns.Add("nameLast", [string])
 [void]$table.Columns.Add("nameFirst", [string])
@@ -146,10 +152,12 @@ $table = New-Object System.Data.DataTable
 # Bind table BEFORE re-setting selection-related properties
 $gridNav.DataSource = $table
 
-# Now enforce multi-select
-$gridNav.ReadOnly = $true
+# Configure grid: checkbox column editable, others read-only
+$gridNav.ReadOnly = $false
 $gridNav.MultiSelect = $true
 $gridNav.SelectionMode = 'FullRowSelect'
+
+# Note: Column configuration will be done after data is loaded
 
 # Middle column: pathology text fields
 $rtbPath = New-Object System.Windows.Forms.RichTextBox
@@ -189,6 +197,7 @@ $form.Controls.AddRange(@(
 	$btnConcatenateHl7,
 	$btnConvertTxt,
     $btnAddPid,
+    $btnExport,
     $lblStatus,
     $mainPanel,
     $btnPrev,
@@ -203,6 +212,133 @@ $script:NsMgr           = $null
 $script:NavTable        = $null
 $script:XmlDoc          = $null
 $script:CurrentFilePath = $null
+
+function Export-SelectedXml {
+    param(
+        [array]$TumorIndices,
+        [System.Xml.XmlDocument]$XmlDoc,
+        [System.Xml.XmlNamespaceManager]$NsMgr,
+        [string]$OutputPath
+    )
+
+    if ($TumorIndices.Count -eq 0) {
+        return @{ Success = $false; Message = "No tumors selected for export." }
+    }
+
+    $root = $XmlDoc.DocumentElement
+    $errors = @()
+
+    try {
+        # Create new XML document
+        $newDoc = New-Object System.Xml.XmlDocument
+        $newDoc.XmlResolver = $null
+
+        # Copy XML declaration
+        $declNode = $XmlDoc.ChildNodes |
+            Where-Object { $_ -is [System.Xml.XmlDeclaration] } |
+            Select-Object -First 1
+        if ($declNode) {
+            $newDecl = $newDoc.CreateXmlDeclaration($declNode.Version, $declNode.Encoding, $declNode.Standalone)
+            [void]$newDoc.AppendChild($newDecl)
+        }
+
+        # Copy root element with all attributes
+        $newRoot = $newDoc.CreateElement($root.Prefix, $root.LocalName, $root.NamespaceURI)
+        foreach ($attr in $root.Attributes) {
+            $newAttr = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
+            $newAttr.Value = $attr.Value
+            [void]$newRoot.Attributes.Append($newAttr)
+        }
+        [void]$newDoc.AppendChild($newRoot)
+
+        # Copy non-Patient children of root
+        foreach ($child in $root.ChildNodes) {
+            if ($child.LocalName -ne "Patient") {
+                $imported = $newDoc.ImportNode($child, $true)
+                [void]$newRoot.AppendChild($imported)
+            }
+        }
+
+        # Group tumors by patient
+        $patientsMap = @{}  # Patient node -> array of tumor indices
+
+        foreach ($tumorIndex in $TumorIndices) {
+            if ($tumorIndex -lt 0 -or $tumorIndex -ge $script:Tumors.Count) {
+                $errors += "Invalid tumor index: $tumorIndex"
+                continue
+            }
+
+            $tumor = $script:Tumors[$tumorIndex]
+            $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
+
+            if ($null -eq $patient) {
+                $errors += "Tumor at index $tumorIndex has no parent Patient node"
+                continue
+            }
+
+            if (-not $patientsMap.ContainsKey($patient)) {
+                $patientsMap[$patient] = @()
+            }
+            $patientsMap[$patient] += $tumorIndex
+        }
+
+        # Process each patient and add their checked tumors
+        foreach ($patientNode in $patientsMap.Keys) {
+            $tumorIndicesForPatient = $patientsMap[$patientNode]
+
+            # Create new Patient element
+            $newPatient = $newDoc.CreateElement($patientNode.Prefix, $patientNode.LocalName, $patientNode.NamespaceURI)
+
+            # Copy patient attributes
+            foreach ($attr in $patientNode.Attributes) {
+                $newAttr = $newDoc.CreateAttribute($attr.Prefix, $attr.LocalName, $attr.NamespaceURI)
+                $newAttr.Value = $attr.Value
+                [void]$newPatient.Attributes.Append($newAttr)
+            }
+
+            # Copy patient-level Items
+            foreach ($child in $patientNode.ChildNodes) {
+                if ($child.LocalName -eq "Item") {
+                    $imported = $newDoc.ImportNode($child, $true)
+                    [void]$newPatient.AppendChild($imported)
+                }
+            }
+
+            # Add all checked tumors for this patient
+            foreach ($tumorIndex in $tumorIndicesForPatient) {
+                $tumor = $script:Tumors[$tumorIndex]
+                $importedTumor = $newDoc.ImportNode($tumor, $true)
+                [void]$newPatient.AppendChild($importedTumor)
+            }
+
+            [void]$newRoot.AppendChild($newPatient)
+        }
+
+        # Save with formatting
+        $settings = New-Object System.Xml.XmlWriterSettings
+        $settings.Indent = $true
+        $settings.IndentChars = "  "
+        $settings.NewLineChars = "`r`n"
+        $settings.NewLineHandling = "Replace"
+
+        $writer = [System.Xml.XmlWriter]::Create($OutputPath, $settings)
+        $newDoc.Save($writer)
+        $writer.Close()
+
+        return @{
+            Success = ($errors.Count -eq 0)
+            ExportedCount = $TumorIndices.Count
+            Errors = $errors
+        }
+    }
+    catch {
+        return @{
+            Success = $false
+            ExportedCount = 0
+            Errors = @("Error during export: $($_.Exception.Message)")
+        }
+    }
+}
 
 function Show-Tumor {
     param(
@@ -439,6 +575,7 @@ $btnOpen.Add_Click({
 
                 # Build navigation table
                 $table = New-Object System.Data.DataTable
+                [void]$table.Columns.Add("Selected", [bool])
                 [void]$table.Columns.Add("Index",           [int])
                 [void]$table.Columns.Add("nameLast",        [string])
                 [void]$table.Columns.Add("nameFirst",       [string])
@@ -469,6 +606,7 @@ $btnOpen.Add_Click({
                     if ($pathNode) { $pathReportNumber1 = $pathNode.InnerText }
 
                     $row = $table.NewRow()
+                    $row["Selected"]          = $false
                     $row["Index"]             = $i + 1
                     $row["nameLast"]          = $nameLast
                     $row["nameFirst"]         = $nameFirst
@@ -481,9 +619,34 @@ $btnOpen.Add_Click({
                 $script:NavTable = $table
                 $gridNav.DataSource = $table
 
-                # Allow sorting by clicking column headers
+                # Configure columns after data binding
+                $gridNav.Columns["Selected"].ReadOnly = $false
+                $gridNav.Columns["Index"].ReadOnly = $true
+                $gridNav.Columns["nameLast"].ReadOnly = $true
+                $gridNav.Columns["nameFirst"].ReadOnly = $true
+                $gridNav.Columns["dateOfDiagnosis"].ReadOnly = $true
+                $gridNav.Columns["pathReportNumber1"].ReadOnly = $true
+                
+                # Set checkbox column width and move to first position
+                $gridNav.Columns["Selected"].Width = 60
+                $gridNav.Columns["Selected"].DisplayIndex = 0
+                
+                # Ensure checkbox column is properly configured as checkbox
+                $checkboxColumn = $gridNav.Columns["Selected"]
+                if ($checkboxColumn -is [System.Windows.Forms.DataGridViewCheckBoxColumn]) {
+                    # Already a checkbox column, good
+                } else {
+                    # Convert to checkbox column if needed
+                    $checkboxColumn.CellTemplate = New-Object System.Windows.Forms.DataGridViewCheckBoxCell
+                }
+
+                # Allow sorting by clicking column headers (except checkbox)
                 foreach ($col in $gridNav.Columns) {
-                    $col.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::Automatic
+                    if ($col.Name -ne "Selected") {
+                        $col.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::Automatic
+                    } else {
+                        $col.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::NotSortable
+                    }
                 }
 
                 Show-Tumor -Index 0
@@ -1220,6 +1383,105 @@ Open the output file location?
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         )
+    }
+})
+
+$btnExport.Add_Click({
+    if ($script:Tumors.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export Selected")
+        return
+    }
+
+    if (-not $script:XmlDoc -or -not $script:NsMgr) {
+        [System.Windows.Forms.MessageBox]::Show("No XML document loaded.", "Export Selected")
+        return
+    }
+
+    # Get checked tumor indices
+    $checkedIndices = @()
+    foreach ($row in $gridNav.Rows) {
+        $selectedValue = $row.Cells["Selected"].Value
+        # Handle both bool and DBNull values
+        if ($selectedValue -eq $true -or ($selectedValue -is [bool] -and $selectedValue)) {
+            $indexVal = $row.Cells["Index"].Value
+            if ($indexVal -ne $null -and $indexVal -ne [System.DBNull]::Value) {
+                $checkedIndices += ([int]$indexVal - 1)
+            }
+        }
+    }
+
+    if ($checkedIndices.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Please select at least one tumor to export by checking the boxes in the first column.",
+            "No Tumors Selected",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+        return
+    }
+
+    # Ask for output file
+    $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+    $saveFileDialog.Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*"
+    $saveFileDialog.Title = "Save Exported XML File"
+    
+    # Suggest default filename based on current file
+    if ($script:CurrentFilePath) {
+        $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
+        $saveFileDialog.FileName = "${inputFileName}_exported.xml"
+        $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
+    }
+
+    if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        try {
+            $lblStatus.Text = "Exporting {0} tumor(s)..." -f $checkedIndices.Count
+            $form.Refresh()
+
+            $result = Export-SelectedXml `
+                -TumorIndices $checkedIndices `
+                -XmlDoc $script:XmlDoc `
+                -NsMgr $script:NsMgr `
+                -OutputPath $saveFileDialog.FileName
+
+            if ($result.Success) {
+                $message = "Successfully exported {0} tumor(s) to:`n{1}" -f $result.ExportedCount, $saveFileDialog.FileName
+                if ($result.Errors.Count -gt 0) {
+                    $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
+                }
+                
+                $dialogResult = [System.Windows.Forms.MessageBox]::Show(
+                    $message,
+                    "Export Complete",
+                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                    [System.Windows.Forms.MessageBoxIcon]::Information
+                )
+
+                if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                    Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
+                }
+
+                $lblStatus.Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
+            }
+            else {
+                $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")
+                [System.Windows.Forms.MessageBox]::Show(
+                    $errorMessage,
+                    "Export Errors",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Warning
+                )
+                $lblStatus.Text = "Export completed with errors"
+            }
+        }
+        catch {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Error during export: $($_.Exception.Message)",
+                "Export Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+            $lblStatus.Text = "Error during export"
+        }
     }
 })
 
