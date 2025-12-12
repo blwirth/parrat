@@ -172,3 +172,198 @@ function Show-ExportPreview {
     return $previewForm.ShowDialog()
 }
 
+function Show-XmlExportPreview {
+    param(
+        [array]$TumorIndices,
+        [System.Xml.XmlDocument]$XmlDoc,
+        [System.Xml.XmlNamespaceManager]$NsMgr,
+        [string]$Title = "Export XML Preview"
+    )
+
+    if ($TumorIndices.Count -eq 0) {
+        return [System.Windows.Forms.DialogResult]::Cancel
+    }
+
+    $errors = @()
+    $patientsMap = @{}  # Patient node -> array of tumor indices
+
+    try {
+        # Group tumors by patient - same logic as export
+        foreach ($tumorIndex in $TumorIndices) {
+            if ($tumorIndex -lt 0 -or $tumorIndex -ge $script:Tumors.Count) {
+                $errors += "Invalid tumor index: $tumorIndex"
+                continue
+            }
+
+            $tumor = $script:Tumors[$tumorIndex]
+            $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
+
+            if ($null -eq $patient) {
+                $errors += "Tumor at index $tumorIndex has no parent Patient node"
+                continue
+            }
+
+            if (-not $patientsMap.ContainsKey($patient)) {
+                $patientsMap[$patient] = @()
+            }
+            $patientsMap[$patient] += $tumorIndex
+        }
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Error building preview: $($_.Exception.Message)",
+            "Preview Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+        return [System.Windows.Forms.DialogResult]::Cancel
+    }
+
+    # Create preview form
+    $previewForm = New-Object System.Windows.Forms.Form
+    $previewForm.Text = $Title
+    $previewForm.Width = 1400
+    $previewForm.Height = 700
+    $previewForm.StartPosition = "CenterScreen"
+    $previewForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $previewForm.MaximizeBox = $false
+    $previewForm.MinimizeBox = $false
+
+    # Summary label
+    $uniquePatients = $patientsMap.Keys.Count
+    $totalTumors = $TumorIndices.Count
+    $lblSummary = New-Object System.Windows.Forms.Label
+    $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
+    $lblSummary.Size = New-Object System.Drawing.Size(1360, 40)
+    $lblSummary.Text = "Preview: {0} patient(s) with {1} tumor(s) will be exported" -f $uniquePatients, $totalTumors
+    if ($errors.Count -gt 0) {
+        $lblSummary.Text += " | Errors: $($errors.Count)"
+    }
+    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+
+    # DataGridView for preview
+    $grid = New-Object System.Windows.Forms.DataGridView
+    $grid.Location = New-Object System.Drawing.Point(10, 60)
+    $grid.Size = New-Object System.Drawing.Size(1360, 500)
+    $grid.Anchor = 'Top,Left,Right,Bottom'
+    $grid.ReadOnly = $true
+    $grid.AllowUserToAddRows = $false
+    $grid.AllowUserToDeleteRows = $false
+    $grid.RowHeadersVisible = $false
+    $grid.AutoSizeColumnsMode = "AllCells"
+    $grid.SelectionMode = 'FullRowSelect'
+    $grid.MultiSelect = $false
+
+    # Build DataTable showing patient info and tumors
+    $table = New-Object System.Data.DataTable
+    [void]$table.Columns.Add("PatientID", [string])
+    [void]$table.Columns.Add("NameLast", [string])
+    [void]$table.Columns.Add("NameFirst", [string])
+    [void]$table.Columns.Add("TumorIndices", [string])
+    [void]$table.Columns.Add("TumorCount", [int])
+    [void]$table.Columns.Add("DateOfDiagnosis", [string])
+    [void]$table.Columns.Add("PathReportNumber1", [string])
+
+    # Populate table with patient and tumor info
+    foreach ($patientNode in $patientsMap.Keys) {
+        $tumorIndicesForPatient = $patientsMap[$patientNode]
+        
+        # Get patient info
+        $patientId = ""
+        $nameLast = ""
+        $nameFirst = ""
+        
+        $patientIdNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $NsMgr)
+        if ($null -ne $patientIdNode) {
+            $patientId = $patientIdNode.InnerText
+        }
+        
+        $nameLastNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
+        if ($null -ne $nameLastNode) {
+            $nameLast = $nameLastNode.InnerText
+        }
+        
+        $nameFirstNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
+        if ($null -ne $nameFirstNode) {
+            $nameFirst = $nameFirstNode.InnerText
+        }
+        
+        # Get tumor info (show first tumor's key fields, or combine if multiple)
+        $tumorIndicesStr = ($tumorIndicesForPatient | ForEach-Object { ($_ + 1).ToString() }) -join ", "
+        $datesOfDiagnosis = @()
+        $pathReportNumbers = @()
+        
+        foreach ($tumorIndex in $tumorIndicesForPatient) {
+            $tumor = $script:Tumors[$tumorIndex]
+            
+            $dateNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
+            if ($null -ne $dateNode) {
+                $datesOfDiagnosis += $dateNode.InnerText
+            }
+            
+            $pathNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
+            if ($null -ne $pathNode) {
+                $pathReportNumbers += $pathNode.InnerText
+            }
+        }
+        
+        $dateOfDiagnosis = ($datesOfDiagnosis | Where-Object { $_ -ne "" }) -join ", "
+        $pathReportNumber1 = ($pathReportNumbers | Where-Object { $_ -ne "" }) -join ", "
+        
+        $row = $table.NewRow()
+        $row["PatientID"] = $patientId
+        $row["NameLast"] = $nameLast
+        $row["NameFirst"] = $nameFirst
+        $row["TumorIndices"] = $tumorIndicesStr
+        $row["TumorCount"] = $tumorIndicesForPatient.Count
+        $row["DateOfDiagnosis"] = $dateOfDiagnosis
+        $row["PathReportNumber1"] = $pathReportNumber1
+        [void]$table.Rows.Add($row)
+    }
+
+    $grid.DataSource = $table
+
+    # Buttons
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "Export"
+    $btnOK.Width = 100
+    $btnOK.Location = New-Object System.Drawing.Point(10, 580)
+    $btnOK.Anchor = 'Bottom,Left'
+    $btnOK.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Location = New-Object System.Drawing.Point(120, 580)
+    $btnCancel.Anchor = 'Bottom,Left'
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+    # Set CancelButton so ESC key and X button work properly
+    $previewForm.CancelButton = $btnCancel
+    $previewForm.AcceptButton = $btnOK
+
+    # Handle form closing (X button) to ensure DialogResult is set
+    $previewForm.Add_FormClosing({
+        param($sender, $e)
+        if ($sender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
+            $sender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        }
+    })
+
+    # Show errors if any
+    if ($errors.Count -gt 0) {
+        $lblErrors = New-Object System.Windows.Forms.Label
+        $lblErrors.Location = New-Object System.Drawing.Point(10, 550)
+        $lblErrors.Size = New-Object System.Drawing.Size(1360, 20)
+        $lblErrors.Text = "Errors: " + ($errors -join "; ")
+        $lblErrors.ForeColor = [System.Drawing.Color]::Red
+        $previewForm.Controls.Add($lblErrors)
+    }
+
+    # Add controls to form
+    $previewForm.Controls.AddRange(@($lblSummary, $grid, $btnOK, $btnCancel))
+
+    # Show dialog and return result
+    return $previewForm.ShowDialog()
+}
+

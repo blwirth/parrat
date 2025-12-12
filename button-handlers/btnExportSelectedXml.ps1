@@ -38,6 +38,17 @@ function Get-BtnExportSelectedXmlHandler {
             return
         }
 
+        # Show preview first
+        $previewResult = Show-XmlExportPreview `
+            -TumorIndices $checkedIndices `
+            -XmlDoc $ScriptVars['XmlDoc'] `
+            -NsMgr $ScriptVars['NsMgr'] `
+            -Title "Export Selected as XML - Preview"
+
+        if ($previewResult -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+
         # Ask for output file
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*"
@@ -103,3 +114,4 @@ function Get-BtnExportSelectedXmlHandler {
         }
     }
 }
+
