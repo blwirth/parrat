@@ -546,6 +546,9 @@ function Show-DeduplicationPreview {
     $previewForm.Width = 1400
     $previewForm.Height = 700
     $previewForm.StartPosition = "CenterScreen"
+    $previewForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $previewForm.MaximizeBox = $false
+    $previewForm.MinimizeBox = $false
 
     # Summary label
     $lblSummary = New-Object System.Windows.Forms.Label
@@ -602,6 +605,9 @@ function Show-DeduplicationPreview {
     $btnCancel.Location = New-Object System.Drawing.Point(220, 580)
     $btnCancel.Anchor = 'Bottom,Left'
 
+    # Set CancelButton so ESC key and X button work properly
+    $previewForm.CancelButton = $btnCancel
+
     # Proceed button handler
     $btnProceed.Add_Click({
         $previewForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
@@ -614,12 +620,21 @@ function Show-DeduplicationPreview {
         $previewForm.Close()
     })
 
+    # Handle form closing (X button) to ensure DialogResult is set
+    $previewForm.Add_FormClosing({
+        param($sender, $e)
+        if ($sender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
+            $sender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        }
+    })
+
     # Add controls to form
     $previewForm.Controls.AddRange(@($lblSummary, $grid, $btnProceed, $btnCancel))
 
-    $result = $previewForm.ShowDialog()
+    $dialogResult = $previewForm.ShowDialog()
     
-    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+    # Only proceed if user clicked OK
+    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
         # User clicked proceed - show the full report
         Show-DeduplicationReport `
             -Report $Result.Report `
@@ -629,6 +644,9 @@ function Show-DeduplicationPreview {
             -XmlDoc $XmlDoc `
             -Tumors $Tumors
     }
+    # If Cancel or closed, just return (do nothing)
+    # Explicitly return nothing to avoid any return value issues
+    return
 }
 
 function Show-DeduplicationReport {
