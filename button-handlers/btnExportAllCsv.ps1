@@ -30,6 +30,24 @@ function Get-BtnExportAllCsvHandler {
             "behaviorCodeIcdO3"
         )
 
+        # Build list of all tumor indices
+        $allIndices = @()
+        for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
+            $allIndices += $i
+        }
+
+        # Show preview first
+        $previewResult = Show-ExportPreview `
+            -TumorIndices $allIndices `
+            -XmlDoc $ScriptVars['XmlDoc'] `
+            -NsMgr $ScriptVars['NsMgr'] `
+            -FieldList $fieldList `
+            -Title "Export All as CSV - Preview"
+
+        if ($previewResult -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+
         # Ask for output file
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*"
@@ -95,3 +113,4 @@ function Get-BtnExportAllCsvHandler {
         }
     }
 }
+

@@ -53,6 +53,18 @@ function Get-BtnExportSelectedCsvHandler {
             "behaviorCodeIcdO3"
         )
 
+        # Show preview first
+        $previewResult = Show-ExportPreview `
+            -TumorIndices $checkedIndices `
+            -XmlDoc $ScriptVars['XmlDoc'] `
+            -NsMgr $ScriptVars['NsMgr'] `
+            -FieldList $fieldList `
+            -Title "Export Selected as CSV - Preview"
+
+        if ($previewResult -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+
         # Ask for output file
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*"
@@ -119,3 +131,4 @@ function Get-BtnExportSelectedCsvHandler {
         }
     }
 }
+
