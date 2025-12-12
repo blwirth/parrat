@@ -1,0 +1,329 @@
+﻿{"Code":"C000","SearchPhrase":"external upper lip"}
+{"Code":"C001","SearchPhrase":"external lower lip"}
+{"Code":"C002","SearchPhrase":"external lip"}
+{"Code":"C003","SearchPhrase":"mucosa of upper lip"}
+{"Code":"C004","SearchPhrase":"mucosa of lower lip"}
+{"Code":"C005","SearchPhrase":"mucosa of lip"}
+{"Code":"C006","SearchPhrase":"commissure of lip"}
+{"Code":"C008","SearchPhrase":"overlapping lesion of lip"}
+{"Code":"C009","SearchPhrase":"lip"}
+{"Code":"C019","SearchPhrase":"base of tongue"}
+{"Code":"C020","SearchPhrase":"dorsal surface of tongue"}
+{"Code":"C021","SearchPhrase":"border of tongue"}
+{"Code":"C022","SearchPhrase":"ventral surface of tongue"}
+{"Code":"C023","SearchPhrase":"anterior 23 of tongue"}
+{"Code":"C024","SearchPhrase":"lingual tonsil"}
+{"Code":"C028","SearchPhrase":"overlapping lesion of tongue"}
+{"Code":"C029","SearchPhrase":"tongue"}
+{"Code":"C030","SearchPhrase":"upper gum"}
+{"Code":"C031","SearchPhrase":"lower gum"}
+{"Code":"C039","SearchPhrase":"gum"}
+{"Code":"C040","SearchPhrase":"anterior floor of mouth"}
+{"Code":"C041","SearchPhrase":"lateral floor of mouth"}
+{"Code":"C048","SearchPhrase":"overlapping lesion of floor of mouth"}
+{"Code":"C049","SearchPhrase":"floor of mouth"}
+{"Code":"C050","SearchPhrase":"hard palate"}
+{"Code":"C051","SearchPhrase":"soft palate"}
+{"Code":"C052","SearchPhrase":"uvula"}
+{"Code":"C058","SearchPhrase":"overlapping lesion of palate"}
+{"Code":"C059","SearchPhrase":"palate"}
+{"Code":"C060","SearchPhrase":"cheeck mucosa"}
+{"Code":"C061","SearchPhrase":"vestibule of mouth"}
+{"Code":"C062","SearchPhrase":"retromolar area"}
+{"Code":"C068","SearchPhrase":"overlapping lesion of other and unspecified parts of mouth"}
+{"Code":"C069","SearchPhrase":"mouth"}
+{"Code":"C079","SearchPhrase":"parotid gland"}
+{"Code":"C080","SearchPhrase":"submandibular gland"}
+{"Code":"C081","SearchPhrase":"sublingual gland"}
+{"Code":"C088","SearchPhrase":"overlapping lesion of major salivary glands"}
+{"Code":"C089","SearchPhrase":"major salivary gland"}
+{"Code":"C090","SearchPhrase":"tonsillar fossa"}
+{"Code":"C091","SearchPhrase":"tonsillar pillar"}
+{"Code":"C098","SearchPhrase":"overlapping lesion of tonsil"}
+{"Code":"C099","SearchPhrase":"tonsil"}
+{"Code":"C100","SearchPhrase":"vallecula"}
+{"Code":"C101","SearchPhrase":"anterior surface of epiglottis"}
+{"Code":"C102","SearchPhrase":"lateral wall of oropharynx"}
+{"Code":"C103","SearchPhrase":"posterior wall of oropharynx"}
+{"Code":"C104","SearchPhrase":"branchial cleft"}
+{"Code":"C108","SearchPhrase":"overlapping lesions of oropharynx"}
+{"Code":"C109","SearchPhrase":"oropharynx"}
+{"Code":"C110","SearchPhrase":"superior wall of nasopharynx"}
+{"Code":"C111","SearchPhrase":"posterior wall of nasopharynx"}
+{"Code":"C112","SearchPhrase":"lateral wall of nasopharynx"}
+{"Code":"C113","SearchPhrase":"anterior wall of nasopharynx"}
+{"Code":"C118","SearchPhrase":"overlapping lesion of nasopharynx"}
+{"Code":"C119","SearchPhrase":"nasopharynx"}
+{"Code":"C129","SearchPhrase":"pyriform sinus"}
+{"Code":"C130","SearchPhrase":"postcricoid region"}
+{"Code":"C131","SearchPhrase":"hypopharyngeal aspect of aryepiglottic fold"}
+{"Code":"C132","SearchPhrase":"posterior wall of hypopharynx"}
+{"Code":"C138","SearchPhrase":"overlapping lesion of hypopharynx"}
+{"Code":"C139","SearchPhrase":"hypopharynx"}
+{"Code":"C140","SearchPhrase":"pharynx"}
+{"Code":"C142","SearchPhrase":"waldeyer ring"}
+{"Code":"C148","SearchPhrase":"overlapping lesion of lip oral cavity and pharynx"}
+{"Code":"C150","SearchPhrase":"cervical esophagus"}
+{"Code":"C151","SearchPhrase":"thoracic esophagus"}
+{"Code":"C152","SearchPhrase":"abdominal esophagus"}
+{"Code":"C153","SearchPhrase":"upper third of esophagus"}
+{"Code":"C154","SearchPhrase":"middle third of esophagus"}
+{"Code":"C155","SearchPhrase":"lower third of esophagus"}
+{"Code":"C155","SearchPhrase":"esophagus, distal"}
+{"Code":"C155","SearchPhrase":"distal esophagus"}
+{"Code":"C155","SearchPhrase":"lower esophagus"}
+{"Code":"C155","SearchPhrase":"esophagus, distal"}
+{"Code":"C158","SearchPhrase":"overlapping lesion of esophagus"}
+{"Code":"C159","SearchPhrase":"esophagus"}
+{"Code":"C159","SearchPhrase":"esophagus"}
+{"Code":"C160","SearchPhrase":"cardia"}
+{"Code":"C161","SearchPhrase":"fundus of stomach"}
+{"Code":"C162","SearchPhrase":"body of stomach"}
+{"Code":"C163","SearchPhrase":"gastric antrum"}
+{"Code":"C164","SearchPhrase":"pylorus"}
+{"Code":"C165","SearchPhrase":"lesser curvature of stomach"}
+{"Code":"C166","SearchPhrase":"greater curvature of stomach"}
+{"Code":"C168","SearchPhrase":"overlapping lesion of stomach"}
+{"Code":"C169","SearchPhrase":"stomach"}
+{"Code":"C170","SearchPhrase":"duodenum"}
+{"Code":"C171","SearchPhrase":"jejunum"}
+{"Code":"C172","SearchPhrase":"ileum"}
+{"Code":"C173","SearchPhrase":"meckel diverticulum"}
+{"Code":"C178","SearchPhrase":"overlapping lesion of small intestine"}
+{"Code":"C179","SearchPhrase":"small intestine"}
+{"Code":"C180","SearchPhrase":"cecum"}
+{"Code":"C181","SearchPhrase":"appendix"}
+{"Code":"C182","SearchPhrase":"ascending colon"}
+{"Code":"C183","SearchPhrase":"hepatic flexure of colon"}
+{"Code":"C184","SearchPhrase":"transverse colon"}
+{"Code":"C185","SearchPhrase":"splenic flexure of colon"}
+{"Code":"C186","SearchPhrase":"descending colon"}
+{"Code":"C187","SearchPhrase":"sigmoid colon"}
+{"Code":"C188","SearchPhrase":"overlapping lesion of colon"}
+{"Code":"C189","SearchPhrase":"colon"}
+{"Code":"C199","SearchPhrase":"rectosigmoid junction"}
+{"Code":"C209","SearchPhrase":"rectum"}
+{"Code":"C210","SearchPhrase":"anus"}
+{"Code":"C211","SearchPhrase":"anal canal"}
+{"Code":"C212","SearchPhrase":"cloacogenic zone"}
+{"Code":"C218","SearchPhrase":"overlapping lesion of rectum anus and anal canal"}
+{"Code":"C220","SearchPhrase":"liver"}
+{"Code":"C221","SearchPhrase":"intrahepatic bile duct"}
+{"Code":"C239","SearchPhrase":"gallbladder"}
+{"Code":"C240","SearchPhrase":"extrahepatic bile duct"}
+{"Code":"C241","SearchPhrase":"ampulla of vater"}
+{"Code":"C248","SearchPhrase":"overlapping lesion of billiary tract"}
+{"Code":"C249","SearchPhrase":"billiary tract"}
+{"Code":"C250","SearchPhrase":"head of pancreas"}
+{"Code":"C251","SearchPhrase":"body of pancreas"}
+{"Code":"C252","SearchPhrase":"tail of pancreas"}
+{"Code":"C253","SearchPhrase":"pancreatic duct"}
+{"Code":"C254","SearchPhrase":"islets of langerhans"}
+{"Code":"C257","SearchPhrase":"other specified parts of pancreas"}
+{"Code":"C258","SearchPhrase":"overlapping lesion of pancreas"}
+{"Code":"C259","SearchPhrase":"pancreas"}
+{"Code":"C260","SearchPhrase":"intestinal tract"}
+{"Code":"C268","SearchPhrase":"overlapping lesion of digestive system"}
+{"Code":"C269","SearchPhrase":"gastrointestinal tract"}
+{"Code":"C300","SearchPhrase":"nasal cavity"}
+{"Code":"C301","SearchPhrase":"middle ear"}
+{"Code":"C310","SearchPhrase":"maxillary sinus"}
+{"Code":"C311","SearchPhrase":"ethmoid sinus"}
+{"Code":"C312","SearchPhrase":"frontal sinus"}
+{"Code":"C313","SearchPhrase":"sphenoid sinus"}
+{"Code":"C318","SearchPhrase":"overlapping lesion of accessory sinuses"}
+{"Code":"C319","SearchPhrase":"accessory sinus"}
+{"Code":"C320","SearchPhrase":"glottis"}
+{"Code":"C321","SearchPhrase":"supraglottis"}
+{"Code":"C322","SearchPhrase":"subglottis"}
+{"Code":"C323","SearchPhrase":"laryngeal cartilage"}
+{"Code":"C328","SearchPhrase":"overlapping lesion of larynx"}
+{"Code":"C329","SearchPhrase":"larynx"}
+{"Code":"C339","SearchPhrase":"trachea"}
+{"Code":"C340","SearchPhrase":"main bronchus"}
+{"Code":"C341","SearchPhrase":"upper lobe lung"}
+{"Code":"C342","SearchPhrase":"middle lobe lung"}
+{"Code":"C343","SearchPhrase":"lower lobe lung"}
+{"Code":"C348","SearchPhrase":"overlapping lesion of lung"}
+{"Code":"C349","SearchPhrase":"lung"}
+{"Code":"C379","SearchPhrase":"thymus"}
+{"Code":"C380","SearchPhrase":"heart"}
+{"Code":"C381","SearchPhrase":"anterior mediastinum"}
+{"Code":"C382","SearchPhrase":"posterior mediastinum"}
+{"Code":"C383","SearchPhrase":"mediastinum"}
+{"Code":"C384","SearchPhrase":"pleura"}
+{"Code":"C388","SearchPhrase":"overlapping lesion of heart mediastinum and pleura"}
+{"Code":"C390","SearchPhrase":"upper respiratory tract"}
+{"Code":"C398","SearchPhrase":"overlapping lesion of respiratory system and intrathoracic organs"}
+{"Code":"C399","SearchPhrase":"illdefined sites within respiratory system"}
+{"Code":"C400","SearchPhrase":"long bones of upper limb scapula and associated joints"}
+{"Code":"C401","SearchPhrase":"short bones of upper limb and associated joints"}
+{"Code":"C402","SearchPhrase":"long bones of lower limb and associated joints"}
+{"Code":"C403","SearchPhrase":"short bones of lower limb and associated joints"}
+{"Code":"C408","SearchPhrase":"overlapping lesion of bones joints and articular cartilage of limbs"}
+{"Code":"C409","SearchPhrase":"bone of limb"}
+{"Code":"C410","SearchPhrase":"bones of skull and face and associated joints"}
+{"Code":"C411","SearchPhrase":"mandible"}
+{"Code":"C412","SearchPhrase":"vertebral column"}
+{"Code":"C413","SearchPhrase":"rib sternum clavicle and associated joints"}
+{"Code":"C414","SearchPhrase":"pelvic bones sacrum coccyx and associated joints"}
+{"Code":"C418","SearchPhrase":"overlapping lesion of bones joints and articular cartilage"}
+{"Code":"C419","SearchPhrase":"bone"}
+{"Code":"C420","SearchPhrase":"blood"}
+{"Code":"C421","SearchPhrase":"bone marrow"}
+{"Code":"C422","SearchPhrase":"spleen"}
+{"Code":"C423","SearchPhrase":"reticuloendothelial system"}
+{"Code":"C424","SearchPhrase":"hematopoietic system"}
+{"Code":"C440","SearchPhrase":"skin of lip"}
+{"Code":"C441","SearchPhrase":"eyelid"}
+{"Code":"C442","SearchPhrase":"external ear"}
+{"Code":"C443","SearchPhrase":"skin of other and unspecified parts of face"}
+{"Code":"C444","SearchPhrase":"skin of scalp and neck"}
+{"Code":"C445","SearchPhrase":"skin of trunk"}
+{"Code":"C446","SearchPhrase":"skin of upper limb and shoulder"}
+{"Code":"C447","SearchPhrase":"skin of lower limb and hip"}
+{"Code":"C448","SearchPhrase":"overlapping lesion of skin"}
+{"Code":"C449","SearchPhrase":"skin"}
+{"Code":"C470","SearchPhrase":"peripheral nerves and autonomic nervous system of head face and neck"}
+{"Code":"C471","SearchPhrase":"peripheral nerves and autonomic nervous system of upper limb and shoulder"}
+{"Code":"C472","SearchPhrase":"peripheral nerves and autonomic nervous system of lower limb and hip"}
+{"Code":"C473","SearchPhrase":"peripheral nerves and autonomic nervous system of thorax"}
+{"Code":"C474","SearchPhrase":"peripheral nerves and autonomic nervous system of abdomen"}
+{"Code":"C475","SearchPhrase":"peripheral nerves and autonomic nervous system of pelvis"}
+{"Code":"C476","SearchPhrase":"peripheral nerves and autonomic nervous system of trunk"}
+{"Code":"C478","SearchPhrase":"overlapping lesion of peripheral nerves and autonomic nervous system"}
+{"Code":"C479","SearchPhrase":"autonomic nervous system"}
+{"Code":"C480","SearchPhrase":"retroperitoneum"}
+{"Code":"C481","SearchPhrase":"specified parts of peritoneum"}
+{"Code":"C482","SearchPhrase":"peritoneum"}
+{"Code":"C488","SearchPhrase":"overlapping lesion of retroperitoneum and peritoneum"}
+{"Code":"C490","SearchPhrase":"connective subcutaneous and other soft tissues of head face and neck"}
+{"Code":"C491","SearchPhrase":"connective subcutaneous and other soft tissues of upper limb and shoulder"}
+{"Code":"C492","SearchPhrase":"connective subcutaneous and other soft tissues of lower limb and hip"}
+{"Code":"C493","SearchPhrase":"connective subcutaneous and other soft tissues of thorax"}
+{"Code":"C494","SearchPhrase":"connective subcutaneous and other soft tissues of abdomen"}
+{"Code":"C495","SearchPhrase":"connective subcutaneous and other soft tissues of pelvis"}
+{"Code":"C496","SearchPhrase":"connective subcutaneous and other soft tissues of trunk"}
+{"Code":"C498","SearchPhrase":"overlapping lesion of connective subcutaneous and other soft tissues"}
+{"Code":"C499","SearchPhrase":"connective subcutaneous and other soft tissues"}
+{"Code":"C500","SearchPhrase":"nipple"}
+{"Code":"C501","SearchPhrase":"central portion of breast"}
+{"Code":"C502","SearchPhrase":"upperinner quadrant of breast"}
+{"Code":"C503","SearchPhrase":"lowerinner quadrant of breast"}
+{"Code":"C504","SearchPhrase":"upperouter quadrant of breast"}
+{"Code":"C505","SearchPhrase":"lowerouter quadrant of breast"}
+{"Code":"C506","SearchPhrase":"axillary tail of breast"}
+{"Code":"C508","SearchPhrase":"overlapping lesion of breast"}
+{"Code":"C509","SearchPhrase":"breast"}
+{"Code":"C510","SearchPhrase":"labium majus"}
+{"Code":"C511","SearchPhrase":"labium minus"}
+{"Code":"C512","SearchPhrase":"clitorus"}
+{"Code":"C518","SearchPhrase":"overlapping lesion of vulva"}
+{"Code":"C519","SearchPhrase":"vulva"}
+{"Code":"C529","SearchPhrase":"vagina"}
+{"Code":"C530","SearchPhrase":"endocervix"}
+{"Code":"C531","SearchPhrase":"exocervix"}
+{"Code":"C538","SearchPhrase":"overlapping lesion of cervix uteri"}
+{"Code":"C539","SearchPhrase":"cervix uteri"}
+{"Code":"C540","SearchPhrase":"isthmus uteri"}
+{"Code":"C541","SearchPhrase":"endometrium"}
+{"Code":"C542","SearchPhrase":"myometrium"}
+{"Code":"C543","SearchPhrase":"fundus uteri"}
+{"Code":"C548","SearchPhrase":"overlapping lesion of corpus uteri"}
+{"Code":"C549","SearchPhrase":"corpus uteri"}
+{"Code":"C559","SearchPhrase":"uterus"}
+{"Code":"C569","SearchPhrase":"ovary"}
+{"Code":"C570","SearchPhrase":"fallopian tube"}
+{"Code":"C571","SearchPhrase":"broad ligament"}
+{"Code":"C572","SearchPhrase":"round ligament"}
+{"Code":"C573","SearchPhrase":"parametrium"}
+{"Code":"C574","SearchPhrase":"uterine adnexa"}
+{"Code":"C577","SearchPhrase":"other specified parts of female genital organs"}
+{"Code":"C578","SearchPhrase":"overlapping lesion of female genital organs"}
+{"Code":"C579","SearchPhrase":"female genital tract"}
+{"Code":"C589","SearchPhrase":"placenta"}
+{"Code":"C600","SearchPhrase":"prepuce"}
+{"Code":"C601","SearchPhrase":"glans penis"}
+{"Code":"C602","SearchPhrase":"body of penis"}
+{"Code":"C608","SearchPhrase":"overlapping lesion of penis"}
+{"Code":"C609","SearchPhrase":"penis"}
+{"Code":"C619","SearchPhrase":"prostate gland"}
+{"Code":"C619","SearchPhrase":"prostate"}
+{"Code":"C620","SearchPhrase":"undescended testis"}
+{"Code":"C621","SearchPhrase":"descended testis"}
+{"Code":"C629","SearchPhrase":"testis"}
+{"Code":"C630","SearchPhrase":"epididymis"}
+{"Code":"C631","SearchPhrase":"spermatic cord"}
+{"Code":"C632","SearchPhrase":"scrotum"}
+{"Code":"C637","SearchPhrase":"other specified parts of male genital organs"}
+{"Code":"C638","SearchPhrase":"overlapping lesion of male genital organs"}
+{"Code":"C639","SearchPhrase":"male genital organs"}
+{"Code":"C649","SearchPhrase":"kidney"}
+{"Code":"C659","SearchPhrase":"renal pelvis"}
+{"Code":"C669","SearchPhrase":"ureter"}
+{"Code":"C670","SearchPhrase":"trigone of bladder"}
+{"Code":"C671","SearchPhrase":"dome of bladder"}
+{"Code":"C672","SearchPhrase":"lateral wall of bladder"}
+{"Code":"C673","SearchPhrase":"anterior wall of bladder"}
+{"Code":"C674","SearchPhrase":"posterior wall of bladder"}
+{"Code":"C675","SearchPhrase":"bladder neck"}
+{"Code":"C676","SearchPhrase":"ureteric orifice"}
+{"Code":"C677","SearchPhrase":"urachus"}
+{"Code":"C678","SearchPhrase":"overlapping lesion of bladder"}
+{"Code":"C679","SearchPhrase":"bladder"}
+{"Code":"C680","SearchPhrase":"urethra"}
+{"Code":"C681","SearchPhrase":"paraurethral gland"}
+{"Code":"C688","SearchPhrase":"overlapping lesion of urinary organs"}
+{"Code":"C689","SearchPhrase":"urinary system"}
+{"Code":"C690","SearchPhrase":"conjunctiva"}
+{"Code":"C691","SearchPhrase":"cornea"}
+{"Code":"C692","SearchPhrase":"retina"}
+{"Code":"C693","SearchPhrase":"choroid"}
+{"Code":"C694","SearchPhrase":"ciliary body"}
+{"Code":"C695","SearchPhrase":"lacrimal gland"}
+{"Code":"C696","SearchPhrase":"orbit"}
+{"Code":"C698","SearchPhrase":"overlapping lesion of eye and adnexa"}
+{"Code":"C699","SearchPhrase":"eye"}
+{"Code":"C700","SearchPhrase":"cerebral meninges"}
+{"Code":"C701","SearchPhrase":"spinal meninges"}
+{"Code":"C709","SearchPhrase":"meninges"}
+{"Code":"C710","SearchPhrase":"cerebrum"}
+{"Code":"C711","SearchPhrase":"frontal lobe"}
+{"Code":"C712","SearchPhrase":"temporal lobe"}
+{"Code":"C713","SearchPhrase":"parietal lobe"}
+{"Code":"C714","SearchPhrase":"occipital lobe"}
+{"Code":"C715","SearchPhrase":"ventricle"}
+{"Code":"C716","SearchPhrase":"cerebellum"}
+{"Code":"C717","SearchPhrase":"brain stem"}
+{"Code":"C718","SearchPhrase":"overlapping lesion of brain"}
+{"Code":"C719","SearchPhrase":"brain"}
+{"Code":"C720","SearchPhrase":"spinal cord"}
+{"Code":"C721","SearchPhrase":"cauda equina"}
+{"Code":"C722","SearchPhrase":"olfactory nerve"}
+{"Code":"C723","SearchPhrase":"optic nerve"}
+{"Code":"C724","SearchPhrase":"acoustic nerve"}
+{"Code":"C725","SearchPhrase":"cranial nerve"}
+{"Code":"C728","SearchPhrase":"overlapping lesion of brain and central nervous system"}
+{"Code":"C729","SearchPhrase":"nervous system"}
+{"Code":"C739","SearchPhrase":"thyroid gland"}
+{"Code":"C739","SearchPhrase":"thyroid"}
+{"Code":"C740","SearchPhrase":"cortex of adrenal gland"}
+{"Code":"C741","SearchPhrase":"medulla of adrenal gland"}
+{"Code":"C749","SearchPhrase":"adrenal gland"}
+{"Code":"C750","SearchPhrase":"parathyroid gland"}
+{"Code":"C751","SearchPhrase":"pituitary gland"}
+{"Code":"C752","SearchPhrase":"craniopharyngeal duct"}
+{"Code":"C753","SearchPhrase":"pineal gland"}
+{"Code":"C754","SearchPhrase":"carotid body"}
+{"Code":"C755","SearchPhrase":"aortic body and other paraganglia"}
+{"Code":"C758","SearchPhrase":"overlapping lesion of endocrine glands and related structures"}
+{"Code":"C759","SearchPhrase":"endocrine gland"}
+{"Code":"C760","SearchPhrase":"head face or neck"}
+{"Code":"C761","SearchPhrase":"thorax"}
+{"Code":"C762","SearchPhrase":"abdomen"}
+{"Code":"C763","SearchPhrase":"pelvis"}
+{"Code":"C764","SearchPhrase":"upper limb"}
+{"Code":"C765","SearchPhrase":"lower limb"}
+{"Code":"C767","SearchPhrase":"other illdefined sites"}
+{"Code":"C768","SearchPhrase":"overlapping lesion of illdefined sites"}
+{"Code":"C809","SearchPhrase":"unknown primary site"}

@@ -4,6 +4,8 @@
 . "$PSScriptRoot\xml-helpers.ps1"
 
 # Cache for loaded Excel maps to avoid reloading on every call
+# More important if we don't have the .json and .jsonl files created
+# Would otherwise take about 10s per call
 $script:TopoMapCache = $null
 $script:MelTopoMapCache = $null
 $script:LateralityCodesCache = $null
@@ -153,6 +155,54 @@ function Read-LateralityExcel {
     return $codes
 }
 
+# Fast JSON loading functions (much faster than Excel COM objects)
+function Read-TopographyJson {
+    param([string]$Path)
+    
+    $items = @()
+    
+    if (-not (Test-Path $Path)) {
+        throw "JSON file not found: $Path"
+    }
+    
+    # Read all lines at once for better performance
+    $lines = [System.IO.File]::ReadAllLines($Path)
+    
+    foreach ($line in $lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        
+        try {
+            $item = $line | ConvertFrom-Json
+            if ($item.Code -and $item.SearchPhrase) {
+                $items += $item
+            }
+        }
+        catch {
+            Write-Warning "Failed to parse JSON line: $line"
+        }
+    }
+    
+    return $items
+}
+
+function Read-LateralityJson {
+    param([string]$Path)
+    
+    if (-not (Test-Path $Path)) {
+        throw "JSON file not found: $Path"
+    }
+    
+    $json = [System.IO.File]::ReadAllText($Path)
+    $codes = @{}
+    $array = $json | ConvertFrom-Json
+    
+    foreach ($code in $array) {
+        $codes[$code] = $true
+    }
+    
+    return $codes
+}
+
 function Get-BestCode {
     param($Map, $TextLow)
 
@@ -207,48 +257,88 @@ function Get-CachedMaps {
         [string]$ScriptDir
     )
     
+    # Prefer JSON files (much faster), fallback to Excel
+    $topoJson    = Join-Path $ScriptDir "Topography.jsonl"
+    $melTopoJson = Join-Path $ScriptDir "TopographyMelanoma.jsonl"
+    $latJson     = Join-Path $ScriptDir "Laterality.json"
     $topoXlsx    = Join-Path $ScriptDir "Topography.xlsx"
     $melTopoXlsx = Join-Path $ScriptDir "TopographyMelanoma.xlsx"
     $latXlsx     = Join-Path $ScriptDir "Laterality.xlsx"
 
-    if (-not (Test-Path $topoXlsx)) {
-        throw "Missing Topography.xlsx in script folder: $ScriptDir"
+    # Determine which files to use (prefer JSON)
+    $useTopoJson = Test-Path $topoJson
+    $useMelTopoJson = Test-Path $melTopoJson
+    $useLatJson = Test-Path $latJson
+    
+    # Validate that at least one format exists for each file
+    if (-not $useTopoJson -and -not (Test-Path $topoXlsx)) {
+        throw "Missing Topography file (neither .jsonl nor .xlsx found) in script folder: $ScriptDir"
     }
-    if (-not (Test-Path $melTopoXlsx)) {
-        throw "Missing TopographyMelanoma.xlsx in script folder: $ScriptDir"
+    if (-not $useMelTopoJson -and -not (Test-Path $melTopoXlsx)) {
+        throw "Missing TopographyMelanoma file (neither .jsonl nor .xlsx found) in script folder: $ScriptDir"
     }
-    if (-not (Test-Path $latXlsx)) {
-        throw "Missing Laterality.xlsx in script folder: $ScriptDir"
+    if (-not $useLatJson -and -not (Test-Path $latXlsx)) {
+        throw "Missing Laterality file (neither .json nor .xlsx found) in script folder: $ScriptDir"
     }
 
     $loadStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $needsReload = $false
+    $sourceType = @()
     
     # Check if we need to reload Topography map
-    $topoFileTime = (Get-Item $topoXlsx).LastWriteTime
+    $topoFile = if ($useTopoJson) { $topoJson } else { $topoXlsx }
+    $topoFileTime = (Get-Item $topoFile).LastWriteTime
+    
     if ($null -eq $script:TopoMapCache -or $null -eq $script:TopoMapCacheTime -or $topoFileTime -gt $script:TopoMapCacheTime) {
-        Write-Host "Loading Topography.xlsx..." -ForegroundColor Cyan
-        $script:TopoMapCache = Read-TopographyExcel $topoXlsx |
-            Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
+        if ($useTopoJson) {
+            Write-Host "Loading Topography.jsonl..." -ForegroundColor Cyan
+            $script:TopoMapCache = Read-TopographyJson $topoJson |
+                Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
+            $sourceType += "JSON"
+        } else {
+            Write-Host "Loading Topography.xlsx..." -ForegroundColor Cyan
+            $script:TopoMapCache = Read-TopographyExcel $topoXlsx |
+                Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
+            $sourceType += "Excel"
+        }
         $script:TopoMapCacheTime = $topoFileTime
         $needsReload = $true
     }
     
     # Check if we need to reload Melanoma Topography map
-    $melTopoFileTime = (Get-Item $melTopoXlsx).LastWriteTime
+    $melTopoFile = if ($useMelTopoJson) { $melTopoJson } else { $melTopoXlsx }
+    $melTopoFileTime = (Get-Item $melTopoFile).LastWriteTime
+    
     if ($null -eq $script:MelTopoMapCache -or $null -eq $script:MelTopoMapCacheTime -or $melTopoFileTime -gt $script:MelTopoMapCacheTime) {
-        Write-Host "Loading TopographyMelanoma.xlsx..." -ForegroundColor Cyan
-        $script:MelTopoMapCache = Read-TopographyExcel $melTopoXlsx |
-            Where-Object { $_.Code -and $_.SearchPhrase }
+        if ($useMelTopoJson) {
+            Write-Host "Loading TopographyMelanoma.jsonl..." -ForegroundColor Cyan
+            $script:MelTopoMapCache = Read-TopographyJson $melTopoJson |
+                Where-Object { $_.Code -and $_.SearchPhrase }
+            $sourceType += "JSON"
+        } else {
+            Write-Host "Loading TopographyMelanoma.xlsx..." -ForegroundColor Cyan
+            $script:MelTopoMapCache = Read-TopographyExcel $melTopoXlsx |
+                Where-Object { $_.Code -and $_.SearchPhrase }
+            $sourceType += "Excel"
+        }
         $script:MelTopoMapCacheTime = $melTopoFileTime
         $needsReload = $true
     }
     
     # Check if we need to reload Laterality codes
-    $latFileTime = (Get-Item $latXlsx).LastWriteTime
+    $latFile = if ($useLatJson) { $latJson } else { $latXlsx }
+    $latFileTime = (Get-Item $latFile).LastWriteTime
+    
     if ($null -eq $script:LateralityCodesCache -or $null -eq $script:LateralityCodesCacheTime -or $latFileTime -gt $script:LateralityCodesCacheTime) {
-        Write-Host "Loading Laterality.xlsx..." -ForegroundColor Cyan
-        $script:LateralityCodesCache = Read-LateralityExcel $latXlsx
+        if ($useLatJson) {
+            Write-Host "Loading Laterality.json..." -ForegroundColor Cyan
+            $script:LateralityCodesCache = Read-LateralityJson $latJson
+            $sourceType += "JSON"
+        } else {
+            Write-Host "Loading Laterality.xlsx..." -ForegroundColor Cyan
+            $script:LateralityCodesCache = Read-LateralityExcel $latXlsx
+            $sourceType += "Excel"
+        }
         $script:LateralityCodesCacheTime = $latFileTime
         $needsReload = $true
     }
@@ -256,9 +346,14 @@ function Get-CachedMaps {
     $loadStopwatch.Stop()
     
     if ($needsReload) {
-        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes in {3:F2} seconds." -f $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Cyan
+        $sourceInfo = if ($sourceType -contains "JSON") { " (using JSON)" } else { " (using Excel)" }
+        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes in {3:F2} seconds{4}." -f 
+            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, 
+            $loadStopwatch.Elapsed.TotalSeconds, $sourceInfo) -ForegroundColor Cyan
     } else {
-        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes (loaded in {3:F3} seconds)." -f $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
+        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes (checked in {3:F3} seconds)." -f 
+            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, 
+            $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
     }
     
     return @{
