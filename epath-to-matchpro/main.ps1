@@ -11,6 +11,7 @@
 . "$PSScriptRoot\export-selected-xml.ps1"
 . "$PSScriptRoot\export-selected-csv.ps1"
 . "$PSScriptRoot\export-all-csv.ps1"
+. "$PSScriptRoot\export-preview.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnXml.ps1"
