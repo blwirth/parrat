@@ -85,6 +85,7 @@
 {"Code":"C166","SearchPhrase":"greater curvature of stomach"}
 {"Code":"C168","SearchPhrase":"overlapping lesion of stomach"}
 {"Code":"C169","SearchPhrase":"stomach"}
+{"Code":"C169","SearchPhrase":"gastric"}
 {"Code":"C170","SearchPhrase":"duodenum"}
 {"Code":"C171","SearchPhrase":"jejunum"}
 {"Code":"C172","SearchPhrase":"ileum"}
@@ -93,6 +94,7 @@
 {"Code":"C179","SearchPhrase":"small intestine"}
 {"Code":"C180","SearchPhrase":"cecum"}
 {"Code":"C181","SearchPhrase":"appendix"}
+{"Code":"C181","SearchPhrase":"appendiceal"}
 {"Code":"C182","SearchPhrase":"ascending colon"}
 {"Code":"C183","SearchPhrase":"hepatic flexure of colon"}
 {"Code":"C184","SearchPhrase":"transverse colon"}
@@ -102,6 +104,7 @@
 {"Code":"C188","SearchPhrase":"overlapping lesion of colon"}
 {"Code":"C189","SearchPhrase":"colon"}
 {"Code":"C199","SearchPhrase":"rectosigmoid junction"}
+{"Code":"C199","SearchPhrase":"colorectal"}
 {"Code":"C209","SearchPhrase":"rectum"}
 {"Code":"C210","SearchPhrase":"anus"}
 {"Code":"C211","SearchPhrase":"anal canal"}
@@ -112,6 +115,7 @@
 {"Code":"C239","SearchPhrase":"gallbladder"}
 {"Code":"C240","SearchPhrase":"extrahepatic bile duct"}
 {"Code":"C241","SearchPhrase":"ampulla of vater"}
+{"Code":"C241","SearchPhrase":"ampullary"}
 {"Code":"C248","SearchPhrase":"overlapping lesion of billiary tract"}
 {"Code":"C249","SearchPhrase":"billiary tract"}
 {"Code":"C250","SearchPhrase":"head of pancreas"}
@@ -146,6 +150,7 @@
 {"Code":"C343","SearchPhrase":"lower lobe lung"}
 {"Code":"C348","SearchPhrase":"overlapping lesion of lung"}
 {"Code":"C349","SearchPhrase":"lung"}
+{"Code":"C349","SearchPhrase":"pulmonary"}
 {"Code":"C379","SearchPhrase":"thymus"}
 {"Code":"C380","SearchPhrase":"heart"}
 {"Code":"C381","SearchPhrase":"anterior mediastinum"}
@@ -215,6 +220,7 @@
 {"Code":"C506","SearchPhrase":"axillary tail of breast"}
 {"Code":"C508","SearchPhrase":"overlapping lesion of breast"}
 {"Code":"C509","SearchPhrase":"breast"}
+{"Code":"C509","SearchPhrase":"mammary"}
 {"Code":"C510","SearchPhrase":"labium majus"}
 {"Code":"C511","SearchPhrase":"labium minus"}
 {"Code":"C512","SearchPhrase":"clitorus"}
@@ -241,6 +247,7 @@
 {"Code":"C577","SearchPhrase":"other specified parts of female genital organs"}
 {"Code":"C578","SearchPhrase":"overlapping lesion of female genital organs"}
 {"Code":"C579","SearchPhrase":"female genital tract"}
+{"Code":"C579","SearchPhrase":"gynecologic/mullerian"}
 {"Code":"C589","SearchPhrase":"placenta"}
 {"Code":"C600","SearchPhrase":"prepuce"}
 {"Code":"C601","SearchPhrase":"glans penis"}

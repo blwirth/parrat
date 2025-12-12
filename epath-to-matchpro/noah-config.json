@@ -1,0 +1,7 @@
+﻿{
+    "exePath":  "C:\\RegPlus\\NOAH\\NOAHClientCentralRegistry.exe",
+    "modelId":  "d61300da-8184-4ce3-a59f-f6c4a9265811",
+    "output":  "hl7",
+    "separateImpossiblesAndMets":  false,
+    "workingRoot":  ""
+}

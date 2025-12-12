@@ -12,6 +12,7 @@
 . "$PSScriptRoot\export-selected-csv.ps1"
 . "$PSScriptRoot\export-all-csv.ps1"
 . "$PSScriptRoot\export-preview.ps1"
+. "$PSScriptRoot\noah-reportability.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnXml.ps1"
@@ -25,6 +26,7 @@
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
+. "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedCsv.ps1"
 . "$PSScriptRoot\button-handlers\btnExportAllCsv.ps1"
@@ -138,12 +140,12 @@ $splitInner.IsSplitterFixed = $false
 $splitInner.Panel1MinSize = 300
 
 $form.Add_Shown({
-    param($sender, $e)
+    param($formSender, $e)
 
     # Adjust main panel to fit current client area
     $mainPanel.Size = New-Object System.Drawing.Size(
-        [int]($sender.ClientSize.Width  - 20),
-        [int]($sender.ClientSize.Height - 100)  # leave some space at the bottom
+        [int]($formSender.ClientSize.Width  - 20),
+        [int]($formSender.ClientSize.Height - 100)  # leave some space at the bottom
     )
 
     # Set splitter distances as proportions
