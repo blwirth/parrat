@@ -411,14 +411,29 @@ function Get-MissingFields {
             $tumorsWithExistingSite++
         }
         
-        if ($hasSite -and $hasLat) {
-            continue
-        }
+        # Still include in report even if both exist (for comparison purposes)
+        # But skip processing if both exist
+        $skipProcessing = $hasSite -and $hasLat
 
         $proposedSite = ""
         $proposedLat = ""
         $sourceText = ""
         $textCombined = ""
+
+        if ($skipProcessing) {
+            # Both site and laterality exist - add to report with category
+            $report += [PSCustomObject]@{
+                TumorIndex         = $i + 1
+                PatientName        = $patientName
+                CurrentSite        = $currentSite
+                ProposedSite       = ""
+                CurrentLaterality  = $currentLat
+                ProposedLaterality = ""
+                SourceText         = ""
+                Category           = "HasSite_NoUpdate"
+            }
+            continue
+        }
 
         # Get text fields
         $textPath = Get-ItemValue -Context $tumor -NsMgr $NsMgr -Id "textDxProcPath"
@@ -435,6 +450,19 @@ function Get-MissingFields {
             # Track tumors without site and no text to analyze
             if (-not $hasSite) {
                 $tumorsWithoutSiteNotCoded++
+            }
+            # Still add to report for display (category: no text, no site)
+            if (-not $hasSite) {
+                $report += [PSCustomObject]@{
+                    TumorIndex         = $i + 1
+                    PatientName        = $patientName
+                    CurrentSite        = $currentSite
+                    ProposedSite       = ""
+                    CurrentLaterality  = $currentLat
+                    ProposedLaterality = ""
+                    SourceText         = "(no text available)"
+                    Category           = "NoSite_NoText"
+                }
             }
             continue
         }
@@ -511,18 +539,42 @@ function Get-MissingFields {
             $tumorsWithoutSiteNotCoded++
         }
 
-        # Create report entry if we have any proposed changes
+        # Determine category for this tumor
+        $category = ""
         if ($proposedSite -or $proposedLat) {
-            $report += [PSCustomObject]@{
-                TumorIndex         = $i + 1
-                PatientName        = $patientName
-                CurrentSite        = $currentSite
-                ProposedSite       = if ($proposedSite) { $proposedSite } else { "" }
-                CurrentLaterality  = $currentLat
-                ProposedLaterality = if ($proposedLat) { $proposedLat } else { "" }
-                SourceText         = $sourceText
-            }
+            $category = "WillUpdate"
+        }
+        elseif ($hasSite) {
+            $category = "HasSite_NoUpdate"
+        }
+        elseif (-not $hasSite) {
+            $category = "NoSite_NoMatch"
+        }
 
+        # Prepare source text for display
+        $displaySourceText = $sourceText
+        if (-not $displaySourceText -and $textCombined) {
+            $maxLen = [Math]::Min(200, $textCombined.Length)
+            $displaySourceText = $textCombined.Substring(0, $maxLen)
+            if ($textCombined.Length -gt 200) {
+                $displaySourceText += "..."
+            }
+        }
+
+        # Create report entry for all tumors (not just those being updated)
+        $report += [PSCustomObject]@{
+            TumorIndex         = $i + 1
+            PatientName        = $patientName
+            CurrentSite        = $currentSite
+            ProposedSite       = if ($proposedSite) { $proposedSite } else { "" }
+            CurrentLaterality  = $currentLat
+            ProposedLaterality = if ($proposedLat) { $proposedLat } else { "" }
+            SourceText         = $displaySourceText
+            Category           = $category
+        }
+
+        # Only add to assignments if we have proposed changes
+        if ($proposedSite -or $proposedLat) {
             $assignments[$i] = @{
                 PrimarySite = $proposedSite
                 Laterality  = $proposedLat
@@ -699,14 +751,33 @@ function Show-AssignmentReport {
     # Summary label
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
-    $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
+    $lblSummary.Size = New-Object System.Drawing.Size(1560, 30)
     $lblSummary.Text = "To update: $($Assignments.Count) | Sites: $siteCount | Laterality: $latCount | Existing site: $TumorsWithExistingSite | Not coded: $TumorsWithoutSiteNotCoded"
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 
+    # Filter checkboxes
+    $chkWillUpdate = New-Object System.Windows.Forms.CheckBox
+    $chkWillUpdate.Text = "Show: Will be updated"
+    $chkWillUpdate.Checked = $true
+    $chkWillUpdate.Location = New-Object System.Drawing.Point(10, 45)
+    $chkWillUpdate.AutoSize = $true
+
+    $chkNoSiteNoUpdate = New-Object System.Windows.Forms.CheckBox
+    $chkNoSiteNoUpdate.Text = "Show: No site, not updated"
+    $chkNoSiteNoUpdate.Checked = $true
+    $chkNoSiteNoUpdate.Location = New-Object System.Drawing.Point(200, 45)
+    $chkNoSiteNoUpdate.AutoSize = $true
+
+    $chkHasSiteNoUpdate = New-Object System.Windows.Forms.CheckBox
+    $chkHasSiteNoUpdate.Text = "Show: Has site, not updated"
+    $chkHasSiteNoUpdate.Checked = $true
+    $chkHasSiteNoUpdate.Location = New-Object System.Drawing.Point(400, 45)
+    $chkHasSiteNoUpdate.AutoSize = $true
+
     # Split container for grid and text preview
     $splitContainer = New-Object System.Windows.Forms.SplitContainer
-    $splitContainer.Location = New-Object System.Drawing.Point(10, 60)
-    $splitContainer.Size = New-Object System.Drawing.Size(1560, 630)
+    $splitContainer.Location = New-Object System.Drawing.Point(10, 75)
+    $splitContainer.Size = New-Object System.Drawing.Size(1560, 615)
     $splitContainer.Anchor = 'Top,Left,Right,Bottom'
     $splitContainer.Orientation = 'Horizontal'
     $splitContainer.SplitterDistance = 300
@@ -722,18 +793,19 @@ function Show-AssignmentReport {
     $grid.SelectionMode = 'FullRowSelect'
     $grid.MultiSelect = $false
 
-    # Build DataTable
-    $table = New-Object System.Data.DataTable
-    [void]$table.Columns.Add("TumorIndex", [int])
-    [void]$table.Columns.Add("PatientName", [string])
-    [void]$table.Columns.Add("CurrentSite", [string])
-    [void]$table.Columns.Add("ProposedSite", [string])
-    [void]$table.Columns.Add("CurrentLaterality", [string])
-    [void]$table.Columns.Add("ProposedLaterality", [string])
-    [void]$table.Columns.Add("SourceText", [string])
+    # Build DataTable (full dataset)
+    $fullTable = New-Object System.Data.DataTable
+    [void]$fullTable.Columns.Add("TumorIndex", [int])
+    [void]$fullTable.Columns.Add("PatientName", [string])
+    [void]$fullTable.Columns.Add("CurrentSite", [string])
+    [void]$fullTable.Columns.Add("ProposedSite", [string])
+    [void]$fullTable.Columns.Add("CurrentLaterality", [string])
+    [void]$fullTable.Columns.Add("ProposedLaterality", [string])
+    [void]$fullTable.Columns.Add("SourceText", [string])
+    [void]$fullTable.Columns.Add("Category", [string])
 
     foreach ($item in $Report) {
-        $row = $table.NewRow()
+        $row = $fullTable.NewRow()
         $row["TumorIndex"] = $item.TumorIndex
         $row["PatientName"] = $item.PatientName
         $row["CurrentSite"] = $item.CurrentSite
@@ -741,10 +813,61 @@ function Show-AssignmentReport {
         $row["CurrentLaterality"] = $item.CurrentLaterality
         $row["ProposedLaterality"] = $item.ProposedLaterality
         $row["SourceText"] = $item.SourceText
-        [void]$table.Rows.Add($row)
+        $row["Category"] = $item.Category
+        [void]$fullTable.Rows.Add($row)
     }
 
-    $grid.DataSource = $table
+    # Create filtered DataView
+    $dataView = New-Object System.Data.DataView($fullTable)
+    $grid.DataSource = $dataView
+
+    # Hide Category column (after grid is bound)
+    $hideCategoryColumn = {
+        try {
+            if ($grid.Columns["Category"] -ne $null) {
+                $grid.Columns["Category"].Visible = $false
+            }
+        }
+        catch {
+            # Column not available yet, will be hidden by DataBindingComplete event
+        }
+    }
+    
+    $grid.Add_DataBindingComplete($hideCategoryColumn)
+    
+    # Also try to hide it after form loads
+    $reportForm.Add_Load({
+        & $hideCategoryColumn
+    })
+
+    # Filter function
+    $updateFilter = {
+        $filterParts = @()
+        
+        if ($chkWillUpdate.Checked) {
+            $filterParts += "Category = 'WillUpdate'"
+        }
+        if ($chkNoSiteNoUpdate.Checked) {
+            $filterParts += "(Category = 'NoSite_NoMatch' OR Category = 'NoSite_NoText')"
+        }
+        if ($chkHasSiteNoUpdate.Checked) {
+            $filterParts += "Category = 'HasSite_NoUpdate'"
+        }
+        
+        if ($filterParts.Count -eq 0) {
+            $dataView.RowFilter = "1=0"  # Show nothing
+        } else {
+            $dataView.RowFilter = "(" + ($filterParts -join ") OR (") + ")"
+        }
+    }
+
+    # Attach filter handlers
+    $chkWillUpdate.Add_CheckedChanged($updateFilter)
+    $chkNoSiteNoUpdate.Add_CheckedChanged($updateFilter)
+    $chkHasSiteNoUpdate.Add_CheckedChanged($updateFilter)
+
+    # Apply initial filter
+    & $updateFilter
 
     # RichTextBox for text field preview (bottom)
     $rtbPreview = New-Object System.Windows.Forms.RichTextBox
@@ -881,7 +1004,7 @@ function Show-AssignmentReport {
     })
 
     # Add controls to form
-    $reportForm.Controls.AddRange(@($lblSummary, $splitContainer, $btnSaveXml, $btnSaveCsv, $btnClose))
+    $reportForm.Controls.AddRange(@($lblSummary, $chkWillUpdate, $chkNoSiteNoUpdate, $chkHasSiteNoUpdate, $splitContainer, $btnSaveXml, $btnSaveCsv, $btnClose))
 
     [void]$reportForm.ShowDialog()
 }
