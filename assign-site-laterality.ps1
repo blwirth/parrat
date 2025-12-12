@@ -3,6 +3,14 @@
 
 . "$PSScriptRoot\xml-helpers.ps1"
 
+# Cache for loaded Excel maps to avoid reloading on every call
+$script:TopoMapCache = $null
+$script:MelTopoMapCache = $null
+$script:LateralityCodesCache = $null
+$script:TopoMapCacheTime = $null
+$script:MelTopoMapCacheTime = $null
+$script:LateralityCodesCacheTime = $null
+
 # Load topography lookup tables
 function Read-TopographyExcel {
     param([string]$Path)
@@ -194,6 +202,72 @@ function Get-ItemValue {
     return ""
 }
 
+function Get-CachedMaps {
+    param(
+        [string]$ScriptDir
+    )
+    
+    $topoXlsx    = Join-Path $ScriptDir "Topography.xlsx"
+    $melTopoXlsx = Join-Path $ScriptDir "TopographyMelanoma.xlsx"
+    $latXlsx     = Join-Path $ScriptDir "Laterality.xlsx"
+
+    if (-not (Test-Path $topoXlsx)) {
+        throw "Missing Topography.xlsx in script folder: $ScriptDir"
+    }
+    if (-not (Test-Path $melTopoXlsx)) {
+        throw "Missing TopographyMelanoma.xlsx in script folder: $ScriptDir"
+    }
+    if (-not (Test-Path $latXlsx)) {
+        throw "Missing Laterality.xlsx in script folder: $ScriptDir"
+    }
+
+    $loadStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $needsReload = $false
+    
+    # Check if we need to reload Topography map
+    $topoFileTime = (Get-Item $topoXlsx).LastWriteTime
+    if ($null -eq $script:TopoMapCache -or $null -eq $script:TopoMapCacheTime -or $topoFileTime -gt $script:TopoMapCacheTime) {
+        Write-Host "Loading Topography.xlsx..." -ForegroundColor Cyan
+        $script:TopoMapCache = Read-TopographyExcel $topoXlsx |
+            Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
+        $script:TopoMapCacheTime = $topoFileTime
+        $needsReload = $true
+    }
+    
+    # Check if we need to reload Melanoma Topography map
+    $melTopoFileTime = (Get-Item $melTopoXlsx).LastWriteTime
+    if ($null -eq $script:MelTopoMapCache -or $null -eq $script:MelTopoMapCacheTime -or $melTopoFileTime -gt $script:MelTopoMapCacheTime) {
+        Write-Host "Loading TopographyMelanoma.xlsx..." -ForegroundColor Cyan
+        $script:MelTopoMapCache = Read-TopographyExcel $melTopoXlsx |
+            Where-Object { $_.Code -and $_.SearchPhrase }
+        $script:MelTopoMapCacheTime = $melTopoFileTime
+        $needsReload = $true
+    }
+    
+    # Check if we need to reload Laterality codes
+    $latFileTime = (Get-Item $latXlsx).LastWriteTime
+    if ($null -eq $script:LateralityCodesCache -or $null -eq $script:LateralityCodesCacheTime -or $latFileTime -gt $script:LateralityCodesCacheTime) {
+        Write-Host "Loading Laterality.xlsx..." -ForegroundColor Cyan
+        $script:LateralityCodesCache = Read-LateralityExcel $latXlsx
+        $script:LateralityCodesCacheTime = $latFileTime
+        $needsReload = $true
+    }
+    
+    $loadStopwatch.Stop()
+    
+    if ($needsReload) {
+        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes in {3:F2} seconds." -f $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Cyan
+    } else {
+        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes (loaded in {3:F3} seconds)." -f $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
+    }
+    
+    return @{
+        TopoMap = $script:TopoMapCache
+        MelTopoMap = $script:MelTopoMapCache
+        LateralityCodes = $script:LateralityCodesCache
+    }
+}
+
 function Get-MissingFields {
     param(
         [System.Xml.XmlNodeList]$Tumors,
@@ -202,34 +276,17 @@ function Get-MissingFields {
 
     $scriptDir = $PSScriptRoot
 
-    $topoXlsx    = Join-Path $scriptDir "Topography.xlsx"
-    $melTopoXlsx = Join-Path $scriptDir "TopographyMelanoma.xlsx"
-    $latXlsx     = Join-Path $scriptDir "Laterality.xlsx"
-
-    if (-not (Test-Path $topoXlsx)) {
-        throw "Missing Topography.xlsx in script folder: $scriptDir"
-    }
-    if (-not (Test-Path $melTopoXlsx)) {
-        throw "Missing TopographyMelanoma.xlsx in script folder: $scriptDir"
-    }
-    if (-not (Test-Path $latXlsx)) {
-        throw "Missing Laterality.xlsx in script folder: $scriptDir"
-    }
-
-    Write-Host "Loading topography and laterality tables..." -ForegroundColor Cyan
-
-    $topoMap = Read-TopographyExcel $topoXlsx |
-        Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
-
-    $melTopoMap = Read-TopographyExcel $melTopoXlsx |
-        Where-Object { $_.Code -and $_.SearchPhrase }
-
-    $lateralityCodes = Read-LateralityExcel $latXlsx
-
-    Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes." -f $topoMap.Count, $melTopoMap.Count, $lateralityCodes.Count) -ForegroundColor Cyan
+    # Load maps (with caching)
+    $maps = Get-CachedMaps -ScriptDir $scriptDir
+    $topoMap = $maps.TopoMap
+    $melTopoMap = $maps.MelTopoMap
+    $lateralityCodes = $maps.LateralityCodes
 
     $report = @()
     $assignments = @{}
+    
+    Write-Host "Processing $($Tumors.Count) tumors..." -ForegroundColor Cyan
+    $processStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     for ($i = 0; $i -lt $Tumors.Count; $i++) {
         $tumor = $Tumors[$i]
@@ -361,6 +418,9 @@ function Get-MissingFields {
             }
         }
     }
+    
+    $processStopwatch.Stop()
+    Write-Host ("Processed {0} tumors in {1:F2} seconds ({2:F3} seconds per tumor)." -f $Tumors.Count, $processStopwatch.Elapsed.TotalSeconds, ($processStopwatch.Elapsed.TotalSeconds / $Tumors.Count)) -ForegroundColor Cyan
 
     return @{
         Report = $report
