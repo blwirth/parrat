@@ -16,6 +16,8 @@
 . "$PSScriptRoot\button-handlers\btnXml.ps1"
 . "$PSScriptRoot\button-handlers\btnDiff.ps1"
 . "$PSScriptRoot\button-handlers\btnDedup.ps1"
+. "$PSScriptRoot\button-handlers\btnDedupTrueMatches.ps1"
+. "$PSScriptRoot\button-handlers\btnDedupPathReport.ps1"
 . "$PSScriptRoot\button-handlers\btnAssign.ps1"
 . "$PSScriptRoot\button-handlers\btnFacility.ps1"
 . "$PSScriptRoot\button-handlers\btnConcatenateXml.ps1"
@@ -245,6 +247,7 @@ $script:Controls = @{
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
     'btnExport' = $btnExport
+    'btnDedup' = $btnDedup
 }
 
 $script:ScriptVars = @{
