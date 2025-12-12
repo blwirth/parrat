@@ -1,0 +1,240 @@
+function Get-NoahConfigPath {
+    return (Join-Path $PSScriptRoot "noah-config.json")
+}
+
+function Get-NoahConfig {
+    $configPath = Get-NoahConfigPath
+    if (Test-Path -LiteralPath $configPath) {
+        try {
+            $raw = Get-Content -LiteralPath $configPath -Raw
+            if (-not [string]::IsNullOrWhiteSpace($raw)) {
+                return ($raw | ConvertFrom-Json)
+            }
+        }
+        catch {
+            # ignore and fall back to defaults
+        }
+    }
+
+    return [pscustomobject]@{
+        exePath = ""
+        modelId = ""
+        output  = "hl7"   # "hl7" or "xml"
+        separateImpossiblesAndMets = $false
+        workingRoot = ""  # if empty, uses $env:TEMP
+    }
+}
+
+function Save-NoahConfig {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $configPath = Get-NoahConfigPath
+    $json = $Config | ConvertTo-Json -Depth 6
+    Set-Content -LiteralPath $configPath -Value $json -Encoding UTF8
+}
+
+function Resolve-NoahExePath {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    if ($Config.exePath -and (Test-Path -LiteralPath $Config.exePath)) {
+        return $Config.exePath
+    }
+
+    $ofd = New-Object System.Windows.Forms.OpenFileDialog
+    $ofd.Filter = "NOAH Client (NOAHClientCentralRegistry.exe)|NOAHClientCentralRegistry.exe|Executable (*.exe)|*.exe|All files (*.*)|*.*"
+    $ofd.Title  = "Select NOAHClientCentralRegistry.exe"
+
+    if ($ofd.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+        return $null
+    }
+
+    $Config.exePath = $ofd.FileName
+    Save-NoahConfig -Config $Config
+    return $Config.exePath
+}
+
+function Resolve-NoahModelId {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    try {
+        Add-Type -AssemblyName Microsoft.VisualBasic -ErrorAction SilentlyContinue | Out-Null
+    }
+    catch { }
+
+    $current = [string]$Config.modelId
+    if (-not [string]::IsNullOrWhiteSpace($current)) {
+        $tmp = [guid]::Empty
+        if ([guid]::TryParse($current, [ref]$tmp)) {
+            return $current
+        }
+    }
+
+    $input = [Microsoft.VisualBasic.Interaction]::InputBox(
+        "Enter the NOAH model id (GUID).`nYou can copy this from the NOAH GUI (Update NLP Models).",
+        "NOAH Model ID",
+        $current
+    )
+
+    if ([string]::IsNullOrWhiteSpace($input)) {
+        return $null
+    }
+
+    $g = [guid]::Empty
+    if (-not [guid]::TryParse($input.Trim(), [ref]$g)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Model id must be a GUID. You entered:`n$input",
+            "Invalid Model ID",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        ) | Out-Null
+        return $null
+    }
+
+    $Config.modelId = $g.ToString()
+    Save-NoahConfig -Config $Config
+    return $Config.modelId
+}
+
+function New-NoahWorkingFolders {
+    param(
+        [Parameter(Mandatory=$true)][string]$OutputFormat,
+        [Parameter(Mandatory=$true)][string]$WorkingRoot
+    )
+
+    $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $runId = [guid]::NewGuid().ToString()
+    $base  = Join-Path $WorkingRoot ("noah_reportability_{0}_{1}" -f $stamp, $runId)
+
+    $folders = [ordered]@{
+        base          = $base
+        source        = (Join-Path $base "source")
+        reportable    = (Join-Path $base "reportable")
+        nonreportable = (Join-Path $base "nonreportable")
+        reports       = (Join-Path $base "reports")
+        outputFormat  = $OutputFormat
+    }
+
+    foreach ($p in @($folders.base, $folders.source, $folders.reportable, $folders.nonreportable, $folders.reports)) {
+        New-Item -ItemType Directory -Path $p -Force | Out-Null
+    }
+
+    return [pscustomobject]$folders
+}
+
+function Invoke-NoahReportabilityFilterForTumor {
+    param(
+        [Parameter(Mandatory=$true)][int]$TumorIndex,
+        [Parameter(Mandatory=$true)][System.Xml.XmlDocument]$XmlDoc,
+        [Parameter(Mandatory=$true)][System.Xml.XmlNamespaceManager]$NsMgr,
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
+
+    $modelId = Resolve-NoahModelId -Config $Config
+    if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
+
+    $output = ([string]$Config.output).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
+    $workingRoot = [string]$Config.workingRoot
+    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
+    if (-not (Test-Path -LiteralPath $workingRoot)) {
+        $workingRoot = $env:TEMP
+    }
+
+    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
+
+    # Create a copy of the "single tumor" NAACCR XML payload in the temp source folder.
+    $inputFileName = "tumor_{0}.xml" -f ($TumorIndex + 1)
+    $inputPath     = Join-Path $folders.source $inputFileName
+
+    $exportResult = Export-SelectedXml -TumorIndices @($TumorIndex) -XmlDoc $XmlDoc -NsMgr $NsMgr -OutputPath $inputPath
+    if (-not $exportResult.Success) {
+        return @{
+            Success = $false
+            Message = "Failed to export tumor XML for NOAH."
+            Errors  = $exportResult.Errors
+            WorkingFolder = $folders.base
+        }
+    }
+
+    $args = @(
+        "action=filter",
+        "mode=batch",
+        ("source={0}" -f $folders.source),
+        ("reportable={0}" -f $folders.reportable),
+        ("nonreportable={0}" -f $folders.nonreportable),
+        ("report={0}" -f $folders.reports),
+        ("model={0}" -f $modelId),
+        ("output={0}" -f $output)
+    )
+
+    if ($Config.separateImpossiblesAndMets -eq $true) {
+        $args += "separateimpossiblesandmets=true"
+    }
+
+    $exeDir = Split-Path -Parent $exePath
+    $stdoutPath = Join-Path $folders.base "noah_stdout.txt"
+    $stderrPath = Join-Path $folders.base "noah_stderr.txt"
+
+    try {
+        $proc = Start-Process `
+            -FilePath $exePath `
+            -WorkingDirectory $exeDir `
+            -ArgumentList $args `
+            -PassThru `
+            -Wait `
+            -WindowStyle Hidden `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath
+        $exitCode = $proc.ExitCode
+    }
+    catch {
+        return @{
+            Success = $false
+            Message = "Failed running NOAH CLI: $($_.Exception.Message)"
+            WorkingFolder = $folders.base
+            Args = $args
+            ExePath = $exePath
+            WorkingDirectory = $exeDir
+        }
+    }
+
+    $reportableFiles    = @(Get-ChildItem -LiteralPath $folders.reportable -Recurse -File -ErrorAction SilentlyContinue)
+    $nonreportableFiles = @(Get-ChildItem -LiteralPath $folders.nonreportable -Recurse -File -ErrorAction SilentlyContinue)
+
+    $classification = "unknown"
+    if ($reportableFiles.Count -gt 0 -and $nonreportableFiles.Count -eq 0) {
+        $classification = "reportable"
+    }
+    elseif ($nonreportableFiles.Count -gt 0 -and $reportableFiles.Count -eq 0) {
+        $classification = "nonreportable"
+    }
+    elseif ($nonreportableFiles.Count -gt 0 -and $reportableFiles.Count -gt 0) {
+        $classification = "mixed"
+    }
+
+    return @{
+        Success = $true
+        ExitCode = $exitCode
+        Classification = $classification
+        WorkingFolder = $folders.base
+        ReportableCount = $reportableFiles.Count
+        NonreportableCount = $nonreportableFiles.Count
+        Args = $args
+        ExePath = $exePath
+        InputPath = $inputPath
+        StdoutPath = $stdoutPath
+        StderrPath = $stderrPath
+        WorkingDirectory = $exeDir
+    }
+}
+
