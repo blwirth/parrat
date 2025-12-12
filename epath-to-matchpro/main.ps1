@@ -57,7 +57,7 @@ $btnXml.Width = 100
 $btnXml.Location = New-Object System.Drawing.Point(230, 10)
 
 $btnDedup = New-Object System.Windows.Forms.Button
-$btnDedup.Text = "Deduplicate"
+$btnDedup.Text = "Deduplicate..."
 $btnDedup.Width = 100
 $btnDedup.Location = New-Object System.Drawing.Point(340, 10)
 
