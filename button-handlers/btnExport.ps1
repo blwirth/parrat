@@ -4,102 +4,39 @@ function Get-BtnExportHandler {
         [hashtable]$ScriptVars
     )
     
+    # Return handler that shows the context menu
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export Selected")
-            return
-        }
-
-        if (-not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
-            [System.Windows.Forms.MessageBox]::Show("No XML document loaded.", "Export Selected")
-            return
-        }
-
-        # Get checked tumor indices
-        $checkedIndices = @()
-        foreach ($row in $Controls['gridNav'].Rows) {
-            $selectedValue = $row.Cells["Selected"].Value
-            # Handle both bool and DBNull values
-            if ($selectedValue -eq $true -or ($selectedValue -is [bool] -and $selectedValue)) {
-                $indexVal = $row.Cells["Index"].Value
-                if ($null -ne $indexVal -and $indexVal -ne [System.DBNull]::Value) {
-                    $checkedIndices += ([int]$indexVal - 1)
-                }
-            }
-        }
-
-        if ($checkedIndices.Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Please select at least one tumor to export by checking the boxes in the first column.",
-                "No Tumors Selected",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            )
-            return
-        }
-
-        # Ask for output file
-        $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-        $saveFileDialog.Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*"
-        $saveFileDialog.Title = "Save Exported XML File"
+        param($sender, $e)
         
-        # Suggest default filename based on current file
-        if ($ScriptVars['CurrentFilePath']) {
-            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
-            $saveFileDialog.FileName = "${inputFileName}_exported.xml"
-            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+        # Create context menu for dropdown (create fresh each time to ensure proper scoping)
+        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+        
+        # Menu item 1: Export Selected as XML
+        $menuItemXml = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemXml.Text = "Export Selected as XML"
+        $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemXml)
+        
+        # Menu item 2: Export All as CSV
+        $menuItemAllCsv = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemAllCsv.Text = "Export All as CSV"
+        $menuItemAllCsv.Add_Click((Get-BtnExportAllCsvHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemAllCsv)
+        
+        # Menu item 3: Export Selected as CSV
+        $menuItemSelectedCsv = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSelectedCsv.Text = "Export Selected as CSV"
+        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedCsvHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemSelectedCsv)
+        
+        # Show context menu at button location (use sender which is the button)
+        $button = $sender
+        if ($null -eq $button) {
+            $button = $Controls['btnExport']
         }
-
-        if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            try {
-                $Controls['lblStatus'].Text = "Exporting {0} tumor(s)..." -f $checkedIndices.Count
-                $Controls['form'].Refresh()
-
-                $result = Export-SelectedXml `
-                    -TumorIndices $checkedIndices `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -NsMgr $ScriptVars['NsMgr'] `
-                    -OutputPath $saveFileDialog.FileName
-
-                if ($result.Success) {
-                    $message = "Successfully exported {0} tumor(s) to:`n{1}" -f $result.ExportedCount, $saveFileDialog.FileName
-                    if ($result.Errors.Count -gt 0) {
-                        $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
-                    }
-                    
-                    $dialogResult = [System.Windows.Forms.MessageBox]::Show(
-                        $message,
-                        "Export Complete",
-                        [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                        [System.Windows.Forms.MessageBoxIcon]::Information
-                    )
-
-                    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
-                        Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
-                    }
-
-                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
-                }
-                else {
-                    $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")
-                    [System.Windows.Forms.MessageBox]::Show(
-                        $errorMessage,
-                        "Export Errors",
-                        [System.Windows.Forms.MessageBoxButtons]::OK,
-                        [System.Windows.Forms.MessageBoxIcon]::Warning
-                    )
-                    $Controls['lblStatus'].Text = "Export completed with errors"
-                }
-            }
-            catch {
-                [System.Windows.Forms.MessageBox]::Show(
-                    "Error during export: $($_.Exception.Message)",
-                    "Export Error",
-                    [System.Windows.Forms.MessageBoxButtons]::OK,
-                    [System.Windows.Forms.MessageBoxIcon]::Error
-                )
-                $Controls['lblStatus'].Text = "Error during export"
-            }
+        
+        if ($null -ne $button) {
+            $contextMenu.Show($button, [System.Drawing.Point]::new(0, $button.Height))
         }
     }
 }
