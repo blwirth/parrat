@@ -51,7 +51,9 @@ function Get-BtnAssignHandler {
                     -Assignments $result.Assignments `
                     -OriginalFilePath $ScriptVars['CurrentFilePath'] `
                     -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors']
+                    -Tumors $ScriptVars['Tumors'] `
+                    -TumorsWithExistingSite $result.TumorsWithExistingSite `
+                    -TumorsWithoutSiteNotCoded $result.TumorsWithoutSiteNotCoded
             }
         }
         catch {

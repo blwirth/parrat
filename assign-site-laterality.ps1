@@ -379,6 +379,8 @@ function Get-MissingFields {
 
     $report = @()
     $assignments = @{}
+    $tumorsWithExistingSite = 0
+    $tumorsWithoutSiteNotCoded = 0
     
     Write-Host "Processing $($Tumors.Count) tumors..." -ForegroundColor Cyan
     $processStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -404,6 +406,11 @@ function Get-MissingFields {
         $hasSite = -not [string]::IsNullOrWhiteSpace($currentSite)
         $hasLat = -not [string]::IsNullOrWhiteSpace($currentLat)
         
+        # Track tumors with existing site
+        if ($hasSite) {
+            $tumorsWithExistingSite++
+        }
+        
         if ($hasSite -and $hasLat) {
             continue
         }
@@ -425,6 +432,10 @@ function Get-MissingFields {
         }
 
         if (-not $textCombined) {
+            # Track tumors without site and no text to analyze
+            if (-not $hasSite) {
+                $tumorsWithoutSiteNotCoded++
+            }
             continue
         }
 
@@ -495,6 +506,11 @@ function Get-MissingFields {
             }
         }
 
+        # Track tumors without site that we couldn't code (had text but no match found)
+        if (-not $hasSite -and -not $proposedSite) {
+            $tumorsWithoutSiteNotCoded++
+        }
+
         # Create report entry if we have any proposed changes
         if ($proposedSite -or $proposedLat) {
             $report += [PSCustomObject]@{
@@ -520,6 +536,8 @@ function Get-MissingFields {
     return @{
         Report = $report
         Assignments = $assignments
+        TumorsWithExistingSite = $tumorsWithExistingSite
+        TumorsWithoutSiteNotCoded = $tumorsWithoutSiteNotCoded
     }
 }
 
@@ -659,7 +677,9 @@ function Show-AssignmentReport {
         [hashtable]$Assignments,
         [string]$OriginalFilePath,
         [System.Xml.XmlDocument]$XmlDoc,
-        [System.Xml.XmlNodeList]$Tumors
+        [System.Xml.XmlNodeList]$Tumors,
+        [int]$TumorsWithExistingSite = 0,
+        [int]$TumorsWithoutSiteNotCoded = 0
     )
 
     # Count assignments
@@ -680,7 +700,7 @@ function Show-AssignmentReport {
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
-    $lblSummary.Text = "Tumors to update: $($Assignments.Count) | Sites to assign: $siteCount | Lateralities to assign: $latCount"
+    $lblSummary.Text = "To update: $($Assignments.Count) | Sites: $siteCount | Laterality: $latCount | Existing site: $TumorsWithExistingSite | Not coded: $TumorsWithoutSiteNotCoded"
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 
     # Split container for grid and text preview
