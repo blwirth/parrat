@@ -9,6 +9,8 @@
 . "$PSScriptRoot\convert-txt.ps1"
 . "$PSScriptRoot\add-pid.ps1"
 . "$PSScriptRoot\export-selected-xml.ps1"
+. "$PSScriptRoot\export-selected-csv.ps1"
+. "$PSScriptRoot\export-all-csv.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnXml.ps1"
@@ -21,6 +23,9 @@
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
+. "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
+. "$PSScriptRoot\button-handlers\btnExportSelectedCsv.ps1"
+. "$PSScriptRoot\button-handlers\btnExportAllCsv.ps1"
 . "$PSScriptRoot\button-handlers\btnPrev.ps1"
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
 
@@ -85,7 +90,7 @@ $btnAddPid.Width = 100
 $btnAddPid.Location = New-Object System.Drawing.Point(1040, 10)
 
 $btnExport = New-Object System.Windows.Forms.Button
-$btnExport.Text = "Export Selected"
+$btnExport.Text = "Export..."
 $btnExport.Width = 120
 $btnExport.Location = New-Object System.Drawing.Point(1150, 10)
 
@@ -239,6 +244,7 @@ $script:Controls = @{
     'btnPrev' = $btnPrev
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
+    'btnExport' = $btnExport
 }
 
 $script:ScriptVars = @{
