@@ -77,22 +77,22 @@ $btnAddPid.Location = New-Object System.Drawing.Point(670, 10)
 
 $btnExport = New-Object System.Windows.Forms.Button
 $btnExport.Text = "Export..."
-$btnExport.Width = 120
+$btnExport.Width = 100
 $btnExport.Location = New-Object System.Drawing.Point(780, 10)
 
 $btnConcatenate = New-Object System.Windows.Forms.Button
 $btnConcatenate.Text = "Concatenate..."
 $btnConcatenate.Width = 120
-$btnConcatenate.Location = New-Object System.Drawing.Point(910, 10)
+$btnConcatenate.Location = New-Object System.Drawing.Point(890, 10)
 
 $btnConvertTxt = New-Object System.Windows.Forms.Button
 $btnConvertTxt.Text = "Convert TXT"
 $btnConvertTxt.Width = 100
-$btnConvertTxt.Location = New-Object System.Drawing.Point(1040, 10)
+$btnConvertTxt.Location = New-Object System.Drawing.Point(1020, 10)
 
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1150, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(1130, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
