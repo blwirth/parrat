@@ -337,6 +337,100 @@ function Get-Duplicates {
     }
 }
 
+function Get-DuplicatesByPathReport {
+    param(
+        [System.Xml.XmlNodeList]$Tumors,
+        [System.Xml.XmlNamespaceManager]$NsMgr
+    )
+
+    Write-Host "Grouping tumors by pathReportNumber1..."
+    $pathReportGroups = @{}
+    $duplicateReport  = @()
+    $indicesToKeep    = @{}
+
+    # Group tumors by pathReportNumber1
+    for ($i = 0; $i -lt $Tumors.Count; $i++) {
+        $tumor = $Tumors[$i]
+        $pathReportNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
+        
+        $pathReportNumber1 = ""
+        if ($pathReportNode) {
+            $pathReportNumber1 = $pathReportNode.InnerText
+        }
+        
+        # Skip tumors without pathReportNumber1
+        if ([string]::IsNullOrWhiteSpace($pathReportNumber1)) {
+            $indicesToKeep[$i] = $true
+            continue
+        }
+        
+        if (-not $pathReportGroups.ContainsKey($pathReportNumber1)) {
+            $pathReportGroups[$pathReportNumber1] = @()
+        }
+        
+        $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
+        $pathReportGroups[$pathReportNumber1] += @{
+            Index = $i
+            Tumor = $tumor
+            Patient = $patient
+        }
+    }
+
+    # Process groups with duplicates
+    foreach ($pathReport in $pathReportGroups.Keys) {
+        $group = $pathReportGroups[$pathReport]
+        
+        if ($group.Count -eq 1) {
+            # No duplicates for this pathReportNumber1; keep it
+            $indicesToKeep[$group[0].Index] = $true
+            continue
+        }
+        
+        # Multiple tumors with same pathReportNumber1 - apply tiebreaker
+        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
+        
+        if ($null -eq $winner -or $null -eq $winner.Index) {
+            Write-Warning "PathReport $pathReport : Apply-TiebreakerRules returned null or invalid winner; keeping all entries."
+            foreach ($item in $group) {
+                if ($null -ne $item -and $null -ne $item.Index) {
+                    $indicesToKeep[$item.Index] = $true
+                }
+            }
+            continue
+        }
+        
+        $indicesToKeep[$winner.Index] = $true
+        
+        $allIndices     = ($group | ForEach-Object { $_.Index + 1 }) -join ","
+        $removedIndices = ($group | Where-Object { $_.Index -ne $winner.Index } | ForEach-Object { $_.Index + 1 }) -join ","
+        
+        $dateLoaded   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
+        $dateReceived = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
+        $physician3   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'physician3'
+        
+        $reason =
+            if (-not [string]::IsNullOrWhiteSpace($dateLoaded)) { "Earliest dateCaseReportLoaded" }
+            elseif (-not [string]::IsNullOrWhiteSpace($dateReceived)) { "Earliest dateCaseReportReceived" }
+            elseif (-not [string]::IsNullOrWhiteSpace($physician3)) { "Non-empty physician3" }
+            else { "First occurrence" }
+        
+        $duplicateReport += [PSCustomObject]@{
+            PatientKey     = "pathReportNumber1: $pathReport"
+            AllIndices     = $allIndices
+            KeptIndex      = $winner.Index + 1
+            RemovedIndices = $removedIndices
+            Reason         = $reason
+            DateReceived   = $dateReceived
+            Physician3     = $physician3
+        }
+    }
+
+    return @{
+        IndicesToKeep = $indicesToKeep
+        Report        = $duplicateReport
+    }
+}
+
 function Write-DedupedXml {
     param(
         [System.Xml.XmlDocument]$XmlDoc,
@@ -430,6 +524,111 @@ function Write-DedupedXml {
     $writer = [System.Xml.XmlWriter]::Create($OutputPath, $settings)
     $newDoc.Save($writer)
     $writer.Close()
+}
+
+function Show-DeduplicationPreview {
+    param(
+        [hashtable]$Result,
+        [int]$OriginalCount,
+        [string]$OriginalFilePath,
+        [System.Xml.XmlDocument]$XmlDoc,
+        [System.Xml.XmlNodeList]$Tumors,
+        [System.Xml.XmlNamespaceManager]$NsMgr,
+        [string]$DedupType
+    )
+
+    $dedupedCount = $Result.IndicesToKeep.Count
+    $removedCount = $OriginalCount - $dedupedCount
+    $duplicateCount = $Result.Report.Count
+
+    $previewForm = New-Object System.Windows.Forms.Form
+    $previewForm.Text = "Deduplication Preview - $DedupType"
+    $previewForm.Width = 1400
+    $previewForm.Height = 700
+    $previewForm.StartPosition = "CenterScreen"
+
+    # Summary label
+    $lblSummary = New-Object System.Windows.Forms.Label
+    $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
+    $lblSummary.Size = New-Object System.Drawing.Size(1360, 40)
+    $lblSummary.Text = "Original tumors: $OriginalCount | Will keep: $dedupedCount | Will remove: $removedCount duplicates | Duplicate groups: $duplicateCount"
+    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+
+    # DataGridView for report
+    $grid = New-Object System.Windows.Forms.DataGridView
+    $grid.Location = New-Object System.Drawing.Point(10, 60)
+    $grid.Size = New-Object System.Drawing.Size(1360, 500)
+    $grid.Anchor = 'Top,Left,Right,Bottom'
+    $grid.ReadOnly = $true
+    $grid.AllowUserToAddRows = $false
+    $grid.AllowUserToDeleteRows = $false
+    $grid.RowHeadersVisible = $false
+    $grid.AutoSizeColumnsMode = "AllCells"
+
+    # Build DataTable
+    $table = New-Object System.Data.DataTable
+    [void]$table.Columns.Add("PatientKey", [string])
+    [void]$table.Columns.Add("AllIndices", [string])
+    [void]$table.Columns.Add("KeptIndex", [string])
+    [void]$table.Columns.Add("RemovedIndices", [string])
+    [void]$table.Columns.Add("Reason", [string])
+    [void]$table.Columns.Add("DateReceived", [string])
+    [void]$table.Columns.Add("Physician3", [string])
+
+    foreach ($item in $Result.Report) {
+        $row = $table.NewRow()
+        $row["PatientKey"] = $item.PatientKey
+        $row["AllIndices"] = $item.AllIndices
+        $row["KeptIndex"] = $item.KeptIndex
+        $row["RemovedIndices"] = $item.RemovedIndices
+        $row["Reason"] = $item.Reason
+        $row["DateReceived"] = $item.DateReceived
+        $row["Physician3"] = $item.Physician3
+        [void]$table.Rows.Add($row)
+    }
+
+    $grid.DataSource = $table
+
+    # Buttons
+    $btnProceed = New-Object System.Windows.Forms.Button
+    $btnProceed.Text = "Proceed with Deduplication"
+    $btnProceed.Width = 200
+    $btnProceed.Location = New-Object System.Drawing.Point(10, 580)
+    $btnProceed.Anchor = 'Bottom,Left'
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Location = New-Object System.Drawing.Point(220, 580)
+    $btnCancel.Anchor = 'Bottom,Left'
+
+    # Proceed button handler
+    $btnProceed.Add_Click({
+        $previewForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        $previewForm.Close()
+    })
+
+    # Cancel button handler
+    $btnCancel.Add_Click({
+        $previewForm.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        $previewForm.Close()
+    })
+
+    # Add controls to form
+    $previewForm.Controls.AddRange(@($lblSummary, $grid, $btnProceed, $btnCancel))
+
+    $result = $previewForm.ShowDialog()
+    
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        # User clicked proceed - show the full report
+        Show-DeduplicationReport `
+            -Report $Result.Report `
+            -IndicesToKeep $Result.IndicesToKeep `
+            -OriginalCount $OriginalCount `
+            -OriginalFilePath $OriginalFilePath `
+            -XmlDoc $XmlDoc `
+            -Tumors $Tumors
+    }
 }
 
 function Show-DeduplicationReport {

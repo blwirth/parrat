@@ -4,52 +4,35 @@ function Get-BtnDedupHandler {
         [hashtable]$ScriptVars
     )
     
+    # Return handler that shows the context menu
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Deduplicate")
-            return
+        param($sender, $e)
+        
+        # Create context menu for dropdown (create fresh each time to ensure proper scoping)
+        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+        
+        # Menu item 1: Dedup true matches
+        $menuItemTrueMatches = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemTrueMatches.Text = "Dedup true matches"
+        $menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemTrueMatches)
+        
+        # Menu item 2: Dedup by pathReportNumber1
+        $menuItemPathReport = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemPathReport.Text = "Dedup by pathReportNumber1"
+        $menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemPathReport)
+        
+        # Show context menu at button location (use sender which is the button)
+        $button = $sender
+        if ($null -eq $button) {
+            $button = $Controls['btnDedup']
         }
         
-        if (-not $ScriptVars['CurrentFilePath']) {
-            [System.Windows.Forms.MessageBox]::Show("No file path available.", "Deduplicate")
-            return
-        }
-        
-        try {
-            $Controls['lblStatus'].Text = "Analyzing duplicates..."
-            $Controls['form'].Refresh()
-            
-            # Run dedup analysis
-            $result = Get-Duplicates -Tumors $ScriptVars['Tumors'] -NsMgr $ScriptVars['NsMgr']
-            
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
-            
-            if ($result.Report.Count -eq 0) {
-                [System.Windows.Forms.MessageBox]::Show(
-                    "No duplicates found!",
-                    "Deduplication complete",
-                    [System.Windows.Forms.MessageBoxButtons]::OK,
-                    [System.Windows.Forms.MessageBoxIcon]::Information
-                )
-            }
-            else {
-                # Show Report
-                Show-DeduplicationReport `
-                    -Report $result.Report `
-                    -IndicesToKeep $result.IndicesToKeep `
-                    -OriginalCount $ScriptVars['Tumors'].Count `
-                    -OriginalFilePath $ScriptVars['CurrentFilePath'] `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors']
-            }
-        }
-        catch {
-            [System.Windows.Forms.MessageBox]::Show("Error during deduplication: $($_.Exception.Message)",
-                "Error", 
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Error
-            )
-            $Controls['lblStatus'].Text = "Error during deduplication"
+        if ($null -ne $button) {
+            $contextMenu.Show($button, [System.Drawing.Point]::new(0, $button.Height))
         }
     }
 }
+
+
