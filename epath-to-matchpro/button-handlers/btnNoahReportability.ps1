@@ -74,8 +74,17 @@ function Get-BtnNoahReportabilityHandler {
             $message += ("Reportable files: {0}" -f $result.ReportableCount)
             $message += ("Nonreportable files: {0}" -f $result.NonreportableCount)
             $message += ""
+            $message += "NOAH working directory:"
+            $message += $result.WorkingDirectory
+            $message += ""
             $message += "Working folder:"
             $message += $result.WorkingFolder
+            if ($result.StdoutPath -or $result.StderrPath) {
+                $message += ""
+                $message += "Logs:"
+                if ($result.StdoutPath) { $message += ("- stdout: {0}" -f $result.StdoutPath) }
+                if ($result.StderrPath) { $message += ("- stderr: {0}" -f $result.StderrPath) }
+            }
 
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 ($message -join "`r`n"),

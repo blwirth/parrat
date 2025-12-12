@@ -181,8 +181,20 @@ function Invoke-NoahReportabilityFilterForTumor {
         $args += "separateimpossiblesandmets=true"
     }
 
+    $exeDir = Split-Path -Parent $exePath
+    $stdoutPath = Join-Path $folders.base "noah_stdout.txt"
+    $stderrPath = Join-Path $folders.base "noah_stderr.txt"
+
     try {
-        $proc = Start-Process -FilePath $exePath -ArgumentList $args -PassThru -Wait -WindowStyle Hidden
+        $proc = Start-Process `
+            -FilePath $exePath `
+            -WorkingDirectory $exeDir `
+            -ArgumentList $args `
+            -PassThru `
+            -Wait `
+            -WindowStyle Hidden `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath
         $exitCode = $proc.ExitCode
     }
     catch {
@@ -191,6 +203,8 @@ function Invoke-NoahReportabilityFilterForTumor {
             Message = "Failed running NOAH CLI: $($_.Exception.Message)"
             WorkingFolder = $folders.base
             Args = $args
+            ExePath = $exePath
+            WorkingDirectory = $exeDir
         }
     }
 
@@ -218,6 +232,9 @@ function Invoke-NoahReportabilityFilterForTumor {
         Args = $args
         ExePath = $exePath
         InputPath = $inputPath
+        StdoutPath = $stdoutPath
+        StderrPath = $stderrPath
+        WorkingDirectory = $exeDir
     }
 }
 
