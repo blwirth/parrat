@@ -16,6 +16,12 @@ function Get-BtnExportHandler {
         $menuItemXml.Text = "Export Selected as XML"
         $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $Controls -ScriptVars $ScriptVars))
         [void]$contextMenu.Items.Add($menuItemXml)
+
+        # Menu item: Test reportability using NOAH CLI (runs against a temp folder; original file is untouched)
+        $menuItemNoah = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemNoah.Text = "Test Reportability (NOAH)"
+        $menuItemNoah.Add_Click((Get-BtnNoahReportabilityHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemNoah)
         
         # Menu item 2: Export All as CSV
         $menuItemAllCsv = New-Object System.Windows.Forms.ToolStripMenuItem
