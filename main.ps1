@@ -20,8 +20,7 @@
 . "$PSScriptRoot\button-handlers\btnDedupPathReport.ps1"
 . "$PSScriptRoot\button-handlers\btnAssign.ps1"
 . "$PSScriptRoot\button-handlers\btnFacility.ps1"
-. "$PSScriptRoot\button-handlers\btnConcatenateXml.ps1"
-. "$PSScriptRoot\button-handlers\btnConcatenateHl7.ps1"
+. "$PSScriptRoot\button-handlers\btnConcatenate.ps1"
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
@@ -71,34 +70,29 @@ $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
 $btnFacility.Location = New-Object System.Drawing.Point(560, 10)
 
-$btnConcatenateXml = New-Object System.Windows.Forms.Button
-$btnConcatenateXml.Text = "Concatenate XML"
-$btnConcatenateXml.Width = 120
-$btnConcatenateXml.Location = New-Object System.Drawing.Point(670, 10)
-
-$btnConcatenateHl7 = New-Object System.Windows.Forms.Button
-$btnConcatenateHl7.Text = "Concatenate HL7"
-$btnConcatenateHl7.Width = 120
-$btnConcatenateHl7.Location = New-Object System.Drawing.Point(800, 10)
-
-$btnConvertTxt = New-Object System.Windows.Forms.Button
-$btnConvertTxt.Text = "Convert TXT"
-$btnConvertTxt.Width = 100
-$btnConvertTxt.Location = New-Object System.Drawing.Point(930, 10)
-
 $btnAddPid = New-Object System.Windows.Forms.Button
 $btnAddPid.Text = "Add PID"
 $btnAddPid.Width = 100
-$btnAddPid.Location = New-Object System.Drawing.Point(1040, 10)
+$btnAddPid.Location = New-Object System.Drawing.Point(670, 10)
 
 $btnExport = New-Object System.Windows.Forms.Button
 $btnExport.Text = "Export..."
 $btnExport.Width = 120
-$btnExport.Location = New-Object System.Drawing.Point(1150, 10)
+$btnExport.Location = New-Object System.Drawing.Point(780, 10)
+
+$btnConcatenate = New-Object System.Windows.Forms.Button
+$btnConcatenate.Text = "Concatenate..."
+$btnConcatenate.Width = 120
+$btnConcatenate.Location = New-Object System.Drawing.Point(910, 10)
+
+$btnConvertTxt = New-Object System.Windows.Forms.Button
+$btnConvertTxt.Text = "Convert TXT"
+$btnConvertTxt.Width = 100
+$btnConvertTxt.Location = New-Object System.Drawing.Point(1040, 10)
 
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1280, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(1150, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -116,7 +110,7 @@ $btnNext.Enabled = $false
 
 $lblIndex = New-Object System.Windows.Forms.Label
 $lblIndex.AutoSize = $true
-$lblIndex.Location = New-Object System.Drawing.Point(130, 980)
+$lblIndex.Location = New-Object System.Drawing.Point(110, 985)
 $lblIndex.Text = ""
 
 # --- Main resizable area (panel + split containers) ---
@@ -216,8 +210,7 @@ $form.Controls.AddRange(@(
 	$btnDedup,
 	$btnAssign,
 	$btnFacility,
-	$btnConcatenateXml,
-	$btnConcatenateHl7,
+	$btnConcatenate,
 	$btnConvertTxt,
     $btnAddPid,
     $btnExport,
@@ -248,6 +241,7 @@ $script:Controls = @{
     'lblIndex' = $lblIndex
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
+    'btnConcatenate' = $btnConcatenate
 }
 
 $script:ScriptVars = @{
@@ -383,8 +377,7 @@ $btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $s
 $btnDedup.Add_Click((Get-BtnDedupHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnConcatenateXml.Add_Click((Get-BtnConcatenateXmlHandler))
-$btnConcatenateHl7.Add_Click((Get-BtnConcatenateHl7Handler))
+$btnConcatenate.Add_Click((Get-BtnConcatenateHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 $btnExport.Add_Click((Get-BtnExportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
