@@ -472,22 +472,49 @@ function Get-MissingFields {
         # Assign primary site if missing
         if (-not $hasSite) {
             # Check for histology-based overrides first
-            # Invasive ductal carcinoma -> Breast
-            if ($low -match '\binvasive ductal carcinoma\b') {
+            if ($low -match '\b(invasive ductal carcinoma|metastatic mammary carcinoma|progesterone receptor|estrogen receptor|ductal carcinoma in-situ)\b') {
+				# check ductal carcinomas
                 $proposedSite = "C509"
             }
-            # Renal cell carcinoma -> Kidney
             elseif ($low -match '\brenal cell carcinoma\b') {
                 $proposedSite = "C649"
             }
-            # Prostate indicators -> Prostate
             elseif ($low -match '\b(prostatectomy|prostatic adenocarcinoma|gleason)\b') {
                 $proposedSite = "C619"
+            }
+			elseif ($low -match '\b(cll|plasma cell myeloma|small lymphocytic lymphoma|chronic lymphocytic leukemia)\b') {
+                $proposedSite = "C421"
+            }
+			elseif ($low -match '\b(follicular lymphoma|diffuse large b-cell lymphoma|dlbcl)\b') {
+                $proposedSite = "C779"
+            }
+			elseif ($low -match '\b(mlh1|pms2|msh2|msh6)\b') {
+                $proposedSite = "C189"
             }
             # Bone marrow override (must check before general bone)
             elseif ($low -match '\bbone marrow\b') {
                 $proposedSite = "C421"
             }
+			elseif ($low -match '\bserous carcinoma\b') {
+                $proposedSite = "C579" # Gyn, nos
+            }
+			elseif (
+				# simple phrase matches
+				$low -like '*dako pd-l1 22c3*' -or
+				$low -like '*non-small cell carcinoma*' -or
+				$low -match '\bnsclc\b' -or
+
+				# biomarker pairs anywhere in text
+				($low -match '\begfr\b' -and $low -match 'pd-l1') -or
+				($low -match '\begfr\b' -and $low -match '\balk\b') -or
+				($low -match 'pd-l1'     -and $low -match '\balk\b')
+			) {
+				$proposedSite = "C349"
+			}
+			elseif ($low -match '\bbraf mutation analysis\b') {
+				$proposedSite = "C449"
+			}
+			 
             else {
                 # Standard topography lookup
                 $hasMel = $low.Contains("melanoma")

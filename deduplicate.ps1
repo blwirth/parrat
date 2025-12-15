@@ -66,12 +66,15 @@ function Get-TumorFingerprint {
     $ignoredFields = @(
         'dateCaseReportReceived',
 		'dateCaseReportLoaded',
+		'dateCaseReportExported',
         'pathDateSpecCollect1',
         'pathDateSpecCollect2',
         'pathDateSpecCollect3',
         'pathDateSpecCollect4',
 		'pathDateSpecCollect5',
-        'physician3'
+        'physician3',
+		'physicianManaging',
+		'physicianFollowUp'
     )
 
     $items = @()
