@@ -22,7 +22,13 @@ function Get-BtnDedupHandler {
         $menuItemPathReport.Text = "Dedup by pathReportNumber1"
         $menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $Controls -ScriptVars $ScriptVars))
         [void]$contextMenu.Items.Add($menuItemPathReport)
-        
+
+        # Menu item 3: Dedup by primary key
+        $menuItemPrimaryKey = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemPrimaryKey.Text = "Dedup by primary key"
+        $menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemPrimaryKey)
+
         # Show context menu at button location (use sender which is the button)
         $button = $sender
         if ($null -eq $button) {
