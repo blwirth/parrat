@@ -237,5 +237,3 @@ function Invoke-NoahReportabilityFilterForTumor {
         WorkingDirectory = $exeDir
     }
 }
-
-
