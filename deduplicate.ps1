@@ -340,6 +340,121 @@ function Get-Duplicates {
     }
 }
 
+function Get-DuplicatesByPrimaryKey {
+    param(
+        [System.Xml.XmlNodeList]$Tumors,
+        [System.Xml.XmlNamespaceManager]$NsMgr
+    )
+
+    Write-Host "Grouping tumors by primary key (nameLast, nameFirst, dateOfBirth, primarySite, laterality)..."
+
+    $primaryKeyGroups = @{}
+    $duplicateReport  = @()
+    $indicesToKeep    = @{}
+
+    for ($i = 0; $i -lt $Tumors.Count; $i++) {
+        $tumor = $Tumors[$i]
+
+        # Get patient node
+        $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
+
+        $nameLast     = ""
+        $nameFirst    = ""
+        $dateOfBirth  = ""
+        $primarySite  = ""
+        $laterality   = ""
+
+        if ($patient -ne $null) {
+            $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
+            $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
+            $dobNode = $patient.SelectSingleNode("./n:Item[@naaccrId='dateOfBirth']", $NsMgr)
+
+            if ($nlNode) { $nameLast = $nlNode.InnerText }
+            if ($nfNode) { $nameFirst = $nfNode.InnerText }
+            if ($dobNode) { $dateOfBirth = $dobNode.InnerText }
+        }
+
+        # Tumor-level items
+        $psNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='primarySite']", $NsMgr)
+        if ($psNode) { $primarySite = $psNode.InnerText }
+
+        $latNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='laterality']", $NsMgr)
+        if ($latNode) { $laterality = $latNode.InnerText }
+
+        # Build primary key (no normalization so the behavior is transparent)
+        $key = "$nameLast|$nameFirst|$dateOfBirth|$primarySite|$laterality"
+
+        if ([string]::IsNullOrWhiteSpace($key)) {
+            # If everything is blank, just keep this tumor and move on
+            $indicesToKeep[$i] = $true
+            continue
+        }
+
+        if (-not $primaryKeyGroups.ContainsKey($key)) {
+            $primaryKeyGroups[$key] = @()
+        }
+
+        $primaryKeyGroups[$key] += @{
+            Index   = $i
+            Tumor   = $tumor
+            Patient = $patient
+        }
+    }
+
+    foreach ($key in $primaryKeyGroups.Keys) {
+        $group = $primaryKeyGroups[$key]
+
+        if ($group.Count -eq 1) {
+            # Only one tumor with this primary key; keep it
+            $indicesToKeep[$group[0].Index] = $true
+            continue
+        }
+
+        # Multiple tumors share this primary key - apply tiebreaker
+        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
+
+        if ($null -eq $winner -or $null -eq $winner.Index) {
+            Write-Warning "PrimaryKey $key : Apply-TiebreakerRules returned null or invalid winner; keeping all entries."
+            foreach ($item in $group) {
+                if ($null -ne $item -and $null -ne $item.Index) {
+                    $indicesToKeep[$item.Index] = $true
+                }
+            }
+            continue
+        }
+
+        $indicesToKeep[$winner.Index] = $true
+
+        $allIndices     = ($group | ForEach-Object { $_.Index + 1 }) -join ","
+        $removedIndices = ($group | Where-Object { $_.Index -ne $winner.Index } | ForEach-Object { $_.Index + 1 }) -join ","
+
+        $dateLoaded   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
+        $dateReceived = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
+        $physician3   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'physician3'
+
+        $reason =
+            if (-not [string]::IsNullOrWhiteSpace($dateLoaded)) { "Earliest dateCaseReportLoaded" }
+            elseif (-not [string]::IsNullOrWhiteSpace($dateReceived)) { "Earliest dateCaseReportReceived" }
+            elseif (-not [string]::IsNullOrWhiteSpace($physician3)) { "Non-empty physician3" }
+            else { "First occurrence" }
+
+        $duplicateReport += [PSCustomObject]@{
+            PatientKey     = "PrimaryKey: $key"
+            AllIndices     = $allIndices
+            KeptIndex      = $winner.Index + 1
+            RemovedIndices = $removedIndices
+            Reason         = $reason
+            DateReceived   = $dateReceived
+            Physician3     = $physician3
+        }
+    }
+
+    return @{
+        IndicesToKeep = $indicesToKeep
+        Report        = $duplicateReport
+    }
+}
+
 function Get-DuplicatesByPathReport {
     param(
         [System.Xml.XmlNodeList]$Tumors,
