@@ -166,8 +166,10 @@ $table = New-Object System.Data.DataTable
 [void]$table.Columns.Add("Index", [int])
 [void]$table.Columns.Add("nameLast", [string])
 [void]$table.Columns.Add("nameFirst", [string])
-[void]$table.Columns.Add("dateOfDiagnosis", [string])
+[void]$table.Columns.Add("dateOfBirth", [string])
 [void]$table.Columns.Add("pathReportNumber1", [string])
+[void]$table.Columns.Add("primarySite", [string])
+[void]$table.Columns.Add("dateOfDiagnosis", [string])
 
 # Bind table BEFORE re-setting selection-related properties
 $gridNav.DataSource = $table
