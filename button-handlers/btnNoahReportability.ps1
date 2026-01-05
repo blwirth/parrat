@@ -59,47 +59,54 @@ function Get-BtnNoahReportabilityHandler {
             }
 
             $class = $result.Classification
-            $title = "NOAH Reportability"
-            $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
+            $Controls['lblStatus'].Text = "NOAH reportability: {0}" -f $class
 
-            if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-            elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-            elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
-            else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+            # Look for the result JSON file in the reports folder
+            $reportsFolder = Join-Path $result.WorkingFolder "reports"
+            $resultFilePath = Get-NoahResultFile -ReportsFolder $reportsFolder
 
-            $message = @()
-            $message += ("Tumor: {0} of {1}" -f ($idx + 1), $ScriptVars['Tumors'].Count)
-            $message += ("Result: {0}" -f $class.ToUpperInvariant())
-            $message += ("Exit code: {0}" -f $result.ExitCode)
-            $message += ("Reportable files: {0}" -f $result.ReportableCount)
-            $message += ("Nonreportable files: {0}" -f $result.NonreportableCount)
-            $message += ""
-            $message += "NOAH working directory:"
-            $message += $result.WorkingDirectory
-            $message += ""
-            $message += "Working folder:"
-            $message += $result.WorkingFolder
-            if ($result.StdoutPath -or $result.StderrPath) {
-                $message += ""
-                $message += "Logs:"
-                if ($result.StdoutPath) { $message += ("- stdout: {0}" -f $result.StdoutPath) }
-                if ($result.StderrPath) { $message += ("- stderr: {0}" -f $result.StderrPath) }
+            if ($resultFilePath) {
+                # Show the results viewer window
+                Show-NoahResultsWindow `
+                    -ResultFilePath $resultFilePath `
+                    -WorkingFolder $result.WorkingFolder `
+                    -RecordLabel "Tumor" `
+                    -RecordIndex $idx `
+                    -RecordCount $ScriptVars['Tumors'].Count
             }
+            else {
+                # Fallback to simple message box if no result file found
+                $title = "NOAH Reportability"
+                $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
 
-            $dialogResult = [System.Windows.Forms.MessageBox]::Show(
-                ($message -join "`r`n"),
-                $title,
-                [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                $icon
-            )
+                if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+                elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+                elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+                else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
 
-            if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
-                if ($result.WorkingFolder -and (Test-Path -LiteralPath $result.WorkingFolder)) {
-                    Start-Process "explorer.exe" -ArgumentList "`"$($result.WorkingFolder)`""
+                $message = @()
+                $message += ("Tumor: {0} of {1}" -f ($idx + 1), $ScriptVars['Tumors'].Count)
+                $message += ("Result: {0}" -f $class.ToUpperInvariant())
+                $message += ("Exit code: {0}" -f $result.ExitCode)
+                $message += ""
+                $message += "(No result JSON file found in reports folder)"
+                $message += ""
+                $message += "Working folder:"
+                $message += $result.WorkingFolder
+
+                $dialogResult = [System.Windows.Forms.MessageBox]::Show(
+                    ($message -join "`r`n"),
+                    $title,
+                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                    $icon
+                )
+
+                if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                    if ($result.WorkingFolder -and (Test-Path -LiteralPath $result.WorkingFolder)) {
+                        Start-Process "explorer.exe" -ArgumentList "`"$($result.WorkingFolder)`""
+                    }
                 }
             }
-
-            $Controls['lblStatus'].Text = "NOAH reportability: {0}" -f $class
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(

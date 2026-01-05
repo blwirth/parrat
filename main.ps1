@@ -13,6 +13,7 @@
 . "$PSScriptRoot\export-all-csv.ps1"
 . "$PSScriptRoot\export-preview.ps1"
 . "$PSScriptRoot\noah-reportability.ps1"
+. "$PSScriptRoot\noah-results-viewer.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnXml.ps1"
