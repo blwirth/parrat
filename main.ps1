@@ -1,5 +1,7 @@
 . "$PSScriptRoot\xml-helpers.ps1"
 . "$PSScriptRoot\xml-viewer.ps1"
+. "$PSScriptRoot\hl7-helpers.ps1"
+. "$PSScriptRoot\hl7-viewer.ps1"
 . "$PSScriptRoot\diff.ps1"
 . "$PSScriptRoot\deduplicate.ps1"
 . "$PSScriptRoot\assign-site-laterality.ps1"
@@ -15,7 +17,7 @@
 . "$PSScriptRoot\noah-reportability.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
-. "$PSScriptRoot\button-handlers\btnXml.ps1"
+. "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
 . "$PSScriptRoot\button-handlers\btnDiff.ps1"
 . "$PSScriptRoot\button-handlers\btnDedup.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupTrueMatches.ps1"
@@ -45,7 +47,7 @@ $form.WindowState   = "Maximized"
 
 # Top nav
 $btnOpen = New-Object System.Windows.Forms.Button
-$btnOpen.Text = "Open XML..."
+$btnOpen.Text = "Open..."
 $btnOpen.Width = 100
 $btnOpen.Location = New-Object System.Drawing.Point(10, 10)
 
@@ -55,7 +57,7 @@ $btnDiff.Width = 100
 $btnDiff.Location = New-Object System.Drawing.Point(120, 10)
 
 $btnXml = New-Object System.Windows.Forms.Button
-$btnXml.Text = "Show Raw XML"
+$btnXml.Text = "Show Raw"
 $btnXml.Width = 100
 $btnXml.Location = New-Object System.Drawing.Point(230, 10)
 
@@ -234,6 +236,8 @@ $script:NsMgr           = $null
 $script:NavTable        = $null
 $script:XmlDoc          = $null
 $script:CurrentFilePath = $null
+$script:FileType        = $null    # 'xml' or 'hl7'
+$script:Hl7Messages     = @()
 
 # Create hashtables for passing context to button handlers
 $script:Controls = @{
@@ -257,6 +261,8 @@ $script:ScriptVars = @{
     'NavTable' = $script:NavTable
     'XmlDoc' = $script:XmlDoc
     'CurrentFilePath' = $script:CurrentFilePath
+    'FileType' = $script:FileType
+    'Hl7Messages' = $script:Hl7Messages
 }
 
 function Show-Tumor {
@@ -357,9 +363,18 @@ function Show-Tumor {
 
 $btnOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
-# Grid row selection -> show that tumor (using Index column, not row position)
+# Grid row selection -> show record based on file type (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
-    if ($script:Tumors.Count -eq 0) { return }
+    # Determine which data source to use based on file type
+    $recordCount = 0
+    if ($script:FileType -eq 'hl7') {
+        $recordCount = $script:Hl7Messages.Count
+    }
+    else {
+        $recordCount = $script:Tumors.Count
+    }
+    
+    if ($recordCount -eq 0) { return }
 
     # Only navigate when exactly one row is selected.
     # If user selects multiple rows (Ctrl/Shift), do nothing here.
@@ -369,16 +384,22 @@ $gridNav.Add_SelectionChanged({
     $indexValObj  = $selectedRow.Cells["Index"].Value
     if ($indexValObj -eq $null) { return }
 
-    $tumorIndex = [int]$indexValObj - 1
+    $recordIndex = [int]$indexValObj - 1
 
-    if ($tumorIndex -lt 0 -or $tumorIndex -ge $script:Tumors.Count) { return }
-    if ($tumorIndex -eq $script:CurrentIndex) { return }
+    if ($recordIndex -lt 0 -or $recordIndex -ge $recordCount) { return }
+    if ($recordIndex -eq $script:CurrentIndex) { return }
 
-    Show-Tumor -Index $tumorIndex
+    # Dispatch to appropriate viewer based on file type
+    if ($script:FileType -eq 'hl7') {
+        Show-Hl7Message -Index $recordIndex
+    }
+    else {
+        Show-Tumor -Index $recordIndex
+    }
 })
 
 
-$btnXml.Add_Click((Get-BtnXmlHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$btnXml.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDedup.Add_Click((Get-BtnDedupHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
