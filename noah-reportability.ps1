@@ -242,6 +242,11 @@ function Invoke-NoahReportabilityFilter {
     $stderrPath = Join-Path $Folders.base "noah_stderr.txt"
 
     try {
+        # Write arguments to a debug file for troubleshooting
+        $argsDebugPath = Join-Path $Folders.base "noah_args.txt"
+        $argsString = $args -join " "
+        Set-Content -Path $argsDebugPath -Value $argsString -ErrorAction SilentlyContinue
+        
         $proc = Start-Process `
             -FilePath $ExePath `
             -WorkingDirectory $exeDir `
@@ -249,7 +254,41 @@ function Invoke-NoahReportabilityFilter {
             -PassThru `
             -WindowStyle Hidden `
             -RedirectStandardOutput $stdoutPath `
-            -RedirectStandardError $stderrPath
+            -RedirectStandardError $stderrPath `
+            -ErrorAction Stop
+        
+        if (-not $proc) {
+            return @{
+                Success = $false
+                Message = "Failed to start NOAH process (process object is null)"
+                WorkingFolder = $Folders.base
+                Args = $args
+                StdoutPath = $stdoutPath
+                StderrPath = $stderrPath
+            }
+        }
+        
+        # Give the process a moment to start
+        Start-Sleep -Milliseconds 100
+        
+        # Check if process has already exited (indicates immediate failure)
+        if ($proc.HasExited) {
+            $exitCode = $proc.ExitCode
+            $stdoutContent = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw -ErrorAction SilentlyContinue } else { "" }
+            $stderrContent = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw -ErrorAction SilentlyContinue } else { "" }
+            
+            return @{
+                Success = $false
+                Message = "NOAH process exited immediately with code $exitCode"
+                ExitCode = $exitCode
+                WorkingFolder = $Folders.base
+                Args = $args
+                StdoutPath = $stdoutPath
+                StderrPath = $stderrPath
+                StdoutContent = $stdoutContent
+                StderrContent = $stderrContent
+            }
+        }
         
         $timeoutMs = 10000
         $exited = $proc.WaitForExit($timeoutMs)
@@ -276,6 +315,7 @@ function Invoke-NoahReportabilityFilter {
             Args = $args
             ExePath = $ExePath
             WorkingDirectory = $exeDir
+            ExceptionType = $_.Exception.GetType().FullName
         }
     }
 
