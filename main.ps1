@@ -11,6 +11,7 @@
 . "$PSScriptRoot\convert-txt.ps1"
 . "$PSScriptRoot\add-pid.ps1"
 . "$PSScriptRoot\export-selected-xml.ps1"
+. "$PSScriptRoot\export-selected-hl7.ps1"
 . "$PSScriptRoot\export-selected-csv.ps1"
 . "$PSScriptRoot\export-all-csv.ps1"
 . "$PSScriptRoot\export-preview.ps1"

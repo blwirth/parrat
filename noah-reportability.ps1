@@ -166,14 +166,70 @@ function Invoke-NoahReportabilityFilterForTumor {
         }
     }
 
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+}
+
+function Invoke-NoahReportabilityFilterForMessage {
+    param(
+        [Parameter(Mandatory=$true)][int]$MessageIndex,
+        [Parameter(Mandatory=$true)][array]$Hl7Messages,
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
+
+    $modelId = Resolve-NoahModelId -Config $Config
+    if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
+
+    $output = ([string]$Config.output).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
+    $workingRoot = [string]$Config.workingRoot
+    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
+    if (-not (Test-Path -LiteralPath $workingRoot)) {
+        $workingRoot = $env:TEMP
+    }
+
+    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
+
+    # Create a copy of the "single HL7 message" in the temp source folder.
+    $inputFileName = "message_{0}.hl7" -f ($MessageIndex + 1)
+    $inputPath     = Join-Path $folders.source $inputFileName
+
+    $exportResult = Export-SelectedHl7 -MessageIndex $MessageIndex -Hl7Messages $Hl7Messages -OutputPath $inputPath
+    if (-not $exportResult.Success) {
+        return @{
+            Success = $false
+            Message = "Failed to export HL7 message for NOAH."
+            Errors  = $exportResult.Errors
+            WorkingFolder = $folders.base
+        }
+    }
+
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+}
+
+function Invoke-NoahReportabilityFilter {
+    param(
+        [Parameter(Mandatory=$true)][string]$InputPath,
+        [Parameter(Mandatory=$true)]$Folders,
+        [Parameter(Mandatory=$true)]$Config,
+        [Parameter(Mandatory=$true)][string]$ExePath,
+        [Parameter(Mandatory=$true)][string]$ModelId
+    )
+
+    $output = ([string]$Config.output).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
     $args = @(
         "action=filter",
         "mode=batch",
-        ("source={0}" -f $folders.source),
-        ("reportable={0}" -f $folders.reportable),
-        ("nonreportable={0}" -f $folders.nonreportable),
-        ("report={0}" -f $folders.reports),
-        ("model={0}" -f $modelId),
+        ("source={0}" -f $Folders.source),
+        ("reportable={0}" -f $Folders.reportable),
+        ("nonreportable={0}" -f $Folders.nonreportable),
+        ("report={0}" -f $Folders.reports),
+        ("model={0}" -f $ModelId),
         ("output={0}" -f $output)
     )
 
@@ -181,13 +237,13 @@ function Invoke-NoahReportabilityFilterForTumor {
         $args += "separateimpossiblesandmets=true"
     }
 
-    $exeDir = Split-Path -Parent $exePath
-    $stdoutPath = Join-Path $folders.base "noah_stdout.txt"
-    $stderrPath = Join-Path $folders.base "noah_stderr.txt"
+    $exeDir = Split-Path -Parent $ExePath
+    $stdoutPath = Join-Path $Folders.base "noah_stdout.txt"
+    $stderrPath = Join-Path $Folders.base "noah_stderr.txt"
 
     try {
         $proc = Start-Process `
-            -FilePath $exePath `
+            -FilePath $ExePath `
             -WorkingDirectory $exeDir `
             -ArgumentList $args `
             -PassThru `
@@ -201,15 +257,15 @@ function Invoke-NoahReportabilityFilterForTumor {
         return @{
             Success = $false
             Message = "Failed running NOAH CLI: $($_.Exception.Message)"
-            WorkingFolder = $folders.base
+            WorkingFolder = $Folders.base
             Args = $args
-            ExePath = $exePath
+            ExePath = $ExePath
             WorkingDirectory = $exeDir
         }
     }
 
-    $reportableFiles    = @(Get-ChildItem -LiteralPath $folders.reportable -Recurse -File -ErrorAction SilentlyContinue)
-    $nonreportableFiles = @(Get-ChildItem -LiteralPath $folders.nonreportable -Recurse -File -ErrorAction SilentlyContinue)
+    $reportableFiles    = @(Get-ChildItem -LiteralPath $Folders.reportable -Recurse -File -ErrorAction SilentlyContinue)
+    $nonreportableFiles = @(Get-ChildItem -LiteralPath $Folders.nonreportable -Recurse -File -ErrorAction SilentlyContinue)
 
     $classification = "unknown"
     if ($reportableFiles.Count -gt 0 -and $nonreportableFiles.Count -eq 0) {
@@ -226,12 +282,12 @@ function Invoke-NoahReportabilityFilterForTumor {
         Success = $true
         ExitCode = $exitCode
         Classification = $classification
-        WorkingFolder = $folders.base
+        WorkingFolder = $Folders.base
         ReportableCount = $reportableFiles.Count
         NonreportableCount = $nonreportableFiles.Count
         Args = $args
-        ExePath = $exePath
-        InputPath = $inputPath
+        ExePath = $ExePath
+        InputPath = $InputPath
         StdoutPath = $stdoutPath
         StderrPath = $stderrPath
         WorkingDirectory = $exeDir
