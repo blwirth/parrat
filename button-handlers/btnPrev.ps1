@@ -4,8 +4,16 @@ function Get-BtnPrevHandler {
     )
     
     return {
-        if ($ScriptVars['CurrentIndex'] -gt 0) {
-            Show-Tumor -Index ($ScriptVars['CurrentIndex'] - 1)
+        if ($script:CurrentIndex -gt 0) {
+            $newIndex = $script:CurrentIndex - 1
+            
+            # Dispatch to appropriate viewer based on file type
+            if ($script:FileType -eq 'hl7') {
+                Show-Hl7Message -Index $newIndex
+            }
+            else {
+                Show-Tumor -Index $newIndex
+            }
         }
     }
 }
