@@ -89,8 +89,15 @@ function Show-NoahResultsWindow {
     $splitMain = New-Object System.Windows.Forms.SplitContainer
     $splitMain.Dock = 'Fill'
     $splitMain.Orientation = 'Vertical'
-    $splitMain.SplitterDistance = 350
     $splitMain.Panel1MinSize = 250
+    $splitMain.Panel2MinSize = 300
+    $splitMain.SplitterDistance = 400 
+    
+    $form.Add_Shown({
+        if ($splitMain.Width -gt 400) {
+            $splitMain.SplitterDistance = 400
+        }
+    })
 
     # === LEFT PANEL: Summary ===
     $rtbSummary = New-Object System.Windows.Forms.RichTextBox
