@@ -1,6 +1,9 @@
 # noah-results-viewer.ps1
 # Display NOAH reportability results with color-coded entity highlighting
 
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Windows.Forms
+
 # Map OBXSegment numbers to OBXTexts keys
 $script:OBXSegmentMap = @{
     0 = "FinalDiagnosis"
