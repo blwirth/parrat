@@ -247,10 +247,23 @@ function Invoke-NoahReportabilityFilter {
             -WorkingDirectory $exeDir `
             -ArgumentList $args `
             -PassThru `
-            -Wait `
             -WindowStyle Hidden `
             -RedirectStandardOutput $stdoutPath `
             -RedirectStandardError $stderrPath
+        
+        $timeoutSec = 10
+        if (-not (Wait-Process -Id $proc.Id -Timeout $timeoutSec -ErrorAction SilentlyContinue)) {
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+            return @{
+                Success = $false
+                Message = "NOAH did not exit within $timeoutSec seconds"
+                WorkingFolder = $folders.base
+                Args = $args
+                StdoutPath = $stdoutPath
+                StderrPath = $stderrPath
+            }
+        }
+            
         $exitCode = $proc.ExitCode
     }
     catch {
