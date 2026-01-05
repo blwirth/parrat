@@ -5,14 +5,15 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 
 # Map OBXSegment numbers to OBXTexts keys
+# Based on NOAH's segment indices as shown in NLP Options
 $script:OBXSegmentMap = @{
-    0 = "FinalDiagnosis"
+    0 = "ClinicalHistory"
     1 = "TextDiagnosis"
-    2 = "ClinicalHistory"
-    3 = "NatureOfSpecimen"
-    4 = "GrossPathology"
-    5 = "MicroPathology"
-    6 = "Comment"
+    2 = "FinalDiagnosis"
+    3 = "GrossPathology"
+    4 = "MicroPathology"
+    5 = "Comment"
+    6 = "NatureOfSpecimen"
     7 = "Supplemental"
     8 = "Addendum"
 }
