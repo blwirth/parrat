@@ -297,10 +297,14 @@ function Build-HighlightedOBXText {
         $textValue = $obxTexts.$fieldName
         if ([string]::IsNullOrWhiteSpace($textValue)) { continue }
 
+        # Normalize line endings to match what NOAH used for offset calculation
+        # NOAH likely uses \r\n (CRLF) for offsets, so normalize to that
+        $textValue = $textValue -replace "`r`n", "`r`n" -replace "`r", "`r`n" -replace "`n", "`r`n"
+
         # Add section header
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text "=== $fieldName (Segment $segNum) ===" -Bold $true
         
-        # Get entities for this segment, sorted by offset descending (to apply from end to start)
+        # Get entities for this segment, sorted by offset
         $segmentEntities = @()
         if ($entitiesBySegment.ContainsKey($segNum)) {
             $segmentEntities = $entitiesBySegment[$segNum] | Sort-Object -Property Offset
@@ -318,23 +322,40 @@ function Build-HighlightedOBXText {
         }
         else {
             # Build text with entity highlighting
+            # Record position BEFORE adding text (after header and its newline)
             $startPos = $RichTextBox.TextLength
             
-            # First, add the entire text as plain
+            # First, add the entire text as plain (without trailing newline yet)
             $RichTextBox.SelectionStart = $RichTextBox.TextLength
             $RichTextBox.SelectionLength = 0
             $RichTextBox.SelectionFont = $RichTextBox.Font
             $RichTextBox.SelectionColor = $RichTextBox.ForeColor
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
-            $RichTextBox.AppendText($textValue + "`r`n")
+            $RichTextBox.AppendText($textValue)
 
-            # Now apply highlighting to each entity
+            # Now apply highlighting to each entity (before adding the final newline)
             foreach ($entity in $segmentEntities) {
                 $offset = [int]$entity.Offset
                 $length = [int]$entity.Length
+                $entityPhrase = [string]$entity.EntityPhrase
+
+                # Verify the offset by checking if the entity phrase matches at that position
+                # If not, try to find it in the text (offset might be wrong due to encoding/line ending differences)
+                $actualOffset = $offset
+                if ($offset -ge 0 -and $offset + $length -le $textValue.Length) {
+                    $textAtOffset = $textValue.Substring($offset, [Math]::Min($length, $textValue.Length - $offset))
+                    if ($textAtOffset -ne $entityPhrase -and -not [string]::IsNullOrWhiteSpace($entityPhrase)) {
+                        # Try to find the phrase in the text (case-insensitive search)
+                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        if ($foundIndex -ge 0) {
+                            $actualOffset = $foundIndex
+                        }
+                    }
+                }
 
                 # Calculate position in RichTextBox
-                $highlightStart = $startPos + $offset
+                # Offset is 0-based relative to the start of textValue
+                $highlightStart = $startPos + $actualOffset
                 $highlightLength = $length
 
                 # Ensure we don't exceed bounds
@@ -362,6 +383,9 @@ function Build-HighlightedOBXText {
                 $RichTextBox.SelectionLength = $highlightLength
                 $RichTextBox.SelectionBackColor = $backColor
             }
+            
+            # Add the trailing newline after all highlighting is applied
+            $RichTextBox.AppendText("`r`n")
         }
 
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text ""
