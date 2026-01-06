@@ -295,9 +295,42 @@ function Build-HighlightedOBXText {
         }
     }
 
-    # Process each OBX text field in order
+    # Calculate cumulative lengths of each segment in the combined text
+    # NOAH calculates offsets relative to the entire combined OBXText (all fields concatenated)
+    # We need to adjust offsets by subtracting the cumulative length of previous segments
+    # Build the combined text exactly as NOAH would (concatenating all segments with \r\n separators)
     $segmentOrder = @(0, 1, 2, 3, 4, 5, 6, 7, 8)
+    $cumulativeLengths = @{}
+    $cumulativeLength = 0
     
+    foreach ($segNum in $segmentOrder) {
+        $fieldName = $script:OBXSegmentMap[$segNum]
+        
+        # Store cumulative length BEFORE this segment
+        $cumulativeLengths[$segNum] = $cumulativeLength
+        
+        if (-not $fieldName) { 
+            continue 
+        }
+
+        $textValue = $obxTexts.$fieldName
+        if ([string]::IsNullOrWhiteSpace($textValue)) {
+            continue
+        }
+
+        # Normalize line endings to match what NOAH used for offset calculation
+        # NOAH likely uses \r\n (CRLF) for offsets, so normalize to that
+        $normalizedText = $textValue -replace "`r`n", "`r`n" -replace "`r", "`r`n" -replace "`n", "`r`n"
+        
+        # Add this segment's length to cumulative
+        # If this is not the first segment, add 2 for the \r\n separator
+        if ($cumulativeLength -gt 0) {
+            $cumulativeLength += 2  # \r\n separator
+        }
+        $cumulativeLength += $normalizedText.Length
+    }
+    
+    # Process each OBX text field in order
     foreach ($segNum in $segmentOrder) {
         $fieldName = $script:OBXSegmentMap[$segNum]
         if (-not $fieldName) { continue }
@@ -341,23 +374,63 @@ function Build-HighlightedOBXText {
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
             $RichTextBox.AppendText($textValue)
 
+            # Get the cumulative length of all previous segments
+            # This is the offset adjustment needed since NOAH calculates offsets relative to combined text
+            $offsetAdjustment = $cumulativeLengths[$segNum]
+
             # Now apply highlighting to each entity (before adding the final newline)
             foreach ($entity in $segmentEntities) {
                 $offset = [int]$entity.Offset
                 $length = [int]$entity.Length
                 $entityPhrase = [string]$entity.EntityPhrase
 
-                # Verify the offset by checking if the entity phrase matches at that position
+                # Adjust offset: NOAH calculates offsets relative to the entire combined OBXText
+                # We need to subtract the cumulative length of all previous segments
+                $adjustedOffset = $offset - $offsetAdjustment
+
+                # Verify the adjusted offset by checking if the entity phrase matches at that position
                 # If not, try to find it in the text (offset might be wrong due to encoding/line ending differences)
-                $actualOffset = $offset
-                if ($offset -ge 0 -and $offset + $length -le $textValue.Length) {
-                    $textAtOffset = $textValue.Substring($offset, [Math]::Min($length, $textValue.Length - $offset))
+                $actualOffset = $adjustedOffset
+                if ($adjustedOffset -ge 0 -and $adjustedOffset + $length -le $textValue.Length) {
+                    $textAtOffset = $textValue.Substring($adjustedOffset, [Math]::Min($length, $textValue.Length - $adjustedOffset))
                     if ($textAtOffset -ne $entityPhrase -and -not [string]::IsNullOrWhiteSpace($entityPhrase)) {
                         # Try to find the phrase in the text (case-insensitive search)
                         $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
                         if ($foundIndex -ge 0) {
                             $actualOffset = $foundIndex
                         }
+                    }
+                }
+                elseif ($adjustedOffset -lt 0) {
+                    # Offset is negative after adjustment - this shouldn't happen, but try to find the phrase anyway
+                    if (-not [string]::IsNullOrWhiteSpace($entityPhrase)) {
+                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        if ($foundIndex -ge 0) {
+                            $actualOffset = $foundIndex
+                        }
+                        else {
+                            # Skip this entity if we can't find it
+                            continue
+                        }
+                    }
+                    else {
+                        continue
+                    }
+                }
+                else {
+                    # Offset is beyond the text length - try to find the phrase
+                    if (-not [string]::IsNullOrWhiteSpace($entityPhrase)) {
+                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        if ($foundIndex -ge 0) {
+                            $actualOffset = $foundIndex
+                        }
+                        else {
+                            # Skip this entity if we can't find it
+                            continue
+                        }
+                    }
+                    else {
+                        continue
                     }
                 }
 
