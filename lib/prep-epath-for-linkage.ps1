@@ -9,14 +9,16 @@ param(
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-$TopoXlsx    = Join-Path $ScriptDir "Topography.xlsx"
-$MelTopoXlsx = Join-Path $ScriptDir "TopographyMelanoma.xlsx"
+# Dictionary files are in data/dictionaries (one level up from lib/)
+$dictDir = Join-Path (Split-Path $ScriptDir -Parent) "data\dictionaries"
+$TopoXlsx    = Join-Path $dictDir "Topography.xlsx"
+$MelTopoXlsx = Join-Path $dictDir "TopographyMelanoma.xlsx"
 
 if (-not (Test-Path $TopoXlsx)) {
-    throw "Missing Topography.xlsx in script folder: $ScriptDir"
+    throw "Missing Topography.xlsx in dictionary folder: $dictDir"
 }
 if (-not (Test-Path $MelTopoXlsx)) {
-    throw "Missing TopographyMelanoma.xlsx in script folder: $ScriptDir"
+    throw "Missing TopographyMelanoma.xlsx in dictionary folder: $dictDir"
 }
 if (-not (Test-Path $InputFile)) {
     throw "Input NAACCR XML file not found: $InputFile"

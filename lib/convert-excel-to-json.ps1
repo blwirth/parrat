@@ -9,25 +9,27 @@ param(
 # Load the Excel reading functions
 . "$ScriptDir\assign-site-laterality.ps1"
 
-$topoXlsx = Join-Path $ScriptDir "Topography.xlsx"
-$melTopoXlsx = Join-Path $ScriptDir "TopographyMelanoma.xlsx"
-$latXlsx = Join-Path $ScriptDir "Laterality.xlsx"
+# Dictionary files are in data/dictionaries (one level up from lib/)
+$dictDir = Join-Path (Split-Path $ScriptDir -Parent) "data\dictionaries"
+$topoXlsx = Join-Path $dictDir "Topography.xlsx"
+$melTopoXlsx = Join-Path $dictDir "TopographyMelanoma.xlsx"
+$latXlsx = Join-Path $dictDir "Laterality.xlsx"
 
-$topoJson = Join-Path $ScriptDir "Topography.jsonl"
-$melTopoJson = Join-Path $ScriptDir "TopographyMelanoma.jsonl"
-$latJson = Join-Path $ScriptDir "Laterality.json"
+$topoJson = Join-Path $dictDir "Topography.jsonl"
+$melTopoJson = Join-Path $dictDir "TopographyMelanoma.jsonl"
+$latJson = Join-Path $dictDir "Laterality.json"
 
 # Check if Excel files exist
 if (-not (Test-Path $topoXlsx)) {
-    Write-Error "Missing Topography.xlsx in script folder: $ScriptDir"
+    Write-Error "Missing Topography.xlsx in dictionary folder: $dictDir"
     exit 1
 }
 if (-not (Test-Path $melTopoXlsx)) {
-    Write-Error "Missing TopographyMelanoma.xlsx in script folder: $ScriptDir"
+    Write-Error "Missing TopographyMelanoma.xlsx in dictionary folder: $dictDir"
     exit 1
 }
 if (-not (Test-Path $latXlsx)) {
-    Write-Error "Missing Laterality.xlsx in script folder: $ScriptDir"
+    Write-Error "Missing Laterality.xlsx in dictionary folder: $dictDir"
     exit 1
 }
 

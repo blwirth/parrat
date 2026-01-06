@@ -257,13 +257,16 @@ function Get-CachedMaps {
         [string]$ScriptDir
     )
     
+    # Dictionary files are in data/dictionaries (one level up from lib/)
+    $dictDir = Join-Path (Split-Path $ScriptDir -Parent) "data\dictionaries"
+    
     # Prefer JSON files (much faster), fallback to Excel
-    $topoJson    = Join-Path $ScriptDir "Topography.jsonl"
-    $melTopoJson = Join-Path $ScriptDir "TopographyMelanoma.jsonl"
-    $latJson     = Join-Path $ScriptDir "Laterality.json"
-    $topoXlsx    = Join-Path $ScriptDir "Topography.xlsx"
-    $melTopoXlsx = Join-Path $ScriptDir "TopographyMelanoma.xlsx"
-    $latXlsx     = Join-Path $ScriptDir "Laterality.xlsx"
+    $topoJson    = Join-Path $dictDir "Topography.jsonl"
+    $melTopoJson = Join-Path $dictDir "TopographyMelanoma.jsonl"
+    $latJson     = Join-Path $dictDir "Laterality.json"
+    $topoXlsx    = Join-Path $dictDir "Topography.xlsx"
+    $melTopoXlsx = Join-Path $dictDir "TopographyMelanoma.xlsx"
+    $latXlsx     = Join-Path $dictDir "Laterality.xlsx"
 
     # Determine which files to use (prefer JSON)
     $useTopoJson = Test-Path $topoJson
@@ -272,10 +275,10 @@ function Get-CachedMaps {
     
     # Validate that at least one format exists for each file
     if (-not $useTopoJson -and -not (Test-Path $topoXlsx)) {
-        throw "Missing Topography file (neither .jsonl nor .xlsx found) in script folder: $ScriptDir"
+        throw "Missing Topography file (neither .jsonl nor .xlsx found) in dictionary folder: $dictDir"
     }
     if (-not $useMelTopoJson -and -not (Test-Path $melTopoXlsx)) {
-        throw "Missing TopographyMelanoma file (neither .jsonl nor .xlsx found) in script folder: $ScriptDir"
+        throw "Missing TopographyMelanoma file (neither .jsonl nor .xlsx found) in dictionary folder: $dictDir"
     }
     if (-not $useLatJson -and -not (Test-Path $latXlsx)) {
         throw "Missing Laterality file (neither .json nor .xlsx found) in script folder: $ScriptDir"
