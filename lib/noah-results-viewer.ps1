@@ -295,42 +295,9 @@ function Build-HighlightedOBXText {
         }
     }
 
-    # Calculate cumulative lengths of each segment in the combined text
-    # NOAH calculates offsets relative to the entire combined OBXText (all fields concatenated)
-    # We need to adjust offsets by subtracting the cumulative length of previous segments
-    # Build the combined text exactly as NOAH would (concatenating all segments with \r\n separators)
-    $segmentOrder = @(0, 1, 2, 3, 4, 5, 6, 7, 8)
-    $cumulativeLengths = @{}
-    $cumulativeLength = 0
-    
-    foreach ($segNum in $segmentOrder) {
-        $fieldName = $script:OBXSegmentMap[$segNum]
-        
-        # Store cumulative length BEFORE this segment
-        $cumulativeLengths[$segNum] = $cumulativeLength
-        
-        if (-not $fieldName) { 
-            continue 
-        }
-
-        $textValue = $obxTexts.$fieldName
-        if ([string]::IsNullOrWhiteSpace($textValue)) {
-            continue
-        }
-
-        # Normalize line endings to match what NOAH used for offset calculation
-        # NOAH likely uses \r\n (CRLF) for offsets, so normalize to that
-        $normalizedText = $textValue -replace "`r`n", "`r`n" -replace "`r", "`r`n" -replace "`n", "`r`n"
-        
-        # Add this segment's length to cumulative
-        # If this is not the first segment, add 2 for the \r\n separator
-        if ($cumulativeLength -gt 0) {
-            $cumulativeLength += 2  # \r\n separator
-        }
-        $cumulativeLength += $normalizedText.Length
-    }
-    
     # Process each OBX text field in order
+    $segmentOrder = @(0, 1, 2, 3, 4, 5, 6, 7, 8)
+    
     foreach ($segNum in $segmentOrder) {
         $fieldName = $script:OBXSegmentMap[$segNum]
         if (-not $fieldName) { continue }
@@ -338,9 +305,12 @@ function Build-HighlightedOBXText {
         $textValue = $obxTexts.$fieldName
         if ([string]::IsNullOrWhiteSpace($textValue)) { continue }
 
-        # Normalize line endings to match what NOAH used for offset calculation
-        # NOAH likely uses \r\n (CRLF) for offsets, so normalize to that
-        $textValue = $textValue -replace "`r`n", "`r`n" -replace "`r", "`r`n" -replace "`n", "`r`n"
+        # IMPORTANT: RichTextBox internally converts \r\n to \n when displaying text.
+        # NOAH calculates offsets based on the original text (with \r\n).
+        # We need to keep track of both versions:
+        # - $textValue: original text with \r\n (for offset calculation/adjustment)
+        # - $displayText: text as RichTextBox will store it (with \n only)
+        $displayText = $textValue -replace "`r`n", "`n"
 
         # Add section header
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text "=== $fieldName (Segment $segNum) ===" -Bold $true
@@ -359,7 +329,7 @@ function Build-HighlightedOBXText {
             $RichTextBox.SelectionFont = $RichTextBox.Font
             $RichTextBox.SelectionColor = $RichTextBox.ForeColor
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
-            $RichTextBox.AppendText($textValue + "`r`n")
+            $RichTextBox.AppendText($displayText + "`n")
         }
         else {
             # Build text with entity highlighting
@@ -372,55 +342,40 @@ function Build-HighlightedOBXText {
             $RichTextBox.SelectionFont = $RichTextBox.Font
             $RichTextBox.SelectionColor = $RichTextBox.ForeColor
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
-            $RichTextBox.AppendText($textValue)
-
-            # Get the cumulative length of all previous segments
-            # This is the offset adjustment needed since NOAH calculates offsets relative to combined text
-            $offsetAdjustment = $cumulativeLengths[$segNum]
+            $RichTextBox.AppendText($displayText)
 
             # Now apply highlighting to each entity (before adding the final newline)
+            # NOAH calculates offsets relative to each individual OBXText field (using \r\n)
             foreach ($entity in $segmentEntities) {
                 $offset = [int]$entity.Offset
                 $length = [int]$entity.Length
                 $entityPhrase = [string]$entity.EntityPhrase
 
-                # Adjust offset: NOAH calculates offsets relative to the entire combined OBXText
-                # We need to subtract the cumulative length of all previous segments
-                $adjustedOffset = $offset - $offsetAdjustment
+                # Convert offset from original text (with \r\n) to display text (with \n only)
+                # Count how many \r\n pairs occur before the offset position
+                $textBeforeOffset = if ($offset -gt 0 -and $offset -le $textValue.Length) {
+                    $textValue.Substring(0, $offset)
+                } else { "" }
+                $crlfCount = ([regex]::Matches($textBeforeOffset, "`r`n")).Count
+                $displayOffset = $offset - $crlfCount
 
-                # Verify the adjusted offset by checking if the entity phrase matches at that position
-                # If not, try to find it in the text (offset might be wrong due to encoding/line ending differences)
-                $actualOffset = $adjustedOffset
-                if ($adjustedOffset -ge 0 -and $adjustedOffset + $length -le $textValue.Length) {
-                    $textAtOffset = $textValue.Substring($adjustedOffset, [Math]::Min($length, $textValue.Length - $adjustedOffset))
+                # Verify the offset by checking if the entity phrase matches at that position in displayText
+                # If not, try to find it in the text
+                $actualOffset = $displayOffset
+                if ($displayOffset -ge 0 -and $displayOffset + $length -le $displayText.Length) {
+                    $textAtOffset = $displayText.Substring($displayOffset, [Math]::Min($length, $displayText.Length - $displayOffset))
                     if ($textAtOffset -ne $entityPhrase -and -not [string]::IsNullOrWhiteSpace($entityPhrase)) {
                         # Try to find the phrase in the text (case-insensitive search)
-                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        $foundIndex = $displayText.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
                         if ($foundIndex -ge 0) {
                             $actualOffset = $foundIndex
                         }
-                    }
-                }
-                elseif ($adjustedOffset -lt 0) {
-                    # Offset is negative after adjustment - this shouldn't happen, but try to find the phrase anyway
-                    if (-not [string]::IsNullOrWhiteSpace($entityPhrase)) {
-                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
-                        if ($foundIndex -ge 0) {
-                            $actualOffset = $foundIndex
-                        }
-                        else {
-                            # Skip this entity if we can't find it
-                            continue
-                        }
-                    }
-                    else {
-                        continue
                     }
                 }
                 else {
-                    # Offset is beyond the text length - try to find the phrase
+                    # Offset is out of bounds - try to find the phrase
                     if (-not [string]::IsNullOrWhiteSpace($entityPhrase)) {
-                        $foundIndex = $textValue.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        $foundIndex = $displayText.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
                         if ($foundIndex -ge 0) {
                             $actualOffset = $foundIndex
                         }
@@ -435,14 +390,15 @@ function Build-HighlightedOBXText {
                 }
 
                 # Calculate position in RichTextBox
-                # Offset is 0-based relative to the start of textValue
+                # Offset is 0-based relative to the start of displayText
                 $highlightStart = $startPos + $actualOffset
                 $highlightLength = $length
 
-                # Ensure we don't exceed bounds
+                # Ensure we don't exceed bounds of the displayText we added
                 if ($highlightStart -lt $startPos) { continue }
-                if ($highlightStart + $highlightLength -gt $RichTextBox.TextLength) {
-                    $highlightLength = $RichTextBox.TextLength - $highlightStart
+                $textEndPos = $startPos + $displayText.Length
+                if ($highlightStart + $highlightLength -gt $textEndPos) {
+                    $highlightLength = $textEndPos - $highlightStart
                 }
                 if ($highlightLength -le 0) { continue }
 
@@ -466,7 +422,7 @@ function Build-HighlightedOBXText {
             }
             
             # Add the trailing newline after all highlighting is applied
-            $RichTextBox.AppendText("`r`n")
+            $RichTextBox.AppendText("`n")
         }
 
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text ""
