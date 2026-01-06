@@ -1,25 +1,46 @@
 function Export-SelectedHl7 {
     param(
-        [int]$MessageIndex,
+        [array]$MessageIndices,
         [array]$Hl7Messages,
         [string]$OutputPath
     )
 
-    if ($MessageIndex -lt 0 -or $MessageIndex -ge $Hl7Messages.Count) {
-        return @{ Success = $false; Message = "Invalid message index: $MessageIndex" }
+    if ($MessageIndices.Count -eq 0) {
+        return @{ Success = $false; Message = "No messages selected for export."; ExportedCount = 0; Errors = @() }
     }
 
-    try {
-        $message = $Hl7Messages[$MessageIndex]
-        $rawContent = $message.RawContent
+    $errors = @()
+    $exportedMessages = @()
 
-        # Write HL7 message to file with ASCII encoding and no trailing newline
-        Set-Content -Path $OutputPath -Value $rawContent -Encoding ASCII -NoNewline
+    try {
+        foreach ($messageIndex in $MessageIndices) {
+            if ($messageIndex -lt 0 -or $messageIndex -ge $Hl7Messages.Count) {
+                $errors += "Invalid message index: $messageIndex"
+                continue
+            }
+
+            $message = $Hl7Messages[$messageIndex]
+            $exportedMessages += $message.RawContent
+        }
+
+        if ($exportedMessages.Count -eq 0) {
+            return @{
+                Success = $false
+                ExportedCount = 0
+                Errors = $errors
+            }
+        }
+
+        # Concatenate messages directly (no separator needed - MSH| at start of each message identifies boundaries)
+        $combinedContent = $exportedMessages -join ""
+
+        # Write HL7 messages to file with ASCII encoding and no trailing newline
+        Set-Content -Path $OutputPath -Value $combinedContent -Encoding ASCII -NoNewline
 
         return @{
-            Success = $true
-            ExportedCount = 1
-            Errors = @()
+            Success = ($errors.Count -eq 0)
+            ExportedCount = $exportedMessages.Count
+            Errors = $errors
         }
     }
     catch {

@@ -197,7 +197,7 @@ function Invoke-NoahReportabilityFilterForMessage {
     $inputFileName = "message_{0}.hl7" -f ($MessageIndex + 1)
     $inputPath     = Join-Path $folders.source $inputFileName
 
-    $exportResult = Export-SelectedHl7 -MessageIndex $MessageIndex -Hl7Messages $Hl7Messages -OutputPath $inputPath
+    $exportResult = Export-SelectedHl7 -MessageIndices @($MessageIndex) -Hl7Messages $Hl7Messages -OutputPath $inputPath
     if (-not $exportResult.Success) {
         return @{
             Success = $false
