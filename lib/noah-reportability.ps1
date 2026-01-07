@@ -1,5 +1,5 @@
 function Get-NoahConfigPath {
-    return (Join-Path $PSScriptRoot "noah-config.json")
+    return (Join-Path (Split-Path $PSScriptRoot -Parent) "config" "noah-config.json")
 }
 
 function Get-NoahConfig {
