@@ -46,6 +46,9 @@ function Load-XmlFile {
         # Clear HL7 data
         $ScriptVars['Hl7Messages'] = @()
         $script:Hl7Messages = @()
+        
+        # Update button states for XML file type
+        Update-ButtonStatesForFileType -Controls $Controls -FileType 'xml'
 
         $nsUri = $xml.DocumentElement.NamespaceURI
         $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
@@ -221,6 +224,9 @@ function Load-Hl7File {
         $script:Tumors = @()
         $ScriptVars['NsMgr'] = $null
         $script:NsMgr = $null
+        
+        # Update button states for HL7 file type
+        Update-ButtonStatesForFileType -Controls $Controls -FileType 'hl7'
         
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count

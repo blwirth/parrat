@@ -77,16 +77,19 @@ $btnAssign = New-Object System.Windows.Forms.Button
 $btnAssign.Text = "Assign Site/Lat"
 $btnAssign.Width = 100
 $btnAssign.Location = New-Object System.Drawing.Point(450, 10)
+$btnAssign.Enabled = $false  # XML-specific, disabled by default
 
 $btnFacility = New-Object System.Windows.Forms.Button
 $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
 $btnFacility.Location = New-Object System.Drawing.Point(560, 10)
+$btnFacility.Enabled = $false  # XML-specific, disabled by default
 
 $btnAddPid = New-Object System.Windows.Forms.Button
 $btnAddPid.Text = "Add PID"
 $btnAddPid.Width = 100
 $btnAddPid.Location = New-Object System.Drawing.Point(670, 10)
+$btnAddPid.Enabled = $false  # XML-specific, disabled by default
 
 $btnExport = New-Object System.Windows.Forms.Button
 $btnExport.Text = "Export..."
@@ -267,6 +270,9 @@ $script:Controls = @{
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate
+    'btnAssign' = $btnAssign
+    'btnFacility' = $btnFacility
+    'btnAddPid' = $btnAddPid
 }
 
 $script:ScriptVars = @{
@@ -278,6 +284,26 @@ $script:ScriptVars = @{
     'CurrentFilePath' = $script:CurrentFilePath
     'FileType' = $script:FileType
     'Hl7Messages' = $script:Hl7Messages
+}
+
+function Update-ButtonStatesForFileType {
+    param(
+        [hashtable]$Controls,
+        [string]$FileType
+    )
+    
+    # XML-specific buttons should be enabled for XML files, disabled for HL7 or no file
+    $isXmlFile = ($FileType -eq 'xml')
+    
+    if ($Controls['btnAssign']) {
+        $Controls['btnAssign'].Enabled = $isXmlFile
+    }
+    if ($Controls['btnFacility']) {
+        $Controls['btnFacility'].Enabled = $isXmlFile
+    }
+    if ($Controls['btnAddPid']) {
+        $Controls['btnAddPid'].Enabled = $isXmlFile
+    }
 }
 
 function Show-Tumor {
