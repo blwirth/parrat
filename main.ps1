@@ -128,9 +128,8 @@ $lblIndex.Text = ""
 
 $lblFileName = New-Object System.Windows.Forms.Label
 $lblFileName.AutoSize = $true
-$lblFileName.Location = New-Object System.Drawing.Point(200, 985)
+$lblFileName.Location = New-Object System.Drawing.Point(200, 983)
 $lblFileName.Text = ""
-$lblFileName.ForeColor = [System.Drawing.Color]::DarkGray
 $lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 
 # --- Main resizable area (panel + split containers) ---
