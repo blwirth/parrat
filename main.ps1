@@ -126,6 +126,13 @@ $lblIndex.AutoSize = $true
 $lblIndex.Location = New-Object System.Drawing.Point(110, 985)
 $lblIndex.Text = ""
 
+$lblFileName = New-Object System.Windows.Forms.Label
+$lblFileName.AutoSize = $true
+$lblFileName.Location = New-Object System.Drawing.Point(200, 985)
+$lblFileName.Text = ""
+$lblFileName.ForeColor = [System.Drawing.Color]::DarkGray
+$lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+
 # --- Main resizable area (panel + split containers) ---
 
 # Panel to host the split containers, leaving room for top buttons and bottom nav
@@ -233,7 +240,8 @@ $form.Controls.AddRange(@(
     $mainPanel,
     $btnPrev,
     $btnNext,
-    $lblIndex
+    $lblIndex,
+    $lblFileName
 ))
 
 # State
@@ -256,6 +264,7 @@ $script:Controls = @{
     'btnPrev' = $btnPrev
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
+    'lblFileName' = $lblFileName
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate

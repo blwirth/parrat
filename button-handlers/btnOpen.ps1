@@ -61,7 +61,9 @@ function Load-XmlFile {
 
         if ($ScriptVars['Tumors'].Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No <Tumor> elements found in this file.", "No Tumors")
+            $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No tumors found"
+            $Controls['lblFileName'].Text = "File: $fileName"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -72,6 +74,7 @@ function Load-XmlFile {
         else {
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $ScriptVars['Tumors'].Count
+            $Controls['lblFileName'].Text = "File: $fileName"
 
             # Build navigation table
             $table = New-Object System.Data.DataTable
@@ -189,7 +192,9 @@ function Load-Hl7File {
         
         if ($messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 messages found in this file.", "No Messages")
+            $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No messages found"
+            $Controls['lblFileName'].Text = "File: $fileName"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -219,6 +224,7 @@ function Load-Hl7File {
         
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count
+        $Controls['lblFileName'].Text = "File: $fileName"
         
         # Build navigation table for HL7
         $table = New-Object System.Data.DataTable
