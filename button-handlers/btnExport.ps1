@@ -29,14 +29,6 @@ function Get-BtnExportHandler {
         $menuItemHl7.Enabled = $isHl7
         $menuItemHl7.Add_Click((Get-BtnExportSelectedHl7Handler -Controls $Controls -ScriptVars $ScriptVars))
         [void]$contextMenu.Items.Add($menuItemHl7)
-
-        # Menu item: Test reportability using NOAH CLI (runs against a temp folder; original file is untouched)
-        # NOAH only accepts HL7 files, so disable this option when XML is loaded
-        $menuItemNoah = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemNoah.Text = "Test Reportability (NOAH)"
-        $menuItemNoah.Enabled = $isHl7
-        $menuItemNoah.Add_Click((Get-BtnNoahReportabilityHandler -Controls $Controls -ScriptVars $ScriptVars))
-        [void]$contextMenu.Items.Add($menuItemNoah)
         
         # Menu item 2: Export All as CSV (context-aware)
         $menuItemAllCsv = New-Object System.Windows.Forms.ToolStripMenuItem

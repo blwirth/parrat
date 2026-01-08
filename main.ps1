@@ -34,6 +34,7 @@
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
+. "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedCsv.ps1"
 . "$PSScriptRoot\button-handlers\btnExportAllCsv.ps1"
@@ -106,9 +107,14 @@ $btnConvertTxt.Text = "Convert TXT"
 $btnConvertTxt.Width = 100
 $btnConvertTxt.Location = New-Object System.Drawing.Point(1020, 10)
 
+$btnNoahMenu = New-Object System.Windows.Forms.Button
+$btnNoahMenu.Text = "NOAH..."
+$btnNoahMenu.Width = 100
+$btnNoahMenu.Location = New-Object System.Drawing.Point(1130, 10)
+
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1130, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(1240, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -236,6 +242,7 @@ $form.Controls.AddRange(@(
 	$btnFacility,
 	$btnConcatenate,
 	$btnConvertTxt,
+	$btnNoahMenu,
     $btnAddPid,
     $btnExport,
     $lblStatus,
@@ -273,6 +280,7 @@ $script:Controls = @{
     'btnAssign' = $btnAssign
     'btnFacility' = $btnFacility
     'btnAddPid' = $btnAddPid
+    'btnNoahMenu' = $btnNoahMenu
 }
 
 $script:ScriptVars = @{
@@ -447,6 +455,7 @@ $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVar
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConcatenate.Add_Click((Get-BtnConcatenateHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
+$btnNoahMenu.Add_Click((Get-BtnNoahMenuHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnExport.Add_Click((Get-BtnExportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
