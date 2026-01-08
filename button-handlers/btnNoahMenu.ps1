@@ -1,35 +1,3 @@
-function Get-BtnNoahMenuHandler {
-    param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
-    )
-
-    return {
-        # Create context menu
-        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-
-        # Menu item 1: POST Selected HL7
-        $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelected.Text = "POST Selected HL7"
-        $menuItemSelected.Add_Click({
-            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
-        }.GetNewClosure())
-
-        # Menu item 2: POST Custom Payload
-        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustom.Text = "POST Custom Payload"
-        $menuItemCustom.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
-        }.GetNewClosure())
-
-        $contextMenu.Items.AddRange(@($menuItemSelected, $menuItemCustom))
-
-        # Show the context menu at the button location
-        $btn = $Controls['btnNoahMenu']
-        $contextMenu.Show($btn, 0, $btn.Height)
-    }
-}
-
 function Invoke-PostSelectedHL7 {
     param(
         [hashtable]$Controls,
@@ -266,3 +234,34 @@ function Show-NoahResult {
     }
 }
 
+function Get-BtnNoahMenuHandler {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
+    return {
+        # Create context menu
+        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+
+        # Menu item 1: POST Selected HL7
+        $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSelected.Text = "POST Selected HL7"
+        $menuItemSelected.Add_Click({
+            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
+        })
+
+        # Menu item 2: POST Custom Payload
+        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemCustom.Text = "POST Custom Payload"
+        $menuItemCustom.Add_Click({
+            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
+        })
+
+        $contextMenu.Items.AddRange(@($menuItemSelected, $menuItemCustom))
+
+        # Show the context menu at the button location
+        $btn = $Controls['btnNoahMenu']
+        $contextMenu.Show($btn, 0, $btn.Height)
+    }
+}
