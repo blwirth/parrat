@@ -49,106 +49,102 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form = $form[0]  # ensure scalar type, not array
-$form.Text   = "XML and HL7 Utilities"
+$form.Text   = "NAACCR XML and HL7 Utilities"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
-# Top nav
-$btnOpen = New-Object System.Windows.Forms.Button
+# Top nav - ToolStrip
+$toolStrip = New-Object System.Windows.Forms.ToolStrip
+$toolStrip.Dock = 'Top'
+
+# File operations
+$btnOpen = New-Object System.Windows.Forms.ToolStripButton
 $btnOpen.Text = "Open..."
-$btnOpen.Width = 100
-$btnOpen.Location = New-Object System.Drawing.Point(10, 10)
+$btnOpen.DisplayStyle = 'Text'
+[void]$toolStrip.Items.Add($btnOpen)
 
-$btnDiff = New-Object System.Windows.Forms.Button
-$btnDiff.Text = "Diff"
-$btnDiff.Width = 100
-$btnDiff.Location = New-Object System.Drawing.Point(120, 10)
-
-$btnXml = New-Object System.Windows.Forms.Button
+$btnXml = New-Object System.Windows.Forms.ToolStripButton
 $btnXml.Text = "Show Raw"
-$btnXml.Width = 100
-$btnXml.Location = New-Object System.Drawing.Point(230, 10)
+$btnXml.DisplayStyle = 'Text'
+$btnXml.Enabled = $false  # Disabled until file is loaded
+[void]$toolStrip.Items.Add($btnXml)
 
-$btnDedup = New-Object System.Windows.Forms.Button
+[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+# Processing operations
+$btnDiff = New-Object System.Windows.Forms.ToolStripButton
+$btnDiff.Text = "Diff"
+$btnDiff.DisplayStyle = 'Text'
+$btnDiff.Enabled = $false  # Disabled until file is loaded
+[void]$toolStrip.Items.Add($btnDiff)
+
+$btnDedup = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnDedup.Text = "Deduplicate..."
-$btnDedup.Width = 100
-$btnDedup.Location = New-Object System.Drawing.Point(340, 10)
+$btnDedup.DisplayStyle = 'Text'
+$btnDedup.Enabled = $false  # Disabled until file is loaded
+[void]$toolStrip.Items.Add($btnDedup)
 
-$btnAssign = New-Object System.Windows.Forms.Button
+$btnAssign = New-Object System.Windows.Forms.ToolStripButton
 $btnAssign.Text = "Assign Site/Lat"
-$btnAssign.Width = 100
-$btnAssign.Location = New-Object System.Drawing.Point(450, 10)
-$btnAssign.Enabled = $false  # XML-specific, disabled by default
+$btnAssign.DisplayStyle = 'Text'
+$btnAssign.Enabled = $false  # Disabled until file is loaded (XML-specific)
+[void]$toolStrip.Items.Add($btnAssign)
 
-$btnFacility = New-Object System.Windows.Forms.Button
+$btnFacility = New-Object System.Windows.Forms.ToolStripButton
 $btnFacility.Text = "Assign Facility"
-$btnFacility.Width = 100
-$btnFacility.Location = New-Object System.Drawing.Point(560, 10)
-$btnFacility.Enabled = $false  # XML-specific, disabled by default
+$btnFacility.DisplayStyle = 'Text'
+$btnFacility.Enabled = $false  # Disabled until file is loaded (XML-specific)
+[void]$toolStrip.Items.Add($btnFacility)
 
-$btnAddPid = New-Object System.Windows.Forms.Button
+$btnAddPid = New-Object System.Windows.Forms.ToolStripButton
 $btnAddPid.Text = "Add PID"
-$btnAddPid.Width = 100
-$btnAddPid.Location = New-Object System.Drawing.Point(670, 10)
-$btnAddPid.Enabled = $false  # XML-specific, disabled by default
+$btnAddPid.DisplayStyle = 'Text'
+$btnAddPid.Enabled = $false  # Disabled until file is loaded (XML-specific)
+[void]$toolStrip.Items.Add($btnAddPid)
 
-$btnExport = New-Object System.Windows.Forms.Button
+[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+# Export/Convert operations
+$btnExport = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnExport.Text = "Export..."
-$btnExport.Width = 100
-$btnExport.Location = New-Object System.Drawing.Point(780, 10)
+$btnExport.DisplayStyle = 'Text'
+$btnExport.Enabled = $false  # Disabled until file is loaded
+[void]$toolStrip.Items.Add($btnExport)
 
-$btnConcatenate = New-Object System.Windows.Forms.Button
+[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$btnConcatenate = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnConcatenate.Text = "Concatenate..."
-$btnConcatenate.Width = 120
-$btnConcatenate.Location = New-Object System.Drawing.Point(890, 10)
+$btnConcatenate.DisplayStyle = 'Text'
+# Concatenate stays enabled - doesn't require a file
+[void]$toolStrip.Items.Add($btnConcatenate)
 
-$btnConvertTxt = New-Object System.Windows.Forms.Button
+$btnConvertTxt = New-Object System.Windows.Forms.ToolStripButton
 $btnConvertTxt.Text = "Convert TXT"
-$btnConvertTxt.Width = 100
-$btnConvertTxt.Location = New-Object System.Drawing.Point(1020, 10)
+$btnConvertTxt.DisplayStyle = 'Text'
+# Convert TXT stays enabled - doesn't require a file
+[void]$toolStrip.Items.Add($btnConvertTxt)
 
-$btnNoahMenu = New-Object System.Windows.Forms.Button
+$btnNoahMenu = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnNoahMenu.Text = "NOAH..."
-$btnNoahMenu.Width = 100
-$btnNoahMenu.Location = New-Object System.Drawing.Point(1130, 10)
+$btnNoahMenu.DisplayStyle = 'Text'
+# NOAH stays enabled - doesn't require a file
+[void]$toolStrip.Items.Add($btnNoahMenu)
 
-$lblStatus = New-Object System.Windows.Forms.Label
-$lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1240, 15)
+[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+# Status label
+$lblStatus = New-Object System.Windows.Forms.ToolStripLabel
 $lblStatus.Text = "No file loaded"
-
-# Bottom nav
-$btnPrev = New-Object System.Windows.Forms.Button
-$btnPrev.Text = "<"
-$btnPrev.Width = 40
-$btnPrev.Location = New-Object System.Drawing.Point(10, 980)
-$btnPrev.Enabled = $false
-
-$btnNext = New-Object System.Windows.Forms.Button
-$btnNext.Text = ">"
-$btnNext.Width = 40
-$btnNext.Location = New-Object System.Drawing.Point(60, 980)
-$btnNext.Enabled = $false
-
-$lblIndex = New-Object System.Windows.Forms.Label
-$lblIndex.AutoSize = $true
-$lblIndex.Location = New-Object System.Drawing.Point(110, 985)
-$lblIndex.Text = ""
-
-$lblFileName = New-Object System.Windows.Forms.Label
-$lblFileName.AutoSize = $true
-$lblFileName.Location = New-Object System.Drawing.Point(200, 983)
-$lblFileName.Text = ""
-$lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$lblStatus.Alignment = 'Right'
+[void]$toolStrip.Items.Add($lblStatus)
 
 # --- Main resizable area (panel + split containers) ---
 
-# Panel to host the split containers, leaving room for top buttons and bottom nav
+# Panel to host the split containers, leaving room for ToolStrip and bottom nav
 $mainPanel = New-Object System.Windows.Forms.Panel
-$mainPanel.Location = New-Object System.Drawing.Point(10, 40)
-# will be redrawn to fit screen below but give initial size
-$mainPanel.Size     = New-Object System.Drawing.Size(1000, 800)
-$mainPanel.Anchor   = 'Top,Left,Right,Bottom'
+$mainPanel.Dock = 'Fill'
+$mainPanel.Padding = New-Object System.Windows.Forms.Padding(10, 25, 10, 10)
 
 # Outer split container: left (grid) | right (inner split: path + items)
 $splitOuter = New-Object System.Windows.Forms.SplitContainer
@@ -156,6 +152,7 @@ $splitOuter.Dock = 'Fill'
 $splitOuter.Orientation = 'Vertical'
 $splitOuter.IsSplitterFixed = $false
 $splitOuter.Panel1MinSize = 200
+$splitOuter.Panel2MinSize = 400
 
 # Inner split container: middle (path text) | right (other items)
 $splitInner = New-Object System.Windows.Forms.SplitContainer
@@ -163,15 +160,10 @@ $splitInner.Dock = 'Fill'
 $splitInner.Orientation = 'Vertical'
 $splitInner.IsSplitterFixed = $false
 $splitInner.Panel1MinSize = 300
+$splitInner.Panel2MinSize = 200
 
 $form.Add_Shown({
     param($formSender, $e)
-
-    # Adjust main panel to fit current client area
-    $mainPanel.Size = New-Object System.Drawing.Size(
-        [int]($formSender.ClientSize.Width  - 20),
-        [int]($formSender.ClientSize.Height - 100)  # leave some space at the bottom
-    )
 
     # Set splitter distances as proportions
     $splitOuter.SplitterDistance = [int]($splitOuter.Width * 0.20)
@@ -232,28 +224,51 @@ $splitOuter.Panel2.Controls.Add($splitInner)
 
 $mainPanel.Controls.Add($splitOuter)
 
+# Bottom nav panel
+$bottomPanel = New-Object System.Windows.Forms.Panel
+$bottomPanel.Dock = 'Bottom'
+$bottomPanel.Height = 50
+$bottomPanel.Padding = New-Object System.Windows.Forms.Padding(10, 5, 10, 5)
+
+$btnPrev = New-Object System.Windows.Forms.Button
+$btnPrev.Text = "<"
+$btnPrev.Width = 40
+$btnPrev.Height = 30
+$btnPrev.Location = New-Object System.Drawing.Point(10, 10)
+$btnPrev.Enabled = $false
+$btnPrev.Anchor = 'Left,Bottom'
+
+$btnNext = New-Object System.Windows.Forms.Button
+$btnNext.Text = ">"
+$btnNext.Width = 40
+$btnNext.Height = 30
+$btnNext.Location = New-Object System.Drawing.Point(60, 10)
+$btnNext.Enabled = $false
+$btnNext.Anchor = 'Left,Bottom'
+
+$lblIndex = New-Object System.Windows.Forms.Label
+$lblIndex.AutoSize = $true
+$lblIndex.Location = New-Object System.Drawing.Point(110, 15)
+$lblIndex.Text = ""
+$lblIndex.Anchor = 'Left,Bottom'
+
+$lblFileName = New-Object System.Windows.Forms.Label
+$lblFileName.AutoSize = $true
+$lblFileName.Location = New-Object System.Drawing.Point(200, 15)
+$lblFileName.Text = ""
+$lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$lblFileName.Anchor = 'Left,Bottom'
+
+$bottomPanel.Controls.AddRange(@($btnPrev, $btnNext, $lblIndex, $lblFileName))
+
 # Add everything to the form
 $form.Controls.AddRange(@(
-    $btnOpen,
-    $btnDiff,
-    $btnXml,
-	$btnDedup,
-	$btnAssign,
-	$btnFacility,
-	$btnConcatenate,
-	$btnConvertTxt,
-	$btnNoahMenu,
-    $btnAddPid,
-    $btnExport,
-    $lblStatus,
+    $toolStrip,
     $mainPanel,
-    $btnPrev,
-    $btnNext,
-    $lblIndex,
-    $lblFileName
+    $bottomPanel
 ))
 
-# State
+# State (script scope)
 $script:Tumors          = @()
 $script:CurrentIndex    = -1
 $script:NsMgr           = $null
@@ -262,6 +277,11 @@ $script:XmlDoc          = $null
 $script:CurrentFilePath = $null
 $script:FileType        = $null    # 'xml' or 'hl7'
 $script:Hl7Messages     = @()
+
+# Global state (for cross-file access)
+$global:Hl7Messages     = @()
+$global:CurrentIndex    = -1
+$global:FileType        = $null
 
 # Create hashtables for passing context to button handlers
 $script:Controls = @{
@@ -274,6 +294,8 @@ $script:Controls = @{
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
     'lblFileName' = $lblFileName
+    'btnXml' = $btnXml
+    'btnDiff' = $btnDiff
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate
@@ -282,6 +304,9 @@ $script:Controls = @{
     'btnAddPid' = $btnAddPid
     'btnNoahMenu' = $btnNoahMenu
 }
+
+# Global controls reference for cross-file access
+$global:AppControls = $script:Controls
 
 $script:ScriptVars = @{
     'Tumors' = $script:Tumors
@@ -300,7 +325,23 @@ function Update-ButtonStatesForFileType {
         [string]$FileType
     )
     
-    # XML-specific buttons should be enabled for XML files, disabled for HL7 or no file
+    # Enable buttons that require a file (any file type)
+    $hasFile = ($null -ne $FileType -and $FileType -ne '')
+    
+    if ($Controls['btnXml']) {
+        $Controls['btnXml'].Enabled = $hasFile
+    }
+    if ($Controls['btnDiff']) {
+        $Controls['btnDiff'].Enabled = $hasFile
+    }
+    if ($Controls['btnDedup']) {
+        $Controls['btnDedup'].Enabled = $hasFile
+    }
+    if ($Controls['btnExport']) {
+        $Controls['btnExport'].Enabled = $hasFile
+    }
+    
+    # XML-specific buttons should be enabled only for XML files
     $isXmlFile = ($FileType -eq 'xml')
     
     if ($Controls['btnAssign']) {
@@ -416,8 +457,14 @@ $btnOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $s
 $gridNav.Add_SelectionChanged({
     # Determine which data source to use based on file type
     $recordCount = 0
-    if ($script:FileType -eq 'hl7') {
-        $recordCount = $script:Hl7Messages.Count
+    # Use global variables for cross-file access
+    $fileType = $global:FileType
+    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+    
+    if ($fileType -eq 'hl7') {
+        $messages = $global:Hl7Messages
+        if ($null -eq $messages) { $messages = $script:Hl7Messages }
+        $recordCount = if ($null -ne $messages) { $messages.Count } else { 0 }
     }
     else {
         $recordCount = $script:Tumors.Count
@@ -436,11 +483,14 @@ $gridNav.Add_SelectionChanged({
     $recordIndex = [int]$indexValObj - 1
 
     if ($recordIndex -lt 0 -or $recordIndex -ge $recordCount) { return }
-    if ($recordIndex -eq $script:CurrentIndex) { return }
+    
+    $currentIdx = $global:CurrentIndex
+    if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
+    if ($recordIndex -eq $currentIdx) { return }
 
     # Dispatch to appropriate viewer based on file type
-    if ($script:FileType -eq 'hl7') {
-        Show-Hl7Message -Index $recordIndex
+    if ($fileType -eq 'hl7') {
+        Show-Hl7Message -Index $recordIndex -Messages $global:Hl7Messages -Controls $script:Controls
     }
     else {
         Show-Tumor -Index $recordIndex
@@ -448,16 +498,131 @@ $gridNav.Add_SelectionChanged({
 })
 
 
+# Wire up button handlers
 $btnXml.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnDedup.Add_Click((Get-BtnDedupHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnConcatenate.Add_Click((Get-BtnConcatenateHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
-$btnNoahMenu.Add_Click((Get-BtnNoahMenuHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnExport.Add_Click((Get-BtnExportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+# Set up NOAH dropdown menu (populated dynamically on DropDownOpening)
+$btnNoahMenu.Add_DropDownOpening({
+    param($toolStripButton, $e)
+    
+    # Clear existing items
+    $toolStripButton.DropDownItems.Clear()
+    
+    # Determine file type
+    $fileType = $global:FileType
+    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+    $isHl7 = ($fileType -eq 'hl7')
+    
+    # POST Current HL7 - only enabled if HL7 file is loaded
+    $menuItemPostCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemPostCurrent.Text = "POST Current HL7"
+    $menuItemPostCurrent.Enabled = $isHl7
+    $menuItemPostCurrent.Add_Click({
+        Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
+    })
+    [void]$toolStripButton.DropDownItems.Add($menuItemPostCurrent)
+    
+    # POST Custom Payload - always enabled
+    $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemCustom.Text = "POST Custom Payload"
+    $menuItemCustom.Add_Click({
+        Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
+    })
+    [void]$toolStripButton.DropDownItems.Add($menuItemCustom)
+})
+
+# Set up Dedup dropdown menu
+$menuItemTrueMatches = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemTrueMatches.Text = "Dedup true matches"
+$menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnDedup.DropDownItems.Add($menuItemTrueMatches)
+
+$menuItemPathReport = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPathReport.Text = "Dedup by pathReportNumber1"
+$menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnDedup.DropDownItems.Add($menuItemPathReport)
+
+$menuItemPrimaryKey = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPrimaryKey.Text = "Dedup by primary key"
+$menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnDedup.DropDownItems.Add($menuItemPrimaryKey)
+
+# Set up Export dropdown menu (populated dynamically on DropDownOpening)
+$btnExport.Add_DropDownOpening({
+    param($toolStripButton, $e)
+    
+    # Clear existing items
+    $toolStripButton.DropDownItems.Clear()
+    
+    # Determine file type
+    $fileType = $script:FileType
+    $isXml = ($fileType -eq 'xml')
+    $isHl7 = ($fileType -eq 'hl7')
+    
+    # Export Selected as XML (XML only)
+    $menuItemXml = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemXml.Text = "Export Selected as XML"
+    $menuItemXml.Enabled = $isXml
+    $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    [void]$toolStripButton.DropDownItems.Add($menuItemXml)
+    
+    # Export Selected as HL7 (HL7 only)
+    $menuItemHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemHl7.Text = "Export Selected as HL7"
+    $menuItemHl7.Enabled = $isHl7
+    $menuItemHl7.Add_Click((Get-BtnExportSelectedHl7Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    [void]$toolStripButton.DropDownItems.Add($menuItemHl7)
+    
+    [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    
+    # Export All as CSV (context-aware)
+    $menuItemAllCsv = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemAllCsv.Text = "Export All as CSV"
+    $menuItemAllCsv.Enabled = ($isXml -or $isHl7)
+    if ($isXml) {
+        $menuItemAllCsv.Add_Click((Get-BtnExportAllCsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    } elseif ($isHl7) {
+        $menuItemAllCsv.Add_Click((Get-BtnExportAllHl7CsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    }
+    [void]$toolStripButton.DropDownItems.Add($menuItemAllCsv)
+    
+    # Export Selected as CSV (context-aware)
+    $menuItemSelectedCsv = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemSelectedCsv.Text = "Export Selected as CSV"
+    $menuItemSelectedCsv.Enabled = ($isXml -or $isHl7)
+    if ($isXml) {
+        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedCsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    } elseif ($isHl7) {
+        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedHl7CsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    }
+    [void]$toolStripButton.DropDownItems.Add($menuItemSelectedCsv)
+})
+
+# Set up Concatenate dropdown menu
+$menuItemConcatenateHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateHl7.Text = "Concatenate HL7"
+$menuItemConcatenateHl7.Add_Click({
+    Start-ConcatenateHl7
+})
+[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateHl7)
+
+$menuItemConcatenateXml = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateXml.Text = "Concatenate XML"
+$menuItemConcatenateXml.Add_Click({
+    Start-ConcatenateXml
+})
+[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateXml)
+
+$menuItemConcatenateTxt = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateTxt.Text = "Concatenate TXT"
+$menuItemConcatenateTxt.Add_Click({
+    Start-ConcatenateTxt
+})
+[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateTxt)
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))

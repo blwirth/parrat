@@ -4,12 +4,18 @@ function Get-BtnPrevHandler {
     )
     
     return {
-        if ($script:CurrentIndex -gt 0) {
-            $newIndex = $script:CurrentIndex - 1
+        $currentIdx = $global:CurrentIndex
+        if ($null -eq $currentIdx -or $currentIdx -lt 0) { $currentIdx = $script:CurrentIndex }
+        
+        if ($currentIdx -gt 0) {
+            $newIndex = $currentIdx - 1
             
             # Dispatch to appropriate viewer based on file type
-            if ($script:FileType -eq 'hl7') {
-                Show-Hl7Message -Index $newIndex
+            $fileType = $global:FileType
+            if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+            
+            if ($fileType -eq 'hl7') {
+                Show-Hl7Message -Index $newIndex -Messages $global:Hl7Messages -Controls $global:AppControls
             }
             else {
                 Show-Tumor -Index $newIndex
@@ -17,3 +23,5 @@ function Get-BtnPrevHandler {
         }
     }
 }
+
+

@@ -27,6 +27,14 @@ function Get-BtnConcatenateHandler {
         })
         [void]$contextMenu.Items.Add($menuItemXml)
         
+        # Menu item 3: Concatenate TXT
+        $menuItemTxt = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemTxt.Text = "Concatenate TXT"
+        $menuItemTxt.Add_Click({
+            Start-ConcatenateTxt
+        })
+        [void]$contextMenu.Items.Add($menuItemTxt)
+        
         # Show context menu at button location (use sender which is the button)
         $button = $sender
         if ($null -eq $button) {
@@ -38,4 +46,5 @@ function Get-BtnConcatenateHandler {
         }
     }
 }
+
 

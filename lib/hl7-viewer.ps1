@@ -3,23 +3,38 @@
 
 function Show-Hl7Message {
     param(
-        [int]$Index
+        [int]$Index,
+        [array]$Messages = $null,
+        [hashtable]$Controls = $null
     )
 
-    if ($script:Hl7Messages.Count -eq 0) { return }
-    if ($Index -lt 0 -or $Index -ge $script:Hl7Messages.Count) { return }
+    # Use passed parameters or fall back to global variables
+    if ($null -eq $Messages) {
+        $Messages = $global:Hl7Messages
+    }
+    if ($null -eq $Controls) {
+        $Controls = $global:AppControls
+    }
 
-    $script:CurrentIndex = $Index
-    $script:ScriptVars['CurrentIndex'] = $Index
-    $message = $script:Hl7Messages[$Index]
+    if ($null -eq $Messages -or $Messages.Count -eq 0) { 
+        [System.Windows.Forms.MessageBox]::Show("No HL7 messages loaded!", "Error")
+        return 
+    }
+    if ($Index -lt 0 -or $Index -ge $Messages.Count) { 
+        [System.Windows.Forms.MessageBox]::Show("Index out of range! Index: $Index, Count: $($Messages.Count)", "Error")
+        return 
+    }
+
+    $global:CurrentIndex = $Index
+    $message = $Messages[$Index]
 
     # Get UI controls
-    $rtbPath = $script:Controls['rtbPath']
-    $rtbItems = $script:Controls['rtbItems']
-    $lblIndex = $script:Controls['lblIndex']
-    $btnPrev = $script:Controls['btnPrev']
-    $btnNext = $script:Controls['btnNext']
-    $gridNav = $script:Controls['gridNav']
+    $rtbPath = $Controls['rtbPath']
+    $rtbItems = $Controls['rtbItems']
+    $lblIndex = $Controls['lblIndex']
+    $btnPrev = $Controls['btnPrev']
+    $btnNext = $Controls['btnNext']
+    $gridNav = $Controls['gridNav']
 
     # Clear text boxes
     $rtbPath.Clear()
@@ -37,7 +52,7 @@ function Show-Hl7Message {
     }
 
     # === MIDDLE PANEL: Clean OBX Text Content ===
-    Add-LineToRichTextBox $rtbPath ("=== PATHOLOGY REPORT TEXT ===" ) $true
+    Add-LineToRichTextBox $rtbPath ("=== PATHOLOGY REPORT TEXT ===") $true
     Add-LineToRichTextBox $rtbPath ""
 
     # Extract and display clean OBX text
@@ -58,7 +73,7 @@ function Show-Hl7Message {
     }
 
     # === RIGHT PANEL: Raw HL7 Segments + Metadata ===
-    Add-LineToRichTextBox $rtbItems ("Message {0} of {1}" -f ($Index + 1), $script:Hl7Messages.Count) $true
+    Add-LineToRichTextBox $rtbItems ("Message {0} of {1}" -f ($Index + 1), $Messages.Count) $true
     Add-LineToRichTextBox $rtbItems ""
 
     # Message Header Info
@@ -136,9 +151,9 @@ function Show-Hl7Message {
     }
 
     # Update navigation
-    $lblIndex.Text = "Message {0} of {1}" -f ($Index + 1), $script:Hl7Messages.Count
+    $lblIndex.Text = "Message {0} of {1}" -f ($Index + 1), $Messages.Count
     $btnPrev.Enabled = ($Index -gt 0)
-    $btnNext.Enabled = ($Index -lt ($script:Hl7Messages.Count - 1))
+    $btnNext.Enabled = ($Index -lt ($Messages.Count - 1))
 }
 
 function Format-Hl7SegmentForDisplay {
@@ -173,16 +188,24 @@ function Show-RawHl7ForMessage {
         [int]$Index
     )
 
-    if ($script:Hl7Messages.Count -eq 0) {
+    # Get messages from ScriptVars if script variable is empty (scope issue)
+    $messages = $script:Hl7Messages
+    if ($null -eq $messages -or $messages.Count -eq 0) {
+        if ($null -ne $script:ScriptVars -and $null -ne $script:ScriptVars['Hl7Messages']) {
+            $messages = $script:ScriptVars['Hl7Messages']
+        }
+    }
+
+    if ($null -eq $messages -or $messages.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Show HL7")
         return
     }
-    if ($Index -lt 0 -or $Index -ge $script:Hl7Messages.Count) {
+    if ($Index -lt 0 -or $Index -ge $messages.Count) {
         [System.Windows.Forms.MessageBox]::Show("Index out of range.", "Show HL7")
         return
     }
 
-    $message = $script:Hl7Messages[$Index]
+    $message = $messages[$Index]
     $rawContent = $message.RawContent
 
     $label = "Message {0} - {1} ({2})" -f ($Index + 1), $message.PatientName, $message.MessageType

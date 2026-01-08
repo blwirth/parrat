@@ -3,3 +3,4 @@ function Get-BtnConcatenateXmlHandler {
         Start-ConcatenateXml
     }
 }
+

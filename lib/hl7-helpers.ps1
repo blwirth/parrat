@@ -42,29 +42,61 @@ function Parse-Hl7Messages {
     
     $messages = @()
     
-    # Split by MSH| at start of line
-    $rawMessages = $Content -split "(?m)^MSH\|"
-    $rawMessages = $rawMessages | Where-Object { $_ -match '\S' }
+    # Normalize line endings to just \n
+    $Content = $Content -replace "`r`n", "`n"
+    $Content = $Content -replace "`r", "`n"
     
-    for ($i = 0; $i -lt $rawMessages.Count; $i++) {
-        $msg = $rawMessages[$i]
-        if (-not $msg.StartsWith("MSH|")) {
-            $msg = "MSH|" + $msg
+    # Split content into individual messages by finding MSH segments
+    # Each message starts with "MSH|"
+    $messageTexts = @()
+    $currentMessage = ""
+    
+    $allLines = $Content -split "`n"
+    
+    foreach ($line in $allLines) {
+        $trimmedLine = $line.Trim()
+        if ([string]::IsNullOrEmpty($trimmedLine)) { continue }
+        
+        if ($trimmedLine.StartsWith("MSH|")) {
+            # Start of a new message
+            if (-not [string]::IsNullOrEmpty($currentMessage)) {
+                $messageTexts += $currentMessage
+            }
+            $currentMessage = $trimmedLine
         }
+        else {
+            # Continue current message
+            if (-not [string]::IsNullOrEmpty($currentMessage)) {
+                $currentMessage += "`n" + $trimmedLine
+            }
+        }
+    }
+    
+    # Don't forget the last message
+    if (-not [string]::IsNullOrEmpty($currentMessage)) {
+        $messageTexts += $currentMessage
+    }
+    
+    # Parse each message
+    for ($i = 0; $i -lt $messageTexts.Count; $i++) {
+        $msg = $messageTexts[$i]
         
         # Parse segments
         $segments = @{}
         $allSegments = @()
-        $lines = $msg -split "(`r`n|`n|`r)"
-        $lines = $lines | Where-Object { $_ -match '\S' }
+        $lines = $msg -split "`n"
         
         foreach ($line in $lines) {
-            $segmentType = $line.Substring(0, [Math]::Min(3, $line.Length))
+            $trimmedLine = $line.Trim()
+            if ([string]::IsNullOrEmpty($trimmedLine)) { continue }
+            if ($trimmedLine.Length -lt 3) { continue }
+            
+            $segmentType = $trimmedLine.Substring(0, 3)
             if (-not $segments.ContainsKey($segmentType)) {
                 $segments[$segmentType] = @()
             }
-            $segments[$segmentType] += $line
-            $allSegments += $line
+            $segments[$segmentType] += $trimmedLine
+            $allSegments += $trimmedLine
         }
         
         # Extract common fields
@@ -303,6 +335,11 @@ function Extract-ObxTextContent {
         # OBX-5 is the observation value (index 5 after split by |)
         $observationValue = if ($fields.Count -gt 5) { $fields[5] } else { "" }
         
+        # Skip empty OBX values - they're just spacers in HL7
+        if ([string]::IsNullOrWhiteSpace($observationValue)) {
+            continue
+        }
+        
         # Handle HL7 escape sequences if present
         # Common ones: \X0D\ = carriage return, \X0A\ = line feed, \E\ = escape, \F\ = field separator
         $observationValue = $observationValue -replace '\\X0D\\', "`r"
@@ -313,7 +350,6 @@ function Extract-ObxTextContent {
         $observationValue = $observationValue -replace '\\T\\', '&'
         $observationValue = $observationValue -replace '\\R\\', '~'
         
-        # Add line to collection (even if empty, to preserve blank lines)
         $textLines += $observationValue
     }
     

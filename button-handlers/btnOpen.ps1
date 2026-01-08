@@ -207,15 +207,18 @@ function Load-Hl7File {
             return
         }
         
-        # Set state
+        # Set state (both script and global scope for cross-file access)
         $ScriptVars['Hl7Messages'] = $messages
         $script:Hl7Messages = $messages
+        $global:Hl7Messages = $messages
         $ScriptVars['CurrentFilePath'] = $FilePath
         $script:CurrentFilePath = $FilePath
         $ScriptVars['FileType'] = 'hl7'
         $script:FileType = 'hl7'
+        $global:FileType = 'hl7'
         $ScriptVars['CurrentIndex'] = -1
         $script:CurrentIndex = -1
+        $global:CurrentIndex = -1
         
         # Clear XML data
         $ScriptVars['XmlDoc'] = $null
@@ -292,9 +295,16 @@ function Load-Hl7File {
             }
         }
         
-        Show-Hl7Message -Index 0
+        # Select first row and show first message
+        if ($Controls['gridNav'].Rows.Count -gt 0) {
+            $Controls['gridNav'].Rows[0].Selected = $true
+            $Controls['gridNav'].CurrentCell = $Controls['gridNav'].Rows[0].Cells[0]
+        }
+        Show-Hl7Message -Index 0 -Messages $messages -Controls $Controls
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show("Error loading HL7: {0}" -f $_.Exception.Message, "Error")
     }
 }
+
+
