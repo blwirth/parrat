@@ -1,5 +1,6 @@
 function Get-NoahConfigPath {
-    return (Join-Path (Split-Path $PSScriptRoot -Parent) "config" "noah-config.json")
+    $root = Split-Path -Parent $PSScriptRoot
+    return [System.IO.Path]::Combine($root, "config", "noah-config.json")
 }
 
 function Get-NoahConfig {
@@ -428,7 +429,7 @@ function Invoke-NoahReportabilityFilter {
             }
         }
         
-        $timeoutMs = 10000
+        $timeoutMs = 15000
         $exited = $proc.WaitForExit($timeoutMs)
             
         if (-not $exited) {
