@@ -1,22 +1,24 @@
-. "$PSScriptRoot\xml-helpers.ps1"
-. "$PSScriptRoot\xml-viewer.ps1"
-. "$PSScriptRoot\hl7-helpers.ps1"
-. "$PSScriptRoot\hl7-viewer.ps1"
-. "$PSScriptRoot\diff.ps1"
-. "$PSScriptRoot\deduplicate.ps1"
-. "$PSScriptRoot\assign-site-laterality.ps1"
-. "$PSScriptRoot\assign-facility.ps1"
-. "$PSScriptRoot\concatenate-xml.ps1"
-. "$PSScriptRoot\concatenate-hl7.ps1"
-. "$PSScriptRoot\convert-txt.ps1"
-. "$PSScriptRoot\add-pid.ps1"
-. "$PSScriptRoot\export-selected-xml.ps1"
-. "$PSScriptRoot\export-selected-hl7.ps1"
-. "$PSScriptRoot\export-selected-csv.ps1"
-. "$PSScriptRoot\export-all-csv.ps1"
-. "$PSScriptRoot\export-preview.ps1"
-. "$PSScriptRoot\noah-reportability.ps1"
-. "$PSScriptRoot\noah-results-viewer.ps1"
+. "$PSScriptRoot\lib\xml-helpers.ps1"
+. "$PSScriptRoot\lib\xml-viewer.ps1"
+. "$PSScriptRoot\lib\hl7-helpers.ps1"
+. "$PSScriptRoot\lib\hl7-viewer.ps1"
+. "$PSScriptRoot\lib\diff.ps1"
+. "$PSScriptRoot\lib\deduplicate.ps1"
+. "$PSScriptRoot\lib\assign-site-laterality.ps1"
+. "$PSScriptRoot\lib\assign-facility.ps1"
+. "$PSScriptRoot\lib\concatenate-xml.ps1"
+. "$PSScriptRoot\lib\concatenate-hl7.ps1"
+. "$PSScriptRoot\lib\convert-txt.ps1"
+. "$PSScriptRoot\lib\add-pid.ps1"
+. "$PSScriptRoot\lib\export-selected-xml.ps1"
+. "$PSScriptRoot\lib\export-selected-hl7.ps1"
+. "$PSScriptRoot\lib\export-selected-csv.ps1"
+. "$PSScriptRoot\lib\export-all-csv.ps1"
+. "$PSScriptRoot\lib\export-selected-hl7-csv.ps1"
+. "$PSScriptRoot\lib\export-all-hl7-csv.ps1"
+. "$PSScriptRoot\lib\export-preview.ps1"
+. "$PSScriptRoot\lib\noah-reportability.ps1"
+. "$PSScriptRoot\lib\noah-results-viewer.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
@@ -32,9 +34,13 @@
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
+. "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedCsv.ps1"
 . "$PSScriptRoot\button-handlers\btnExportAllCsv.ps1"
+. "$PSScriptRoot\button-handlers\btnExportSelectedHl7.ps1"
+. "$PSScriptRoot\button-handlers\btnExportSelectedHl7Csv.ps1"
+. "$PSScriptRoot\button-handlers\btnExportAllHl7Csv.ps1"
 . "$PSScriptRoot\button-handlers\btnPrev.ps1"
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
 
@@ -72,16 +78,19 @@ $btnAssign = New-Object System.Windows.Forms.Button
 $btnAssign.Text = "Assign Site/Lat"
 $btnAssign.Width = 100
 $btnAssign.Location = New-Object System.Drawing.Point(450, 10)
+$btnAssign.Enabled = $false  # XML-specific, disabled by default
 
 $btnFacility = New-Object System.Windows.Forms.Button
 $btnFacility.Text = "Assign Facility"
 $btnFacility.Width = 100
 $btnFacility.Location = New-Object System.Drawing.Point(560, 10)
+$btnFacility.Enabled = $false  # XML-specific, disabled by default
 
 $btnAddPid = New-Object System.Windows.Forms.Button
 $btnAddPid.Text = "Add PID"
 $btnAddPid.Width = 100
 $btnAddPid.Location = New-Object System.Drawing.Point(670, 10)
+$btnAddPid.Enabled = $false  # XML-specific, disabled by default
 
 $btnExport = New-Object System.Windows.Forms.Button
 $btnExport.Text = "Export..."
@@ -98,9 +107,14 @@ $btnConvertTxt.Text = "Convert TXT"
 $btnConvertTxt.Width = 100
 $btnConvertTxt.Location = New-Object System.Drawing.Point(1020, 10)
 
+$btnNoahMenu = New-Object System.Windows.Forms.Button
+$btnNoahMenu.Text = "NOAH..."
+$btnNoahMenu.Width = 100
+$btnNoahMenu.Location = New-Object System.Drawing.Point(1130, 10)
+
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.AutoSize = $true
-$lblStatus.Location = New-Object System.Drawing.Point(1130, 15)
+$lblStatus.Location = New-Object System.Drawing.Point(1240, 15)
 $lblStatus.Text = "No file loaded"
 
 # Bottom nav
@@ -120,6 +134,12 @@ $lblIndex = New-Object System.Windows.Forms.Label
 $lblIndex.AutoSize = $true
 $lblIndex.Location = New-Object System.Drawing.Point(110, 985)
 $lblIndex.Text = ""
+
+$lblFileName = New-Object System.Windows.Forms.Label
+$lblFileName.AutoSize = $true
+$lblFileName.Location = New-Object System.Drawing.Point(200, 983)
+$lblFileName.Text = ""
+$lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 
 # --- Main resizable area (panel + split containers) ---
 
@@ -222,13 +242,15 @@ $form.Controls.AddRange(@(
 	$btnFacility,
 	$btnConcatenate,
 	$btnConvertTxt,
+	$btnNoahMenu,
     $btnAddPid,
     $btnExport,
     $lblStatus,
     $mainPanel,
     $btnPrev,
     $btnNext,
-    $lblIndex
+    $lblIndex,
+    $lblFileName
 ))
 
 # State
@@ -251,9 +273,14 @@ $script:Controls = @{
     'btnPrev' = $btnPrev
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
+    'lblFileName' = $lblFileName
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate
+    'btnAssign' = $btnAssign
+    'btnFacility' = $btnFacility
+    'btnAddPid' = $btnAddPid
+    'btnNoahMenu' = $btnNoahMenu
 }
 
 $script:ScriptVars = @{
@@ -265,6 +292,26 @@ $script:ScriptVars = @{
     'CurrentFilePath' = $script:CurrentFilePath
     'FileType' = $script:FileType
     'Hl7Messages' = $script:Hl7Messages
+}
+
+function Update-ButtonStatesForFileType {
+    param(
+        [hashtable]$Controls,
+        [string]$FileType
+    )
+    
+    # XML-specific buttons should be enabled for XML files, disabled for HL7 or no file
+    $isXmlFile = ($FileType -eq 'xml')
+    
+    if ($Controls['btnAssign']) {
+        $Controls['btnAssign'].Enabled = $isXmlFile
+    }
+    if ($Controls['btnFacility']) {
+        $Controls['btnFacility'].Enabled = $isXmlFile
+    }
+    if ($Controls['btnAddPid']) {
+        $Controls['btnAddPid'].Enabled = $isXmlFile
+    }
 }
 
 function Show-Tumor {
@@ -408,6 +455,7 @@ $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVar
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConcatenate.Add_Click((Get-BtnConcatenateHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
+$btnNoahMenu.Add_Click((Get-BtnNoahMenuHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnExport.Add_Click((Get-BtnExportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 

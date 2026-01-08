@@ -286,3 +286,38 @@ function Format-Hl7DateTime {
     return $Hl7DateTime
 }
 
+function Extract-ObxTextContent {
+    param(
+        [array]$ObxSegments
+    )
+    
+    if (-not $ObxSegments -or $ObxSegments.Count -eq 0) {
+        return ""
+    }
+    
+    $textLines = @()
+    
+    foreach ($obx in $ObxSegments) {
+        $fields = $obx -split '\|'
+        
+        # OBX-5 is the observation value (index 5 after split by |)
+        $observationValue = if ($fields.Count -gt 5) { $fields[5] } else { "" }
+        
+        # Handle HL7 escape sequences if present
+        # Common ones: \X0D\ = carriage return, \X0A\ = line feed, \E\ = escape, \F\ = field separator
+        $observationValue = $observationValue -replace '\\X0D\\', "`r"
+        $observationValue = $observationValue -replace '\\X0A\\', "`n"
+        $observationValue = $observationValue -replace '\\E\\', '\'
+        $observationValue = $observationValue -replace '\\F\\', '|'
+        $observationValue = $observationValue -replace '\\S\\', '^'
+        $observationValue = $observationValue -replace '\\T\\', '&'
+        $observationValue = $observationValue -replace '\\R\\', '~'
+        
+        # Add line to collection (even if empty, to preserve blank lines)
+        $textLines += $observationValue
+    }
+    
+    # Join lines with newline
+    return ($textLines -join "`r`n")
+}
+

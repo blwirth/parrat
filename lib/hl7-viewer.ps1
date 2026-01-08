@@ -36,40 +36,28 @@ function Show-Hl7Message {
         }
     }
 
-    # === MIDDLE PANEL: Raw HL7 Segments ===
-    Add-LineToRichTextBox $rtbPath ("=== RAW HL7 MESSAGE ===" ) $true
+    # === MIDDLE PANEL: Clean OBX Text Content ===
+    Add-LineToRichTextBox $rtbPath ("=== PATHOLOGY REPORT TEXT ===" ) $true
     Add-LineToRichTextBox $rtbPath ""
 
-    # Display segments grouped by type
-    $segmentOrder = @("MSH", "PID", "PV1", "ORC", "OBR", "NTE", "OBX")
-    $displayedTypes = @()
-
-    foreach ($segType in $segmentOrder) {
-        if ($message.Segments.ContainsKey($segType)) {
-            Add-LineToRichTextBox $rtbPath ("--- $segType Segment(s) ---") $true
-            foreach ($seg in $message.Segments[$segType]) {
-                # Format segment with field separators visible
-                $formattedSeg = Format-Hl7SegmentForDisplay -Segment $seg
-                Add-LineToRichTextBox $rtbPath $formattedSeg
+    # Extract and display clean OBX text
+    if ($message.Segments.ContainsKey("OBX")) {
+        $cleanText = Extract-ObxTextContent -ObxSegments $message.Segments["OBX"]
+        if (-not [string]::IsNullOrWhiteSpace($cleanText)) {
+            $lines = $cleanText -split "(`r`n|`n|`r)"
+            foreach ($line in $lines) {
+                Add-LineToRichTextBox $rtbPath $line
             }
-            Add-LineToRichTextBox $rtbPath ""
-            $displayedTypes += $segType
+        }
+        else {
+            Add-LineToRichTextBox $rtbPath "(No text content in OBX segments)"
         }
     }
-
-    # Display any other segment types not in the standard order
-    foreach ($segType in $message.Segments.Keys) {
-        if ($displayedTypes -notcontains $segType) {
-            Add-LineToRichTextBox $rtbPath ("--- $segType Segment(s) ---") $true
-            foreach ($seg in $message.Segments[$segType]) {
-                $formattedSeg = Format-Hl7SegmentForDisplay -Segment $seg
-                Add-LineToRichTextBox $rtbPath $formattedSeg
-            }
-            Add-LineToRichTextBox $rtbPath ""
-        }
+    else {
+        Add-LineToRichTextBox $rtbPath "(No OBX segments in this message)"
     }
 
-    # === RIGHT PANEL: Parsed Fields ===
+    # === RIGHT PANEL: Raw HL7 Segments + Metadata ===
     Add-LineToRichTextBox $rtbItems ("Message {0} of {1}" -f ($Index + 1), $script:Hl7Messages.Count) $true
     Add-LineToRichTextBox $rtbItems ""
 
@@ -100,34 +88,6 @@ function Show-Hl7Message {
         Add-LineToRichTextBox $rtbItems ""
     }
 
-    # Observations (OBX segments)
-    if ($message.Segments.ContainsKey("OBX")) {
-        $observations = Parse-ObxSegments -ObxSegments $message.Segments["OBX"]
-        
-        if ($observations.Count -gt 0) {
-            Add-LineToRichTextBox $rtbItems "=== OBSERVATIONS ===" $true
-            
-            foreach ($obs in $observations) {
-                $obsLine = "{0}: {1}" -f $obs.ObservationId, $obs.ObservationValue
-                
-                if (-not [string]::IsNullOrWhiteSpace($obs.Units)) {
-                    $obsLine += " $($obs.Units)"
-                }
-                if (-not [string]::IsNullOrWhiteSpace($obs.ReferenceRange)) {
-                    $obsLine += " (Ref: $($obs.ReferenceRange))"
-                }
-                if (-not [string]::IsNullOrWhiteSpace($obs.AbnormalFlag)) {
-                    $obsLine += " [$($obs.AbnormalFlag)]"
-                    Add-LineToRichTextBox $rtbItems $obsLine $true
-                }
-                else {
-                    Add-LineToRichTextBox $rtbItems $obsLine
-                }
-            }
-            Add-LineToRichTextBox $rtbItems ""
-        }
-    }
-
     # Notes (NTE segments)
     if ($message.Segments.ContainsKey("NTE")) {
         Add-LineToRichTextBox $rtbItems "=== NOTES ===" $true
@@ -140,6 +100,39 @@ function Show-Hl7Message {
             }
         }
         Add-LineToRichTextBox $rtbItems ""
+    }
+
+    # Raw HL7 Segments
+    Add-LineToRichTextBox $rtbItems "=== RAW HL7 SEGMENTS ===" $true
+    Add-LineToRichTextBox $rtbItems ""
+
+    # Display segments grouped by type
+    $segmentOrder = @("MSH", "PID", "PV1", "ORC", "OBR", "NTE", "OBX")
+    $displayedTypes = @()
+
+    foreach ($segType in $segmentOrder) {
+        if ($message.Segments.ContainsKey($segType)) {
+            Add-LineToRichTextBox $rtbItems ("--- $segType Segment(s) ---") $true
+            foreach ($seg in $message.Segments[$segType]) {
+                # Format segment with field separators visible
+                $formattedSeg = Format-Hl7SegmentForDisplay -Segment $seg
+                Add-LineToRichTextBox $rtbItems $formattedSeg
+            }
+            Add-LineToRichTextBox $rtbItems ""
+            $displayedTypes += $segType
+        }
+    }
+
+    # Display any other segment types not in the standard order
+    foreach ($segType in $message.Segments.Keys) {
+        if ($displayedTypes -notcontains $segType) {
+            Add-LineToRichTextBox $rtbItems ("--- $segType Segment(s) ---") $true
+            foreach ($seg in $message.Segments[$segType]) {
+                $formattedSeg = Format-Hl7SegmentForDisplay -Segment $seg
+                Add-LineToRichTextBox $rtbItems $formattedSeg
+            }
+            Add-LineToRichTextBox $rtbItems ""
+        }
     }
 
     # Update navigation

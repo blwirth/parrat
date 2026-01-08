@@ -46,6 +46,9 @@ function Load-XmlFile {
         # Clear HL7 data
         $ScriptVars['Hl7Messages'] = @()
         $script:Hl7Messages = @()
+        
+        # Update button states for XML file type
+        Update-ButtonStatesForFileType -Controls $Controls -FileType 'xml'
 
         $nsUri = $xml.DocumentElement.NamespaceURI
         $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
@@ -61,7 +64,9 @@ function Load-XmlFile {
 
         if ($ScriptVars['Tumors'].Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No <Tumor> elements found in this file.", "No Tumors")
+            $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No tumors found"
+            $Controls['lblFileName'].Text = "File: $fileName"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -72,6 +77,7 @@ function Load-XmlFile {
         else {
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $ScriptVars['Tumors'].Count
+            $Controls['lblFileName'].Text = "File: $fileName"
 
             # Build navigation table
             $table = New-Object System.Data.DataTable
@@ -189,7 +195,9 @@ function Load-Hl7File {
         
         if ($messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 messages found in this file.", "No Messages")
+            $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No messages found"
+            $Controls['lblFileName'].Text = "File: $fileName"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -217,8 +225,12 @@ function Load-Hl7File {
         $ScriptVars['NsMgr'] = $null
         $script:NsMgr = $null
         
+        # Update button states for HL7 file type
+        Update-ButtonStatesForFileType -Controls $Controls -FileType 'hl7'
+        
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count
+        $Controls['lblFileName'].Text = "File: $fileName"
         
         # Build navigation table for HL7
         $table = New-Object System.Data.DataTable

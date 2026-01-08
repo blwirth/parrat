@@ -5,14 +5,15 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 
 # Map OBXSegment numbers to OBXTexts keys
+# Based on NOAH's segment indices as shown in NLP Options
 $script:OBXSegmentMap = @{
-    0 = "FinalDiagnosis"
+    0 = "ClinicalHistory"
     1 = "TextDiagnosis"
-    2 = "ClinicalHistory"
-    3 = "NatureOfSpecimen"
-    4 = "GrossPathology"
-    5 = "MicroPathology"
-    6 = "Comment"
+    2 = "FinalDiagnosis"
+    3 = "GrossPathology"
+    4 = "MicroPathology"
+    5 = "Comment"
+    6 = "NatureOfSpecimen"
     7 = "Supplemental"
     8 = "Addendum"
 }
@@ -89,8 +90,15 @@ function Show-NoahResultsWindow {
     $splitMain = New-Object System.Windows.Forms.SplitContainer
     $splitMain.Dock = 'Fill'
     $splitMain.Orientation = 'Vertical'
-    $splitMain.SplitterDistance = 350
     $splitMain.Panel1MinSize = 250
+    $splitMain.Panel2MinSize = 300
+    $splitMain.SplitterDistance = 400 
+    
+    $form.Add_Shown({
+        if ($splitMain.Width -gt 400) {
+            $splitMain.SplitterDistance = 400
+        }
+    })
 
     # === LEFT PANEL: Summary ===
     $rtbSummary = New-Object System.Windows.Forms.RichTextBox
@@ -297,10 +305,17 @@ function Build-HighlightedOBXText {
         $textValue = $obxTexts.$fieldName
         if ([string]::IsNullOrWhiteSpace($textValue)) { continue }
 
+        # IMPORTANT: RichTextBox internally converts \r\n to \n when displaying text.
+        # NOAH calculates offsets based on the original text (with \r\n).
+        # We need to keep track of both versions:
+        # - $textValue: original text with \r\n (for offset calculation/adjustment)
+        # - $displayText: text as RichTextBox will store it (with \n only)
+        $displayText = $textValue -replace "`r`n", "`n"
+
         # Add section header
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text "=== $fieldName (Segment $segNum) ===" -Bold $true
         
-        # Get entities for this segment, sorted by offset descending (to apply from end to start)
+        # Get entities for this segment, sorted by offset
         $segmentEntities = @()
         if ($entitiesBySegment.ContainsKey($segNum)) {
             $segmentEntities = $entitiesBySegment[$segNum] | Sort-Object -Property Offset
@@ -314,33 +329,76 @@ function Build-HighlightedOBXText {
             $RichTextBox.SelectionFont = $RichTextBox.Font
             $RichTextBox.SelectionColor = $RichTextBox.ForeColor
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
-            $RichTextBox.AppendText($textValue + "`r`n")
+            $RichTextBox.AppendText($displayText + "`n")
         }
         else {
             # Build text with entity highlighting
+            # Record position BEFORE adding text (after header and its newline)
             $startPos = $RichTextBox.TextLength
             
-            # First, add the entire text as plain
+            # First, add the entire text as plain (without trailing newline yet)
             $RichTextBox.SelectionStart = $RichTextBox.TextLength
             $RichTextBox.SelectionLength = 0
             $RichTextBox.SelectionFont = $RichTextBox.Font
             $RichTextBox.SelectionColor = $RichTextBox.ForeColor
             $RichTextBox.SelectionBackColor = $RichTextBox.BackColor
-            $RichTextBox.AppendText($textValue + "`r`n")
+            $RichTextBox.AppendText($displayText)
 
-            # Now apply highlighting to each entity
+            # Now apply highlighting to each entity (before adding the final newline)
+            # NOAH calculates offsets relative to each individual OBXText field (using \r\n)
             foreach ($entity in $segmentEntities) {
                 $offset = [int]$entity.Offset
                 $length = [int]$entity.Length
+                $entityPhrase = [string]$entity.EntityPhrase
+
+                # Convert offset from original text (with \r\n) to display text (with \n only)
+                # Count how many \r\n pairs occur before the offset position
+                $textBeforeOffset = if ($offset -gt 0 -and $offset -le $textValue.Length) {
+                    $textValue.Substring(0, $offset)
+                } else { "" }
+                $crlfCount = ([regex]::Matches($textBeforeOffset, "`r`n")).Count
+                $displayOffset = $offset - $crlfCount
+
+                # Verify the offset by checking if the entity phrase matches at that position in displayText
+                # If not, try to find it in the text
+                $actualOffset = $displayOffset
+                if ($displayOffset -ge 0 -and $displayOffset + $length -le $displayText.Length) {
+                    $textAtOffset = $displayText.Substring($displayOffset, [Math]::Min($length, $displayText.Length - $displayOffset))
+                    if ($textAtOffset -ne $entityPhrase -and -not [string]::IsNullOrWhiteSpace($entityPhrase)) {
+                        # Try to find the phrase in the text (case-insensitive search)
+                        $foundIndex = $displayText.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        if ($foundIndex -ge 0) {
+                            $actualOffset = $foundIndex
+                        }
+                    }
+                }
+                else {
+                    # Offset is out of bounds - try to find the phrase
+                    if (-not [string]::IsNullOrWhiteSpace($entityPhrase)) {
+                        $foundIndex = $displayText.IndexOf($entityPhrase, [StringComparison]::OrdinalIgnoreCase)
+                        if ($foundIndex -ge 0) {
+                            $actualOffset = $foundIndex
+                        }
+                        else {
+                            # Skip this entity if we can't find it
+                            continue
+                        }
+                    }
+                    else {
+                        continue
+                    }
+                }
 
                 # Calculate position in RichTextBox
-                $highlightStart = $startPos + $offset
+                # Offset is 0-based relative to the start of displayText
+                $highlightStart = $startPos + $actualOffset
                 $highlightLength = $length
 
-                # Ensure we don't exceed bounds
+                # Ensure we don't exceed bounds of the displayText we added
                 if ($highlightStart -lt $startPos) { continue }
-                if ($highlightStart + $highlightLength -gt $RichTextBox.TextLength) {
-                    $highlightLength = $RichTextBox.TextLength - $highlightStart
+                $textEndPos = $startPos + $displayText.Length
+                if ($highlightStart + $highlightLength -gt $textEndPos) {
+                    $highlightLength = $textEndPos - $highlightStart
                 }
                 if ($highlightLength -le 0) { continue }
 
@@ -362,6 +420,9 @@ function Build-HighlightedOBXText {
                 $RichTextBox.SelectionLength = $highlightLength
                 $RichTextBox.SelectionBackColor = $backColor
             }
+            
+            # Add the trailing newline after all highlighting is applied
+            $RichTextBox.AppendText("`n")
         }
 
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text ""

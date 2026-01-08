@@ -36,7 +36,8 @@ function Get-FacilityAssignments {
     param(
         [System.Xml.XmlNodeList]$Tumors,
         [System.Xml.XmlNamespaceManager]$NsMgr,
-        [string]$FacilityNumber
+        [string]$FacilityNumber,
+        [bool]$OverwriteExisting = $false
     )
 
     $report = @()
@@ -58,8 +59,8 @@ function Get-FacilityAssignments {
         # Get current reportingFacility value
         $currentFacility = (Get-ItemValue -Context $tumor -NsMgr $NsMgr -Id "reportingFacility").Trim()
 
-        # Check if it's blank or all zeros
-        $needsUpdate = [string]::IsNullOrWhiteSpace($currentFacility) -or ($currentFacility -match '^0+$')
+        # Check if it's blank or all zeros, or if overwrite is enabled
+        $needsUpdate = $OverwriteExisting -or [string]::IsNullOrWhiteSpace($currentFacility) -or ($currentFacility -match '^0+$')
 
         if ($needsUpdate) {
             $report += [PSCustomObject]@{
@@ -196,7 +197,8 @@ function Show-FacilityAssignmentReport {
         [string]$FacilityNumber,
         [string]$OriginalFilePath,
         [System.Xml.XmlDocument]$XmlDoc,
-        [System.Xml.XmlNodeList]$Tumors
+        [System.Xml.XmlNodeList]$Tumors,
+        [bool]$OverwriteExisting = $false
     )
 
     $reportForm = New-Object System.Windows.Forms.Form
@@ -209,7 +211,12 @@ function Show-FacilityAssignmentReport {
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
     $lblSummary.Size = New-Object System.Drawing.Size(960, 40)
-    $lblSummary.Text = "Tumors to update: $($Assignments.Count) | Facility Number: $FacilityNumber"
+    $summaryText = "Tumors to update: $($Assignments.Count) | Facility Number: $FacilityNumber"
+    if ($OverwriteExisting) {
+        $summaryText += " | OVERWRITE MODE ENABLED"
+        $lblSummary.ForeColor = [System.Drawing.Color]::Red
+    }
+    $lblSummary.Text = $summaryText
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 
     # DataGridView for report

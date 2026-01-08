@@ -1,5 +1,6 @@
 function Get-NoahConfigPath {
-    return (Join-Path $PSScriptRoot "noah-config.json")
+    $root = Split-Path -Parent $PSScriptRoot
+    return [System.IO.Path]::Combine($root, "config", "noah-config.json")
 }
 
 function Get-NoahConfig {
@@ -197,12 +198,150 @@ function Invoke-NoahReportabilityFilterForMessage {
     $inputFileName = "message_{0}.hl7" -f ($MessageIndex + 1)
     $inputPath     = Join-Path $folders.source $inputFileName
 
-    $exportResult = Export-SelectedHl7 -MessageIndex $MessageIndex -Hl7Messages $Hl7Messages -OutputPath $inputPath
+    $exportResult = Export-SelectedHl7 -MessageIndices @($MessageIndex) -Hl7Messages $Hl7Messages -OutputPath $inputPath
     if (-not $exportResult.Success) {
         return @{
             Success = $false
             Message = "Failed to export HL7 message for NOAH."
             Errors  = $exportResult.Errors
+            WorkingFolder = $folders.base
+        }
+    }
+
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+}
+
+function New-MinimalHl7Message {
+    param(
+        [Parameter(Mandatory=$true)][string]$CustomText,
+        [string]$PatientId = "TEST000001",
+        [string]$AccessionNumber = "TEST-ACC-001"
+    )
+
+    $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+    $msgId = [guid]::NewGuid().ToString().Substring(0, 8)
+
+    # HL7 segment separator is carriage return (0x0D)
+    $segmentSeparator = "`r"
+    
+    # Build minimal HL7 ORU^R01 message
+    $segments = @()
+    
+    # MSH - Message Header
+    $segments += "MSH|^~\&|ePATH|TEST_FACILITY|NOAH|NOAH_FACILITY|$timestamp||ORU^R01|$msgId|P|2.5.1"
+    
+    # PID - Patient Identification
+    $segments += "PID|1||$PatientId^^^TEST_FACILITY^MR||TEST^PATIENT||19700101|U"
+    
+    # OBR - Observation Request
+    $segments += "OBR|1||$AccessionNumber||88305^Surgical Pathology|||$timestamp"
+    
+    # OBX - Observation/Result
+    # OBX segment 2 corresponds to FinalDiagnosis in NOAH's mapping
+    # Format: OBX|SequenceNum|DataType|ObservationID|SubID|Value|Units|RefRange|AbnormalFlags|Probability|NatureOfAbnormalTest|ObservationResultStatus
+    $segments += "OBX|1|FT|88305&ICD10&2.16.840.1.113883.6.90^Final Diagnosis^L|2|$CustomText||||||F"
+    
+    # Join segments with carriage return
+    $hl7Message = $segments -join $segmentSeparator
+    
+    return $hl7Message
+}
+
+function Show-CustomPayloadDialog {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $dialog = New-Object System.Windows.Forms.Form
+    $dialog.Text = "NOAH Custom Payload"
+    $dialog.Width = 600
+    $dialog.Height = 400
+    $dialog.StartPosition = "CenterScreen"
+    $dialog.FormBorderStyle = "Sizable"
+    $dialog.MinimumSize = New-Object System.Drawing.Size(400, 300)
+
+    # Label
+    $lblPrompt = New-Object System.Windows.Forms.Label
+    $lblPrompt.Location = New-Object System.Drawing.Point(10, 10)
+    $lblPrompt.Size = New-Object System.Drawing.Size(560, 40)
+    $lblPrompt.Text = "Enter the text you want to test against NOAH reportability:`n(This will be placed in the FinalDiagnosis OBX segment)"
+
+    # Text box
+    $txtCustomText = New-Object System.Windows.Forms.TextBox
+    $txtCustomText.Location = New-Object System.Drawing.Point(10, 55)
+    $txtCustomText.Size = New-Object System.Drawing.Size(560, 250)
+    $txtCustomText.Multiline = $true
+    $txtCustomText.ScrollBars = "Vertical"
+    $txtCustomText.Font = New-Object System.Drawing.Font("Consolas", 10)
+    $txtCustomText.Anchor = "Top,Left,Right,Bottom"
+
+    # Buttons
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Text = "Test with NOAH"
+    $btnOk.Width = 120
+    $btnOk.Location = New-Object System.Drawing.Point(350, 315)
+    $btnOk.Anchor = "Bottom,Right"
+    $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Location = New-Object System.Drawing.Point(480, 315)
+    $btnCancel.Anchor = "Bottom,Right"
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+    $dialog.Controls.AddRange(@($lblPrompt, $txtCustomText, $btnOk, $btnCancel))
+    $dialog.AcceptButton = $btnOk
+    $dialog.CancelButton = $btnCancel
+
+    $result = $dialog.ShowDialog()
+
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        $text = $txtCustomText.Text.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($text)) {
+            return $text
+        }
+    }
+
+    return $null
+}
+
+function Invoke-NoahReportabilityFilterForCustomPayload {
+    param(
+        [Parameter(Mandatory=$true)][string]$CustomText,
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
+
+    $modelId = Resolve-NoahModelId -Config $Config
+    if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
+
+    $output = ([string]$Config.output).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
+    $workingRoot = [string]$Config.workingRoot
+    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
+    if (-not (Test-Path -LiteralPath $workingRoot)) {
+        $workingRoot = $env:TEMP
+    }
+
+    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
+
+    # Generate minimal HL7 message with custom text
+    $hl7Content = New-MinimalHl7Message -CustomText $CustomText
+
+    # Save to source folder
+    $inputFileName = "custom_payload.hl7"
+    $inputPath = Join-Path $folders.source $inputFileName
+
+    try {
+        Set-Content -LiteralPath $inputPath -Value $hl7Content -Encoding ASCII -NoNewline
+    }
+    catch {
+        return @{
+            Success = $false
+            Message = "Failed to write custom HL7 payload: $($_.Exception.Message)"
             WorkingFolder = $folders.base
         }
     }
@@ -290,7 +429,7 @@ function Invoke-NoahReportabilityFilter {
             }
         }
         
-        $timeoutMs = 10000
+        $timeoutMs = 15000
         $exited = $proc.WaitForExit($timeoutMs)
             
         if (-not $exited) {
