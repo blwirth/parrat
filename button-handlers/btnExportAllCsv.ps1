@@ -15,7 +15,7 @@ function Get-BtnExportAllCsvHandler {
             return
         }
 
-        # Define field list - map user-friendly names to XML field names
+        # Define default field list
         $fieldList = @(
             "patientIdNumber",
             "nameLast",
@@ -36,15 +36,30 @@ function Get-BtnExportAllCsvHandler {
             $allIndices += $i
         }
 
-        # Show preview first
+        # Show preview with integrated field selector
         $previewResult = Show-ExportPreview `
             -TumorIndices $allIndices `
             -XmlDoc $ScriptVars['XmlDoc'] `
             -NsMgr $ScriptVars['NsMgr'] `
             -FieldList $fieldList `
-            -Title "Export All as CSV - Preview"
+            -Title "Export All as CSV - Configure Fields & Preview"
 
-        if ($previewResult -ne [System.Windows.Forms.DialogResult]::OK) {
+        # Check if user confirmed export
+        if ($previewResult.DialogResult -ne [System.Windows.Forms.DialogResult]::OK) {
+            return
+        }
+
+        # Get the configured field list and custom fields from preview
+        $configuredFieldList = $previewResult.FieldList
+        $customFields = $previewResult.CustomFields
+
+        if ($configuredFieldList.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "No fields selected for export.",
+                "Export Cancelled",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
             return
         }
 
@@ -69,7 +84,8 @@ function Get-BtnExportAllCsvHandler {
                     -XmlDoc $ScriptVars['XmlDoc'] `
                     -NsMgr $ScriptVars['NsMgr'] `
                     -OutputPath $saveFileDialog.FileName `
-                    -FieldList $fieldList
+                    -FieldList $configuredFieldList `
+                    -CustomFields $customFields
 
                 if ($result.Success) {
                     $message = "Successfully exported {0} tumor(s) to:`n{1}" -f $result.ExportedCount, $saveFileDialog.FileName
@@ -113,4 +129,3 @@ function Get-BtnExportAllCsvHandler {
         }
     }
 }
-

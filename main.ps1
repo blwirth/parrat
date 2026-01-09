@@ -10,6 +10,8 @@
 . "$PSScriptRoot\lib\concatenate-hl7.ps1"
 . "$PSScriptRoot\lib\convert-txt.ps1"
 . "$PSScriptRoot\lib\add-pid.ps1"
+. "$PSScriptRoot\lib\naaccr-dictionary.ps1"
+. "$PSScriptRoot\lib\export-config.ps1"
 . "$PSScriptRoot\lib\export-selected-xml.ps1"
 . "$PSScriptRoot\lib\export-selected-hl7.ps1"
 . "$PSScriptRoot\lib\export-selected-csv.ps1"
@@ -152,20 +154,22 @@ $splitOuter.Dock = 'Fill'
 $splitOuter.Orientation = 'Vertical'
 $splitOuter.IsSplitterFixed = $false
 $splitOuter.Panel1MinSize = 200
-$splitOuter.Panel2MinSize = 400
+# Panel2MinSize set in Shown event after form has dimensions
 
 # Inner split container: middle (path text) | right (other items)
 $splitInner = New-Object System.Windows.Forms.SplitContainer
 $splitInner.Dock = 'Fill'
 $splitInner.Orientation = 'Vertical'
 $splitInner.IsSplitterFixed = $false
-$splitInner.Panel1MinSize = 300
-$splitInner.Panel2MinSize = 200
+$splitInner.Panel1MinSize = 200
+# Panel2MinSize set in Shown event after form has dimensions
 
 $form.Add_Shown({
     param($formSender, $e)
 
-    # Set splitter distances as proportions
+    # Set min sizes and splitter distances after form has proper dimensions
+    $splitOuter.Panel2MinSize = 400
+    $splitInner.Panel2MinSize = 200
     $splitOuter.SplitterDistance = [int]($splitOuter.Width * 0.20)
     $splitInner.SplitterDistance = [int]($splitInner.Width * 0.55)
 })
@@ -277,11 +281,14 @@ $script:XmlDoc          = $null
 $script:CurrentFilePath = $null
 $script:FileType        = $null    # 'xml' or 'hl7'
 $script:Hl7Messages     = @()
+$script:IsLoadingData   = $false   # Flag to prevent event recursion during data loading
+$script:IsShowingTumor  = $false   # Flag to prevent Show-Tumor re-entry
 
 # Global state (for cross-file access)
 $global:Hl7Messages     = @()
 $global:CurrentIndex    = -1
 $global:FileType        = $null
+$global:IsLoadingData   = $false
 
 # Create hashtables for passing context to button handlers
 $script:Controls = @{
@@ -362,9 +369,14 @@ function Show-Tumor {
 
     if ($script:Tumors.Count -eq 0) { return }
     if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) { return }
+    
+    # Prevent re-entry (recursion guard)
+    if ($script:IsShowingTumor -eq $true) { return }
+    $script:IsShowingTumor = $true
 
     $script:CurrentIndex = $Index
     $script:ScriptVars['CurrentIndex'] = $Index
+    $global:CurrentIndex = $Index
     $tumor = $script:Tumors[$Index]
 
     # Clear text boxes
@@ -449,12 +461,19 @@ function Show-Tumor {
     $lblIndex.Text = "Tumor {0} of {1}" -f ($Index + 1), $script:Tumors.Count
     $btnPrev.Enabled = ($Index -gt 0)
     $btnNext.Enabled = ($Index -lt ($script:Tumors.Count - 1))
+    
+    # Clear re-entry guard
+    $script:IsShowingTumor = $false
 }
 
 $btnOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
 # Grid row selection -> show record based on file type (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
+    # Skip event handling during data loading or when Show-Tumor is running to prevent recursion
+    if ($global:IsLoadingData -eq $true -or $script:IsLoadingData -eq $true) { return }
+    if ($script:IsShowingTumor -eq $true) { return }
+    
     # Determine which data source to use based on file type
     $recordCount = 0
     # Use global variables for cross-file access

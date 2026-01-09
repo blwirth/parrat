@@ -10,12 +10,16 @@ function Get-BtnExportSelectedHl7Handler {
             return
         }
 
+        # Commit any pending edits to the grid (important for checkboxes)
+        $Controls['gridNav'].EndEdit()
+        
         # Get checked message indices
         $checkedIndices = @()
         foreach ($row in $Controls['gridNav'].Rows) {
-            $selectedValue = $row.Cells["Selected"].Value
-            # Handle both bool and DBNull values
-            if ($selectedValue -eq $true -or ($selectedValue -is [bool] -and $selectedValue)) {
+            $cell = $row.Cells["Selected"]
+            $isChecked = $cell.EditedFormattedValue -eq $true
+            
+            if ($isChecked) {
                 $indexVal = $row.Cells["Index"].Value
                 if ($null -ne $indexVal -and $indexVal -ne [System.DBNull]::Value) {
                     $checkedIndices += ([int]$indexVal - 1)

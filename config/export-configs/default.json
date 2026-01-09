@@ -1,0 +1,19 @@
+{
+  "Name": "Default",
+  "Version": 25,
+  "CreatedDate": "2026-01-09 00:00:00",
+  "Fields": [
+    { "XmlId": "patientIdNumber", "IsCustom": false },
+    { "XmlId": "nameLast", "IsCustom": false },
+    { "XmlId": "nameFirst", "IsCustom": false },
+    { "XmlId": "nameMiddle", "IsCustom": false },
+    { "XmlId": "dateOfBirth", "IsCustom": false },
+    { "XmlId": "reportingFacility", "IsCustom": false },
+    { "XmlId": "dateOfDiagnosis", "IsCustom": false },
+    { "XmlId": "pathReportNumber1", "IsCustom": false },
+    { "XmlId": "primarySite", "IsCustom": false },
+    { "XmlId": "histologicTypeIcdO3", "IsCustom": false },
+    { "XmlId": "behaviorCodeIcdO3", "IsCustom": false }
+  ]
+}
+

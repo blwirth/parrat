@@ -134,6 +134,10 @@ function Load-XmlFile {
             }
 
             $ScriptVars['NavTable'] = $table
+            
+            # Temporarily disable event handling while loading data
+            $script:IsLoadingData = $true
+            $global:IsLoadingData = $true
             $Controls['gridNav'].DataSource = $table
 
             # Configure columns after data binding
@@ -168,6 +172,10 @@ function Load-XmlFile {
                 }
             }
 
+            # Re-enable event handling
+            $script:IsLoadingData = $false
+            $global:IsLoadingData = $false
+            
             Show-Tumor -Index 0
         }
     }
@@ -261,6 +269,10 @@ function Load-Hl7File {
         }
         
         $ScriptVars['NavTable'] = $table
+        
+        # Temporarily disable event handling while loading data
+        $script:IsLoadingData = $true
+        $global:IsLoadingData = $true
         $Controls['gridNav'].DataSource = $table
         
         # Configure columns after data binding
@@ -294,6 +306,10 @@ function Load-Hl7File {
                 $col.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::NotSortable
             }
         }
+        
+        # Re-enable event handling
+        $script:IsLoadingData = $false
+        $global:IsLoadingData = $false
         
         # Select first row and show first message
         if ($Controls['gridNav'].Rows.Count -gt 0) {

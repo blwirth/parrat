@@ -7,7 +7,8 @@ function Export-SelectedCsv {
         [System.Xml.XmlDocument]$XmlDoc,
         [System.Xml.XmlNamespaceManager]$NsMgr,
         [string]$OutputPath,
-        [array]$FieldList
+        [array]$FieldList,
+        [hashtable]$CustomFields = @{}
     )
 
     if ($TumorIndices.Count -eq 0) {
@@ -39,18 +40,17 @@ function Export-SelectedCsv {
             foreach ($fieldId in $FieldList) {
                 $value = ""
                 
-                # Check if field is at patient level or tumor level
-                # Patient-level fields
-                $patientFields = @("patientIdNumber", "nameLast", "nameFirst", "nameMiddle", "dateOfBirth", "reportingFacility")
+                # Use dynamic parent element lookup from dictionary
+                $parentElement = Get-NaaccrParentElement -XmlId $fieldId -CustomFields $CustomFields
                 
-                if ($patientFields -contains $fieldId) {
+                if ($parentElement -eq "Patient") {
                     $node = $patient.SelectSingleNode("./n:Item[@naaccrId='$fieldId']", $NsMgr)
                     if ($null -ne $node) {
                         $value = $node.InnerText
                     }
                 }
                 else {
-                    # Tumor-level fields
+                    # Tumor-level or NaaccrData-level fields (treat NaaccrData as tumor context)
                     $node = $tumor.SelectSingleNode("./n:Item[@naaccrId='$fieldId']", $NsMgr)
                     if ($null -ne $node) {
                         $value = $node.InnerText
@@ -104,5 +104,3 @@ function Export-SelectedCsv {
         }
     }
 }
-
-
