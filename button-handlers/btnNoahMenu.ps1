@@ -5,7 +5,12 @@ function Invoke-PostSelectedHL7 {
     )
 
     $fileType = $script:FileType
-    $idx = [int]$ScriptVars['CurrentIndex']
+    # Try ScriptVars first, fall back to global (HL7 viewer updates global)
+    $idx = $ScriptVars['CurrentIndex']
+    if ($null -eq $idx -or $idx -lt 0) {
+        $idx = $global:CurrentIndex
+    }
+    $idx = [int]$idx
     
     # Check for XML file
     if ($fileType -eq 'xml' -or $fileType -eq $null) {

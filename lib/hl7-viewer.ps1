@@ -26,6 +26,11 @@ function Show-Hl7Message {
     }
 
     $global:CurrentIndex = $Index
+    $script:CurrentIndex = $Index
+    # Also update ScriptVars hashtable so button handlers can read it
+    if ($null -ne $script:ScriptVars) {
+        $script:ScriptVars['CurrentIndex'] = $Index
+    }
     $message = $Messages[$Index]
 
     # Get UI controls
