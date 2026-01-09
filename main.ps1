@@ -10,6 +10,7 @@
 . "$PSScriptRoot\lib\concatenate-hl7.ps1"
 . "$PSScriptRoot\lib\convert-txt.ps1"
 . "$PSScriptRoot\lib\add-pid.ps1"
+. "$PSScriptRoot\lib\fix-obx.ps1"
 . "$PSScriptRoot\lib\naaccr-dictionary.ps1"
 . "$PSScriptRoot\lib\export-config.ps1"
 . "$PSScriptRoot\lib\export-selected-xml.ps1"
@@ -34,6 +35,7 @@
 . "$PSScriptRoot\button-handlers\btnConcatenate.ps1"
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
+. "$PSScriptRoot\button-handlers\btnFixObx.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
@@ -103,6 +105,12 @@ $btnAddPid.Text = "Add PID"
 $btnAddPid.DisplayStyle = 'Text'
 $btnAddPid.Enabled = $false  # Disabled until file is loaded (XML-specific)
 [void]$toolStrip.Items.Add($btnAddPid)
+
+$btnFixObx = New-Object System.Windows.Forms.ToolStripButton
+$btnFixObx.Text = "Fix OBX"
+$btnFixObx.DisplayStyle = 'Text'
+$btnFixObx.Enabled = $false  # Disabled until file is loaded (HL7-specific)
+[void]$toolStrip.Items.Add($btnFixObx)
 
 [void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
@@ -309,6 +317,7 @@ $script:Controls = @{
     'btnAssign' = $btnAssign
     'btnFacility' = $btnFacility
     'btnAddPid' = $btnAddPid
+    'btnFixObx' = $btnFixObx
     'btnNoahMenu' = $btnNoahMenu
 }
 
@@ -359,6 +368,13 @@ function Update-ButtonStatesForFileType {
     }
     if ($Controls['btnAddPid']) {
         $Controls['btnAddPid'].Enabled = $isXmlFile
+    }
+    
+    # HL7-specific buttons should be enabled only for HL7 files
+    $isHl7File = ($FileType -eq 'hl7')
+    
+    if ($Controls['btnFixObx']) {
+        $Controls['btnFixObx'].Enabled = $isHl7File
     }
 }
 
@@ -524,6 +540,7 @@ $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVar
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 $btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$btnFixObx.Add_Click((Get-BtnFixObxHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 # Set up NOAH dropdown menu (populated dynamically on DropDownOpening)
 $btnNoahMenu.Add_DropDownOpening({
     param($toolStripButton, $e)
