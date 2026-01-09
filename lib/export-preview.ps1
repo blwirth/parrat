@@ -65,56 +65,57 @@ function Show-ExportPreview {
     $txtSearch.Width = 330
     $txtSearch.Anchor = 'Top,Left,Right'
 
-    # Field list (CheckedListBox)
-    $lblFields = New-Object System.Windows.Forms.Label
-    $lblFields.Text = "Available Fields:"
-    $lblFields.Location = New-Object System.Drawing.Point(5, 55)
-    $lblFields.AutoSize = $true
-
-    $lstFields = New-Object System.Windows.Forms.CheckedListBox
-    $lstFields.Location = New-Object System.Drawing.Point(5, 75)
-    $lstFields.Size = New-Object System.Drawing.Size(330, 450)
-    $lstFields.Anchor = 'Top,Left,Right,Bottom'
-    $lstFields.CheckOnClick = $true
-
-    # Buttons panel for field actions
+    # Buttons panel for field actions - placed at top below search for visibility
     $pnlFieldButtons = New-Object System.Windows.Forms.Panel
-    $pnlFieldButtons.Location = New-Object System.Drawing.Point(5, 530)
-    $pnlFieldButtons.Size = New-Object System.Drawing.Size(330, 80)
-    $pnlFieldButtons.Anchor = 'Bottom,Left,Right'
-
-    $btnAddCustom = New-Object System.Windows.Forms.Button
-    $btnAddCustom.Text = "+ Custom Field"
-    $btnAddCustom.Location = New-Object System.Drawing.Point(0, 0)
-    $btnAddCustom.Width = 105
+    $pnlFieldButtons.Location = New-Object System.Drawing.Point(5, 55)
+    $pnlFieldButtons.Size = New-Object System.Drawing.Size(330, 70)
+    $pnlFieldButtons.Anchor = 'Top,Left,Right'
 
     $btnLoadConfig = New-Object System.Windows.Forms.Button
     $btnLoadConfig.Text = "Load Config"
-    $btnLoadConfig.Location = New-Object System.Drawing.Point(110, 0)
+    $btnLoadConfig.Location = New-Object System.Drawing.Point(0, 0)
     $btnLoadConfig.Width = 105
 
     $btnSaveConfig = New-Object System.Windows.Forms.Button
     $btnSaveConfig.Text = "Save Config"
-    $btnSaveConfig.Location = New-Object System.Drawing.Point(220, 0)
+    $btnSaveConfig.Location = New-Object System.Drawing.Point(110, 0)
     $btnSaveConfig.Width = 105
+
+    $btnAddCustom = New-Object System.Windows.Forms.Button
+    $btnAddCustom.Text = "+ Custom"
+    $btnAddCustom.Location = New-Object System.Drawing.Point(220, 0)
+    $btnAddCustom.Width = 105
 
     $btnMoveUp = New-Object System.Windows.Forms.Button
     $btnMoveUp.Text = "Move Up"
     $btnMoveUp.Location = New-Object System.Drawing.Point(0, 35)
-    $btnMoveUp.Width = 80
+    $btnMoveUp.Width = 105
 
     $btnMoveDown = New-Object System.Windows.Forms.Button
     $btnMoveDown.Text = "Move Down"
-    $btnMoveDown.Location = New-Object System.Drawing.Point(85, 35)
-    $btnMoveDown.Width = 80
+    $btnMoveDown.Location = New-Object System.Drawing.Point(110, 35)
+    $btnMoveDown.Width = 105
 
     $btnRefresh = New-Object System.Windows.Forms.Button
-    $btnRefresh.Text = "Refresh Preview"
-    $btnRefresh.Location = New-Object System.Drawing.Point(170, 35)
-    $btnRefresh.Width = 155
+    $btnRefresh.Text = "Refresh"
+    $btnRefresh.Location = New-Object System.Drawing.Point(220, 35)
+    $btnRefresh.Width = 105
 
-    $pnlFieldButtons.Controls.AddRange(@($btnAddCustom, $btnLoadConfig, $btnSaveConfig, $btnMoveUp, $btnMoveDown, $btnRefresh))
-    $leftPanel.Controls.AddRange(@($lblSearch, $txtSearch, $lblFields, $lstFields, $pnlFieldButtons))
+    $pnlFieldButtons.Controls.AddRange(@($btnLoadConfig, $btnSaveConfig, $btnAddCustom, $btnMoveUp, $btnMoveDown, $btnRefresh))
+
+    # Field list label and CheckedListBox - below buttons
+    $lblFields = New-Object System.Windows.Forms.Label
+    $lblFields.Text = "Available Fields:"
+    $lblFields.Location = New-Object System.Drawing.Point(5, 130)
+    $lblFields.AutoSize = $true
+
+    $lstFields = New-Object System.Windows.Forms.CheckedListBox
+    $lstFields.Location = New-Object System.Drawing.Point(5, 150)
+    $lstFields.Size = New-Object System.Drawing.Size(330, 460)
+    $lstFields.Anchor = 'Top,Left,Right,Bottom'
+    $lstFields.CheckOnClick = $true
+
+    $leftPanel.Controls.AddRange(@($lblSearch, $txtSearch, $pnlFieldButtons, $lblFields, $lstFields))
 
     # ===== RIGHT PANEL: Preview =====
     $rightPanel = New-Object System.Windows.Forms.Panel
