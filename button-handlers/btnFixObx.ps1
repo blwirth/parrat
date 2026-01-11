@@ -102,8 +102,10 @@ function Get-BtnFixObxHandler {
             $button = $Controls['btnFixObx']
         }
         
-        if ($null -ne $button) {
-            $contextMenu.Show($button, [System.Drawing.Point]::new(0, $button.Height))
+        if ($null -ne $button -and $null -ne $button.Owner) {
+            # Convert button position to screen coordinates for ToolStripItem
+            $screenPoint = $button.Owner.PointToScreen([System.Drawing.Point]::new($button.Bounds.Left, $button.Bounds.Bottom))
+            $contextMenu.Show($screenPoint)
         }
     }
 }
