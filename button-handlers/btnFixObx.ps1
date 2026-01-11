@@ -1,4 +1,4 @@
-function Get-BtnFixObxHandler {
+function Get-BtnFixObx3Handler {
     param(
         [hashtable]$Controls,
         [hashtable]$ScriptVars
@@ -7,12 +7,12 @@ function Get-BtnFixObxHandler {
     return {
         # Validate HL7 file is loaded
         if ($null -eq $ScriptVars['Hl7Messages'] -or $ScriptVars['Hl7Messages'].Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Fix OBX")
+            [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Fix OBX3.1")
             return
         }
         
         if (-not $ScriptVars['CurrentFilePath']) {
-            [System.Windows.Forms.MessageBox]::Show("No file path available.", "Fix OBX")
+            [System.Windows.Forms.MessageBox]::Show("No file path available.", "Fix OBX3.1")
             return
         }
         
@@ -29,7 +29,7 @@ function Get-BtnFixObxHandler {
             if ($result.FixedCount -eq 0) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "No truncated OBX segments found. All $($result.TotalObxCount) OBX segments are properly formatted.",
-                    "Fix OBX",
+                    "Fix OBX3.1",
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Information
                 )
@@ -50,7 +50,7 @@ function Get-BtnFixObxHandler {
             
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 "Fixed $($result.FixedCount) of $($result.TotalObxCount) OBX segments.`n`nSaved to:`n$outputPath`n`nOpen containing folder?",
-                "Fix OBX Complete",
+                "Fix OBX3.1 Complete",
                 [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
@@ -67,6 +67,43 @@ function Get-BtnFixObxHandler {
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
             $Controls['lblStatus'].Text = "Error fixing OBX segments"
+        }
+    }
+}
+
+function Get-BtnFixObxHandler {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+    
+    # Return handler that shows the context menu
+    return {
+        param($sender, $e)
+        
+        # Create context menu for dropdown (create fresh each time to ensure proper scoping)
+        $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+        
+        # Menu item 1: Fix OBX3.1
+        $menuItemFixObx3 = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemFixObx3.Text = "Fix OBX3.1"
+        $menuItemFixObx3.Add_Click((Get-BtnFixObx3Handler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemFixObx3)
+        
+        # Menu item 2: Remove Empty OBX5
+        $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX5"
+        $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $Controls -ScriptVars $ScriptVars))
+        [void]$contextMenu.Items.Add($menuItemRemoveEmptyObx5)
+        
+        # Show context menu at button location (use sender which is the button)
+        $button = $sender
+        if ($null -eq $button) {
+            $button = $Controls['btnFixObx']
+        }
+        
+        if ($null -ne $button) {
+            $contextMenu.Show($button, [System.Drawing.Point]::new(0, $button.Height))
         }
     }
 }

@@ -8,9 +8,11 @@
 . "$PSScriptRoot\lib\assign-facility.ps1"
 . "$PSScriptRoot\lib\concatenate-xml.ps1"
 . "$PSScriptRoot\lib\concatenate-hl7.ps1"
+. "$PSScriptRoot\lib\concatenate-txt.ps1"
 . "$PSScriptRoot\lib\convert-txt.ps1"
 . "$PSScriptRoot\lib\add-pid.ps1"
 . "$PSScriptRoot\lib\fix-obx.ps1"
+. "$PSScriptRoot\lib\remove-empty-obx5.ps1"
 . "$PSScriptRoot\lib\naaccr-dictionary.ps1"
 . "$PSScriptRoot\lib\export-config.ps1"
 . "$PSScriptRoot\lib\export-selected-xml.ps1"
@@ -36,6 +38,7 @@
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnFixObx.ps1"
+. "$PSScriptRoot\button-handlers\btnRemoveEmptyObx5.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
@@ -106,8 +109,8 @@ $btnAddPid.DisplayStyle = 'Text'
 $btnAddPid.Enabled = $false  # Disabled until file is loaded (XML-specific)
 [void]$toolStrip.Items.Add($btnAddPid)
 
-$btnFixObx = New-Object System.Windows.Forms.ToolStripButton
-$btnFixObx.Text = "Fix OBX"
+$btnFixObx = New-Object System.Windows.Forms.ToolStripDropDownButton
+$btnFixObx.Text = "Modify HL7..."
 $btnFixObx.DisplayStyle = 'Text'
 $btnFixObx.Enabled = $false  # Disabled until file is loaded (HL7-specific)
 [void]$toolStrip.Items.Add($btnFixObx)
@@ -553,22 +556,42 @@ $btnNoahMenu.Add_DropDownOpening({
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
     $isHl7 = ($fileType -eq 'hl7')
     
-    # POST Current HL7 - only enabled if HL7 file is loaded
-    $menuItemPostCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemPostCurrent.Text = "POST Current HL7"
-    $menuItemPostCurrent.Enabled = $isHl7
-    $menuItemPostCurrent.Add_Click({
-        Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
+    # POST current HL7 (HL7 output) - only enabled if HL7 file is loaded
+    $menuItemPostCurrentHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemPostCurrentHl7.Text = "POST current HL7 (HL7 output)"
+    $menuItemPostCurrentHl7.Enabled = $isHl7
+    $menuItemPostCurrentHl7.Add_Click({
+        Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars -OutputFormat "hl7"
     })
-    [void]$toolStripButton.DropDownItems.Add($menuItemPostCurrent)
+    [void]$toolStripButton.DropDownItems.Add($menuItemPostCurrentHl7)
     
-    # POST Custom Payload - always enabled
-    $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemCustom.Text = "POST Custom Payload"
-    $menuItemCustom.Add_Click({
-        Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
+    # POST current HL7 (XML output) - only enabled if HL7 file is loaded
+    $menuItemPostCurrentXml = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemPostCurrentXml.Text = "POST current HL7 (XML output)"
+    $menuItemPostCurrentXml.Enabled = $isHl7
+    $menuItemPostCurrentXml.Add_Click({
+        Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars -OutputFormat "xml"
     })
-    [void]$toolStripButton.DropDownItems.Add($menuItemCustom)
+    [void]$toolStripButton.DropDownItems.Add($menuItemPostCurrentXml)
+    
+    # Separator
+    [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    
+    # POST custom payload (HL7 output) - always enabled
+    $menuItemCustomHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemCustomHl7.Text = "POST custom payload (HL7 output)"
+    $menuItemCustomHl7.Add_Click({
+        Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars -OutputFormat "hl7"
+    })
+    [void]$toolStripButton.DropDownItems.Add($menuItemCustomHl7)
+    
+    # POST custom payload (XML output) - always enabled
+    $menuItemCustomXml = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemCustomXml.Text = "POST custom payload (XML output)"
+    $menuItemCustomXml.Add_Click({
+        Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars -OutputFormat "xml"
+    })
+    [void]$toolStripButton.DropDownItems.Add($menuItemCustomXml)
 })
 
 # Set up Dedup dropdown menu
