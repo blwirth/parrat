@@ -86,8 +86,8 @@ function Show-Hl7ConcatenationPreview {
         [array]$Hl7Files
     )
     
-    # Load file info for all files
-    $fileInfos = @()
+    # Use ArrayList for mutable file list that can be modified in event handlers
+    $script:hl7FileInfos = New-Object System.Collections.ArrayList
     $errors = @()
     
     foreach ($file in $Hl7Files) {
@@ -97,10 +97,10 @@ function Show-Hl7ConcatenationPreview {
             continue
         }
         
-        $fileInfos += @{
+        [void]$script:hl7FileInfos.Add(@{
             FilePath = $file
             Info = $info
-        }
+        })
     }
     
     if ($errors.Count -gt 0) {
@@ -113,7 +113,7 @@ function Show-Hl7ConcatenationPreview {
         return
     }
     
-    if ($fileInfos.Count -eq 0) {
+    if ($script:hl7FileInfos.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show(
             "No valid HL7 files found.",
             "No Files",
@@ -122,11 +122,6 @@ function Show-Hl7ConcatenationPreview {
         )
         return
     }
-    
-    # Calculate totals
-    $totalMessages = ($fileInfos | ForEach-Object { $_.Info.MessageCount } | Measure-Object -Sum).Sum
-    $totalSize = ($fileInfos | ForEach-Object { $_.Info.FileSize } | Measure-Object -Sum).Sum
-    $totalSizeMB = [math]::Round($totalSize / 1MB, 2)
     
     # Create preview form
     $previewForm = New-Object System.Windows.Forms.Form
@@ -139,13 +134,12 @@ function Show-Hl7ConcatenationPreview {
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
-    $lblSummary.Text = "Files: $($fileInfos.Count) | Total Messages: $totalMessages | Total Size: $totalSizeMB MB"
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
     
     # Split container for file list and message preview
     $splitContainer = New-Object System.Windows.Forms.SplitContainer
     $splitContainer.Location = New-Object System.Drawing.Point(10, 60)
-    $splitContainer.Size = New-Object System.Drawing.Size(1560, 630)
+    $splitContainer.Size = New-Object System.Drawing.Size(1560, 580)
     $splitContainer.Anchor = 'Top,Left,Right,Bottom'
     $splitContainer.Orientation = 'Vertical'
     $splitContainer.SplitterDistance = 300
@@ -168,17 +162,6 @@ function Show-Hl7ConcatenationPreview {
     [void]$tableFiles.Columns.Add("FileSizeMB", [string])
     [void]$tableFiles.Columns.Add("FilePath", [string])
     
-    foreach ($item in $fileInfos) {
-        $fileName = [System.IO.Path]::GetFileName($item.FilePath)
-        $fileSizeMB = [math]::Round($item.Info.FileSize / 1MB, 2)
-        $row = $tableFiles.NewRow()
-        $row["FileName"] = $fileName
-        $row["MessageCount"] = $item.Info.MessageCount
-        $row["FileSizeMB"] = "$fileSizeMB MB"
-        $row["FilePath"] = $item.FilePath
-        [void]$tableFiles.Rows.Add($row)
-    }
-    
     $gridFiles.DataSource = $tableFiles
     
     # DataGridView for message preview (right)
@@ -199,22 +182,6 @@ function Show-Hl7ConcatenationPreview {
     [void]$tableMessages.Columns.Add("MessageType", [string])
     [void]$tableMessages.Columns.Add("PatientId", [string])
     [void]$tableMessages.Columns.Add("PatientName", [string])
-    
-    # Combine all message previews
-    foreach ($item in $fileInfos) {
-        $fileName = [System.IO.Path]::GetFileName($item.FilePath)
-        $preview = Get-Hl7MessagePreview -Content $item.Info.Content
-        
-        foreach ($msg in $preview) {
-            $row = $tableMessages.NewRow()
-            $row["File"] = $fileName
-            $row["MessageIndex"] = $msg.MessageIndex
-            $row["MessageType"] = $msg.MessageType
-            $row["PatientId"] = $msg.PatientId
-            $row["PatientName"] = $msg.PatientName
-            [void]$tableMessages.Rows.Add($row)
-        }
-    }
     
     $gridMessages.DataSource = $tableMessages
     
@@ -238,6 +205,57 @@ function Show-Hl7ConcatenationPreview {
     $splitContainer.Panel1.Controls.Add($gridFiles)
     $splitContainer.Panel2.Controls.Add($splitInner)
     
+    # Function to update the UI when file list changes
+    $script:UpdateHl7PreviewUI = {
+        # Calculate totals
+        $totalMessages = 0
+        $totalSize = 0
+        foreach ($item in $script:hl7FileInfos) {
+            $totalMessages += $item.Info.MessageCount
+            $totalSize += $item.Info.FileSize
+        }
+        $totalSizeMB = [math]::Round($totalSize / 1MB, 2)
+        
+        # Update summary label
+        $lblSummary.Text = "Files: $($script:hl7FileInfos.Count) | Total Messages: $totalMessages | Total Size: $totalSizeMB MB"
+        
+        # Update file list grid
+        $tableFiles.Clear()
+        foreach ($item in $script:hl7FileInfos) {
+            $fileName = [System.IO.Path]::GetFileName($item.FilePath)
+            $fileSizeMB = [math]::Round($item.Info.FileSize / 1MB, 2)
+            $row = $tableFiles.NewRow()
+            $row["FileName"] = $fileName
+            $row["MessageCount"] = $item.Info.MessageCount
+            $row["FileSizeMB"] = "$fileSizeMB MB"
+            $row["FilePath"] = $item.FilePath
+            [void]$tableFiles.Rows.Add($row)
+        }
+        
+        # Update message preview grid
+        $tableMessages.Clear()
+        foreach ($item in $script:hl7FileInfos) {
+            $fileName = [System.IO.Path]::GetFileName($item.FilePath)
+            $preview = Get-Hl7MessagePreview -Content $item.Info.Content
+            
+            foreach ($msg in $preview) {
+                $row = $tableMessages.NewRow()
+                $row["File"] = $fileName
+                $row["MessageIndex"] = $msg.MessageIndex
+                $row["MessageType"] = $msg.MessageType
+                $row["PatientId"] = $msg.PatientId
+                $row["PatientName"] = $msg.PatientName
+                [void]$tableMessages.Rows.Add($row)
+            }
+        }
+        
+        # Clear preview
+        $rtbPreview.Clear()
+    }
+    
+    # Initial UI update
+    & $script:UpdateHl7PreviewUI
+    
     # Grid selection handler - show message content
     $gridMessages.Add_SelectionChanged({
         if ($gridMessages.SelectedRows.Count -eq 0) { return }
@@ -247,7 +265,7 @@ function Show-Hl7ConcatenationPreview {
         $msgIndex = [int]$selectedRow.Cells["MessageIndex"].Value - 1
         
         # Find the file and message
-        $fileItem = $fileInfos | Where-Object { [System.IO.Path]::GetFileName($_.FilePath) -eq $fileName } | Select-Object -First 1
+        $fileItem = $script:hl7FileInfos | Where-Object { [System.IO.Path]::GetFileName($_.FilePath) -eq $fileName } | Select-Object -First 1
         if ($fileItem) {
             $messages = $fileItem.Info.Content -split "(?m)^MSH\|"
             $messages = $messages | Where-Object { $_ -match '\S' }
@@ -264,7 +282,158 @@ function Show-Hl7ConcatenationPreview {
         }
     })
     
-    # Buttons
+    # File management buttons panel
+    $pnlFileButtons = New-Object System.Windows.Forms.Panel
+    $pnlFileButtons.Location = New-Object System.Drawing.Point(10, 650)
+    $pnlFileButtons.Size = New-Object System.Drawing.Size(600, 35)
+    $pnlFileButtons.Anchor = 'Bottom,Left'
+    
+    # Add More Files button
+    $btnAddFiles = New-Object System.Windows.Forms.Button
+    $btnAddFiles.Text = "Add More Files..."
+    $btnAddFiles.Width = 120
+    $btnAddFiles.Location = New-Object System.Drawing.Point(0, 0)
+    
+    # Remove Selected button
+    $btnRemove = New-Object System.Windows.Forms.Button
+    $btnRemove.Text = "Remove Selected"
+    $btnRemove.Width = 120
+    $btnRemove.Location = New-Object System.Drawing.Point(130, 0)
+    
+    # Move Up button
+    $btnMoveUp = New-Object System.Windows.Forms.Button
+    $btnMoveUp.Text = "Move Up"
+    $btnMoveUp.Width = 80
+    $btnMoveUp.Location = New-Object System.Drawing.Point(260, 0)
+    
+    # Move Down button
+    $btnMoveDown = New-Object System.Windows.Forms.Button
+    $btnMoveDown.Text = "Move Down"
+    $btnMoveDown.Width = 80
+    $btnMoveDown.Location = New-Object System.Drawing.Point(350, 0)
+    
+    $pnlFileButtons.Controls.AddRange(@($btnAddFiles, $btnRemove, $btnMoveUp, $btnMoveDown))
+    
+    # Add More Files handler
+    $btnAddFiles.Add_Click({
+        $ofd = New-Object System.Windows.Forms.OpenFileDialog
+        $ofd.Filter = "HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*"
+        $ofd.Title = "Select additional HL7 files to add"
+        $ofd.Multiselect = $true
+        
+        if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            $addErrors = @()
+            $addedCount = 0
+            
+            foreach ($file in $ofd.FileNames) {
+                # Check if file already exists in list
+                $exists = $script:hl7FileInfos | Where-Object { $_.FilePath -eq $file }
+                if ($exists) {
+                    $addErrors += "File already in list: $([System.IO.Path]::GetFileName($file))"
+                    continue
+                }
+                
+                $info = Get-Hl7FileInfo -FilePath $file
+                if (-not $info.Success) {
+                    $addErrors += "Error loading $file : $($info.Error)"
+                    continue
+                }
+                
+                [void]$script:hl7FileInfos.Add(@{
+                    FilePath = $file
+                    Info = $info
+                })
+                $addedCount++
+            }
+            
+            if ($addErrors.Count -gt 0) {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "Some files could not be added:`n`n$($addErrors -join "`n")",
+                    "Warning",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Warning
+                )
+            }
+            
+            if ($addedCount -gt 0) {
+                & $script:UpdateHl7PreviewUI
+            }
+        }
+    })
+    
+    # Remove Selected handler
+    $btnRemove.Add_Click({
+        if ($gridFiles.SelectedRows.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Please select a file to remove.",
+                "No Selection",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+            return
+        }
+        
+        $selectedRow = $gridFiles.SelectedRows[0]
+        $filePath = [string]$selectedRow.Cells["FilePath"].Value
+        
+        # Find and remove the item
+        $itemToRemove = $null
+        foreach ($item in $script:hl7FileInfos) {
+            if ($item.FilePath -eq $filePath) {
+                $itemToRemove = $item
+                break
+            }
+        }
+        
+        if ($itemToRemove) {
+            [void]$script:hl7FileInfos.Remove($itemToRemove)
+            & $script:UpdateHl7PreviewUI
+        }
+    })
+    
+    # Move Up handler
+    $btnMoveUp.Add_Click({
+        if ($gridFiles.SelectedRows.Count -eq 0) { return }
+        
+        $selectedIndex = $gridFiles.SelectedRows[0].Index
+        if ($selectedIndex -le 0) { return }
+        
+        # Swap items
+        $temp = $script:hl7FileInfos[$selectedIndex]
+        $script:hl7FileInfos[$selectedIndex] = $script:hl7FileInfos[$selectedIndex - 1]
+        $script:hl7FileInfos[$selectedIndex - 1] = $temp
+        
+        & $script:UpdateHl7PreviewUI
+        
+        # Restore selection
+        if ($gridFiles.Rows.Count -gt ($selectedIndex - 1)) {
+            $gridFiles.ClearSelection()
+            $gridFiles.Rows[$selectedIndex - 1].Selected = $true
+        }
+    })
+    
+    # Move Down handler
+    $btnMoveDown.Add_Click({
+        if ($gridFiles.SelectedRows.Count -eq 0) { return }
+        
+        $selectedIndex = $gridFiles.SelectedRows[0].Index
+        if ($selectedIndex -ge ($script:hl7FileInfos.Count - 1)) { return }
+        
+        # Swap items
+        $temp = $script:hl7FileInfos[$selectedIndex]
+        $script:hl7FileInfos[$selectedIndex] = $script:hl7FileInfos[$selectedIndex + 1]
+        $script:hl7FileInfos[$selectedIndex + 1] = $temp
+        
+        & $script:UpdateHl7PreviewUI
+        
+        # Restore selection
+        if ($gridFiles.Rows.Count -gt ($selectedIndex + 1)) {
+            $gridFiles.ClearSelection()
+            $gridFiles.Rows[$selectedIndex + 1].Selected = $true
+        }
+    })
+    
+    # Action buttons
     $btnConcatenate = New-Object System.Windows.Forms.Button
     $btnConcatenate.Text = "Concatenate and Save"
     $btnConcatenate.Width = 180
@@ -279,6 +448,16 @@ function Show-Hl7ConcatenationPreview {
     
     # Concatenate button handler
     $btnConcatenate.Add_Click({
+        if ($script:hl7FileInfos.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "No files to concatenate.",
+                "No Files",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+            return
+        }
+        
         # Get output directory
         $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $folderDialog.Description = "Select output directory for concatenated HL7 file"
@@ -359,8 +538,14 @@ function Show-Hl7ConcatenationPreview {
         }
         
         try {
+            # Calculate total messages for success message
+            $totalMessages = 0
+            foreach ($item in $script:hl7FileInfos) {
+                $totalMessages += $item.Info.MessageCount
+            }
+            
             # Concatenate HL7 files
-            Write-ConcatenatedHl7 -FileInfos $fileInfos -OutputPath $outputPath
+            Write-ConcatenatedHl7 -FileInfos $script:hl7FileInfos -OutputPath $outputPath
             
             [System.Windows.Forms.MessageBox]::Show(
                 "Concatenated HL7 file saved to:`n$outputPath`n`nTotal messages: $totalMessages",
@@ -387,9 +572,13 @@ function Show-Hl7ConcatenationPreview {
     })
     
     # Add controls to form
-    $previewForm.Controls.AddRange(@($lblSummary, $splitContainer, $btnConcatenate, $btnClose))
+    $previewForm.Controls.AddRange(@($lblSummary, $splitContainer, $pnlFileButtons, $btnConcatenate, $btnClose))
     
     [void]$previewForm.ShowDialog()
+    
+    # Cleanup script-scoped variables
+    $script:hl7FileInfos = $null
+    $script:UpdateHl7PreviewUI = $null
 }
 
 function Write-ConcatenatedHl7 {
