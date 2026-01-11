@@ -37,26 +37,6 @@ function Save-NoahConfig {
     Set-Content -LiteralPath $configPath -Value $json -Encoding UTF8
 }
 
-function Test-NoahServerRunning {
-    param(
-        [Parameter(Mandatory=$true)][string]$ApiServerUrl
-    )
-
-    try {
-        $headers = @{
-            "accept" = "*/*"
-            "api-version" = "2"
-        }
-        
-        # Try a simple GET request to see if server is responding
-        $response = Invoke-RestMethod -Uri "$ApiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
 function Start-NoahServer {
     param(
         [Parameter(Mandatory=$true)]$Config
@@ -64,24 +44,33 @@ function Start-NoahServer {
 
     $exePath = Resolve-NoahExePath -Config $Config
     if (-not $exePath) {
-        return @{ Success = $false; Message = "NOAH exe path not configured." }
+        return @{ Success = $false; Message = "NOAH exe path not configured."; Process = $null }
     }
 
-    # Check if server is already running
     $apiServerUrl = [string]$Config.apiServerUrl
     if ([string]::IsNullOrWhiteSpace($apiServerUrl)) {
         $apiServerUrl = "http://localhost:4000"
     }
     $apiServerUrl = $apiServerUrl.TrimEnd('/')
 
-    if (Test-NoahServerRunning -ApiServerUrl $apiServerUrl) {
-        return @{ Success = $true; Message = "Server is already running." }
+    # Check if server is already running
+    try {
+        $headers = @{
+            "accept" = "*/*"
+            "api-version" = "2"
+        }
+        $testResponse = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
+        return @{ Success = $true; Message = "Server is already running."; Process = $null }
+    }
+    catch {
+        # Server not running, need to start it
     }
 
     # Start the server process
     $exeDir = Split-Path -Parent $exePath
     
     try {
+        # Start server process (may need specific arguments - adjust as needed)
         $proc = Start-Process `
             -FilePath $exePath `
             -WorkingDirectory $exeDir `
@@ -90,7 +79,7 @@ function Start-NoahServer {
             -ErrorAction Stop
 
         if (-not $proc) {
-            return @{ Success = $false; Message = "Failed to start NOAH server process." }
+            return @{ Success = $false; Message = "Failed to start NOAH server process."; Process = $null }
         }
 
         # Wait for server to be ready (polling with timeout)
@@ -101,22 +90,52 @@ function Start-NoahServer {
 
         while ($attempt -lt $maxAttempts) {
             Start-Sleep -Milliseconds $checkIntervalMs
-            if (Test-NoahServerRunning -ApiServerUrl $apiServerUrl) {
+            try {
+                $headers = @{
+                    "accept" = "*/*"
+                    "api-version" = "2"
+                }
+                $testResponse = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
                 return @{ Success = $true; Message = "Server started successfully."; Process = $proc }
+            }
+            catch {
+                # Server not ready yet, keep waiting
             }
             $attempt++
         }
 
+        # Server didn't become ready - but process might still be running
         return @{ Success = $false; Message = "Server started but did not become ready within $maxWaitSeconds seconds."; Process = $proc }
     }
     catch {
-        return @{ Success = $false; Message = "Failed to start NOAH server: $($_.Exception.Message)" }
+        return @{ Success = $false; Message = "Failed to start NOAH server: $($_.Exception.Message)"; Process = $null }
+    }
+}
+
+function Stop-NoahServer {
+    param(
+        [System.Diagnostics.Process]$Process
+    )
+
+    if ($null -eq $Process) {
+        return
+    }
+
+    try {
+        if (-not $Process.HasExited) {
+            $Process.Kill()
+            $Process.WaitForExit(5000)
+        }
+    }
+    catch {
+        # Ignore errors when stopping
     }
 }
 
 function Get-NoahModels {
     param(
-        [Parameter(Mandatory=$true)]$Config
+        [Parameter(Mandatory=$true)]$Config,
+        [Parameter(Mandatory=$false)][ref]$ServerProcess
     )
 
     $apiServerUrl = [string]$Config.apiServerUrl
@@ -127,11 +146,16 @@ function Get-NoahModels {
     # Ensure URL doesn't end with a slash
     $apiServerUrl = $apiServerUrl.TrimEnd('/')
 
-    # Ensure server is running before fetching models
-    $serverStartResult = Start-NoahServer -Config $Config
-    if (-not $serverStartResult.Success) {
-        Write-Error "Failed to start NOAH server: $($serverStartResult.Message)"
+    # Start server if not running
+    $serverResult = Start-NoahServer -Config $Config
+    if (-not $serverResult.Success) {
+        Write-Error "Failed to start NOAH server: $($serverResult.Message)"
         return $null
+    }
+
+    # Store process reference if server was started
+    if ($null -ne $ServerProcess) {
+        $ServerProcess.Value = $serverResult.Process
     }
 
     $modelsUrl = "$apiServerUrl/Models"
@@ -199,7 +223,7 @@ function Show-NoahModelSelectionDialog {
     $lblStatus = New-Object System.Windows.Forms.Label
     $lblStatus.Location = New-Object System.Drawing.Point(10, 140)
     $lblStatus.Size = New-Object System.Drawing.Size(460, 20)
-    $lblStatus.Text = "Loading models..."
+    $lblStatus.Text = "Starting server and loading models..."
     $lblStatus.ForeColor = [System.Drawing.Color]::Blue
 
     # Buttons
@@ -220,16 +244,24 @@ function Show-NoahModelSelectionDialog {
     $dialog.AcceptButton = $btnOk
     $dialog.CancelButton = $btnCancel
 
-    # Fetch models (this will also ensure server is running)
-    $lblStatus.Text = "Starting NOAH server and loading models..."
+    # Track server process
+    $serverProcess = $null
+
+    # Fetch models from API (this will start the server)
+    $lblStatus.Text = "Starting server and loading models..."
     $lblStatus.ForeColor = [System.Drawing.Color]::Blue
     $dialog.Refresh()
     
-    $models = Get-NoahModels -Config $Config
+    $models = Get-NoahModels -Config $Config -ServerProcess ([ref]$serverProcess)
 
     if ($null -eq $models -or $models.Count -eq 0) {
-        $lblStatus.Text = "Failed to load models. Please check the API server URL and ensure NOAH server can be started."
+        $lblStatus.Text = "Failed to load models. Please check the API server URL."
         $lblStatus.ForeColor = [System.Drawing.Color]::Red
+        
+        # Stop server if we started it
+        if ($null -ne $serverProcess) {
+            Stop-NoahServer -Process $serverProcess
+        }
         
         $dialogResult = $dialog.ShowDialog()
         return $null
@@ -245,15 +277,25 @@ function Show-NoahModelSelectionDialog {
         $cmbModel.SelectedIndex = 0
         $cmbModel.Enabled = $true
         $btnOk.Enabled = $true
-        $lblStatus.Text = "Select a model and output format, then click OK."
+        $lblStatus.Text = "Select a model and output format, then click OK. Server is running."
         $lblStatus.ForeColor = [System.Drawing.Color]::Black
     }
     else {
         $lblStatus.Text = "No models available."
         $lblStatus.ForeColor = [System.Drawing.Color]::Red
+        
+        # Stop server if we started it
+        if ($null -ne $serverProcess) {
+            Stop-NoahServer -Process $serverProcess
+        }
     }
 
     $dialogResult = $dialog.ShowDialog()
+
+    # Stop server when dialog closes (unless OK was clicked and we'll need it for POST)
+    if ($dialogResult -ne [System.Windows.Forms.DialogResult]::OK -and $null -ne $serverProcess) {
+        Stop-NoahServer -Process $serverProcess
+    }
 
     if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
         $selectedModelIndex = $cmbModel.SelectedIndex
@@ -264,6 +306,7 @@ function Show-NoahModelSelectionDialog {
             return @{
                 ModelId = $selectedModel.id
                 OutputFormat = $selectedOutput
+                ServerProcess = $serverProcess  # Keep server running for POST
             }
         }
     }
@@ -405,48 +448,124 @@ function Invoke-NoahReportabilityFilterForTumor {
     return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
 }
 
+function Invoke-NoahReportabilityApi {
+    param(
+        [Parameter(Mandatory=$true)][string]$Hl7Message,
+        [Parameter(Mandatory=$true)]$Config,
+        [Parameter(Mandatory=$true)][string]$ModelId,
+        [Parameter(Mandatory=$false)][string]$MessageId = $null,
+        [Parameter(Mandatory=$false)][System.Diagnostics.Process]$ServerProcess = $null
+    )
+
+    $apiServerUrl = [string]$Config.apiServerUrl
+    if ([string]::IsNullOrWhiteSpace($apiServerUrl)) {
+        $apiServerUrl = "http://localhost:4000"
+    }
+    $apiServerUrl = $apiServerUrl.TrimEnd('/')
+
+    if ([string]::IsNullOrWhiteSpace($MessageId)) {
+        $MessageId = [guid]::NewGuid().ToString()
+    }
+
+    # Encode HL7 message as Base64
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Hl7Message)
+    $hl7MessageEncoded = [System.Convert]::ToBase64String($bytes)
+
+    # Build request body - array of objects
+    $requestBody = @(
+        @{
+            messageId = $MessageId
+            hl7Message = $hl7MessageEncoded
+            messageEncodingFormat = "Base64"
+            modelId = $ModelId
+        }
+    ) | ConvertTo-Json -Depth 10
+
+    $endpoint = "$apiServerUrl/api/NER"
+
+    try {
+        $headers = @{
+            "Content-Type" = "application/json"
+            "accept" = "application/json"
+            "api-version" = "2"
+        }
+
+        $response = Invoke-RestMethod -Uri $endpoint -Method Post -Headers $headers -Body $requestBody -ErrorAction Stop
+        
+        # Stop server after successful POST
+        if ($null -ne $ServerProcess) {
+            Stop-NoahServer -Process $ServerProcess
+        }
+        
+        if ($null -eq $response -or $response.Count -eq 0) {
+            return @{
+                Success = $false
+                Message = "NOAH API returned empty response"
+            }
+        }
+
+        # Get the first result (since we only sent one message)
+        $result = $response[0]
+
+        # Convert reportable string to boolean
+        $isReportable = $result.reportable -eq "true"
+        $isNonReportable = $result.reportable -eq "false"
+
+        # Determine classification
+        $classification = "unknown"
+        if ($isReportable) {
+            $classification = "reportable"
+        }
+        elseif ($isNonReportable) {
+            $classification = "nonreportable"
+        }
+
+        return @{
+            Success = $true
+            Classification = $classification
+            Reportable = $isReportable
+            ImpossibleCombination = $result.impossibleCombination -eq "true"
+            MetastaticReport = $result.metastaticReport -eq $true
+            MessageId = $result.messageId
+            ApiResponse = $result
+        }
+    }
+    catch {
+        # Stop server even on error
+        if ($null -ne $ServerProcess) {
+            Stop-NoahServer -Process $ServerProcess
+        }
+        
+        return @{
+            Success = $false
+            Message = "Failed to POST to NOAH API: $($_.Exception.Message)"
+            Exception = $_.Exception
+        }
+    }
+}
+
 function Invoke-NoahReportabilityFilterForMessage {
     param(
         [Parameter(Mandatory=$true)][int]$MessageIndex,
         [Parameter(Mandatory=$true)][array]$Hl7Messages,
         [Parameter(Mandatory=$true)]$Config,
         [Parameter(Mandatory=$true)][string]$ModelId,
-        [Parameter(Mandatory=$true)][string]$OutputFormat
+        [Parameter(Mandatory=$true)][string]$OutputFormat,
+        [Parameter(Mandatory=$false)][System.Diagnostics.Process]$ServerProcess = $null
     )
-
-    $exePath = Resolve-NoahExePath -Config $Config
-    if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
 
     if ([string]::IsNullOrWhiteSpace($ModelId)) {
         return @{ Success = $false; Message = "NOAH model id not provided." }
     }
 
-    $output = ([string]$OutputFormat).ToLowerInvariant()
-    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+    # Get the HL7 message content
+    $hl7Message = $Hl7Messages[$MessageIndex].RawContent
+    
+    # Generate message ID
+    $messageId = "message_{0}" -f ($MessageIndex + 1)
 
-    $workingRoot = [string]$Config.workingRoot
-    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
-    if (-not (Test-Path -LiteralPath $workingRoot)) {
-        $workingRoot = $env:TEMP
-    }
-
-    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
-
-    # Create a copy of the "single HL7 message" in the temp source folder.
-    $inputFileName = "message_{0}.hl7" -f ($MessageIndex + 1)
-    $inputPath     = Join-Path $folders.source $inputFileName
-
-    $exportResult = Export-SelectedHl7 -MessageIndices @($MessageIndex) -Hl7Messages $Hl7Messages -OutputPath $inputPath
-    if (-not $exportResult.Success) {
-        return @{
-            Success = $false
-            Message = "Failed to export HL7 message for NOAH."
-            Errors  = $exportResult.Errors
-            WorkingFolder = $folders.base
-        }
-    }
-
-    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
+    # POST to API (server should already be running)
+    return Invoke-NoahReportabilityApi -Hl7Message $hl7Message -Config $Config -ModelId $ModelId -MessageId $messageId -ServerProcess $ServerProcess
 }
 
 function New-MinimalHl7Message {
@@ -548,46 +667,22 @@ function Invoke-NoahReportabilityFilterForCustomPayload {
         [Parameter(Mandatory=$true)][string]$CustomText,
         [Parameter(Mandatory=$true)]$Config,
         [Parameter(Mandatory=$true)][string]$ModelId,
-        [Parameter(Mandatory=$true)][string]$OutputFormat
+        [Parameter(Mandatory=$true)][string]$OutputFormat,
+        [Parameter(Mandatory=$false)][System.Diagnostics.Process]$ServerProcess = $null
     )
-
-    $exePath = Resolve-NoahExePath -Config $Config
-    if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
 
     if ([string]::IsNullOrWhiteSpace($ModelId)) {
         return @{ Success = $false; Message = "NOAH model id not provided." }
     }
 
-    $output = ([string]$OutputFormat).ToLowerInvariant()
-    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
-
-    $workingRoot = [string]$Config.workingRoot
-    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
-    if (-not (Test-Path -LiteralPath $workingRoot)) {
-        $workingRoot = $env:TEMP
-    }
-
-    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
-
     # Generate minimal HL7 message with custom text
-    $hl7Content = New-MinimalHl7Message -CustomText $CustomText
+    $hl7Message = New-MinimalHl7Message -CustomText $CustomText
 
-    # Save to source folder
-    $inputFileName = "custom_payload.hl7"
-    $inputPath = Join-Path $folders.source $inputFileName
+    # Generate message ID
+    $messageId = "custom_payload_{0}" -f [guid]::NewGuid().ToString().Substring(0, 8)
 
-    try {
-        Set-Content -LiteralPath $inputPath -Value $hl7Content -Encoding ASCII -NoNewline
-    }
-    catch {
-        return @{
-            Success = $false
-            Message = "Failed to write custom HL7 payload: $($_.Exception.Message)"
-            WorkingFolder = $folders.base
-        }
-    }
-
-    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
+    # POST to API (server should already be running)
+    return Invoke-NoahReportabilityApi -Hl7Message $hl7Message -Config $Config -ModelId $ModelId -MessageId $messageId -ServerProcess $ServerProcess
 }
 
 function Invoke-NoahReportabilityFilter {

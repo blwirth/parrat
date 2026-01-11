@@ -43,7 +43,7 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
-    # Show model selection dialog
+    # Show model selection dialog (this starts the server)
     $config = Get-NoahConfig
     $selection = Show-NoahModelSelectionDialog -Config $config
 
@@ -55,12 +55,14 @@ function Invoke-PostSelectedHL7 {
         $Controls['lblStatus'].Text = "NOAH reportability: running..."
         $Controls['form'].Refresh()
 
+        # Server is already running from the dialog, pass the process handle
         $result = Invoke-NoahReportabilityFilterForMessage `
             -MessageIndex $idx `
             -Hl7Messages $ScriptVars['Hl7Messages'] `
             -Config $config `
             -ModelId $selection.ModelId `
-            -OutputFormat $selection.OutputFormat
+            -OutputFormat $selection.OutputFormat `
+            -ServerProcess $selection.ServerProcess
 
         $recordLabel = "Message"
         $recordCount = $ScriptVars['Hl7Messages'].Count
@@ -92,7 +94,7 @@ function Invoke-PostCustomPayload {
         return
     }
 
-    # Show model selection dialog
+    # Show model selection dialog (this starts the server)
     $config = Get-NoahConfig
     $selection = Show-NoahModelSelectionDialog -Config $config
 
@@ -104,11 +106,13 @@ function Invoke-PostCustomPayload {
         $Controls['lblStatus'].Text = "NOAH reportability (custom): running..."
         $Controls['form'].Refresh()
 
+        # Server is already running from the dialog, pass the process handle
         $result = Invoke-NoahReportabilityFilterForCustomPayload `
             -CustomText $customText `
             -Config $config `
             -ModelId $selection.ModelId `
-            -OutputFormat $selection.OutputFormat
+            -OutputFormat $selection.OutputFormat `
+            -ServerProcess $selection.ServerProcess
 
         $recordLabel = "Custom Payload"
         $recordIndex = 0
@@ -161,52 +165,35 @@ function Show-NoahResult {
     $class = $Result.Classification
     $Controls['lblStatus'].Text = "NOAH reportability: {0}" -f $class
 
-    # Look for the result JSON file in the reports folder
-    $reportsFolder = Join-Path $Result.WorkingFolder "reports"
-    $resultFilePath = Get-NoahResultFile -ReportsFolder $reportsFolder
+    # API-based results - show in message box
+    $title = "NOAH Reportability"
+    $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
 
-    if ($resultFilePath) {
-        # Show the results viewer window
-        Show-NoahResultsWindow `
-            -ResultFilePath $resultFilePath `
-            -WorkingFolder $Result.WorkingFolder `
-            -RecordLabel $RecordLabel `
-            -RecordIndex $RecordIndex `
-            -RecordCount $RecordCount
-    }
-    else {
-        # Fallback to simple message box if no result file found
-        $title = "NOAH Reportability"
-        $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
+    if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+    elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+    elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+    else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
 
-        if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-        elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-        elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
-        else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
-
-        $message = @()
-        $message += ("$RecordLabel : {0} of {1}" -f ($RecordIndex + 1), $RecordCount)
-        $message += ("Result: {0}" -f $class.ToUpperInvariant())
-        $message += ("Exit code: {0}" -f $Result.ExitCode)
-        $message += ""
-        $message += "(No result JSON file found in reports folder)"
-        $message += ""
-        $message += "Working folder:"
-        $message += $Result.WorkingFolder
-
-        $dialogResult = [System.Windows.Forms.MessageBox]::Show(
-            ($message -join "`r`n"),
-            $title,
-            [System.Windows.Forms.MessageBoxButtons]::YesNo,
-            $icon
-        )
-
-        if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
-            if ($Result.WorkingFolder -and (Test-Path -LiteralPath $Result.WorkingFolder)) {
-                Start-Process "explorer.exe" -ArgumentList "`"$($Result.WorkingFolder)`""
-            }
+    $message = @()
+    $message += ("$RecordLabel : {0} of {1}" -f ($RecordIndex + 1), $RecordCount)
+    $message += ("Result: {0}" -f $class.ToUpperInvariant())
+    
+    if ($Result.ApiResponse) {
+        $apiResp = $Result.ApiResponse
+        if ($apiResp.impossibleCombination -eq "true") {
+            $message += "Impossible Combination: Yes"
+        }
+        if ($apiResp.metastaticReport -eq $true) {
+            $message += "Metastatic Report: Yes"
         }
     }
+
+    [System.Windows.Forms.MessageBox]::Show(
+        ($message -join "`r`n"),
+        $title,
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        $icon
+    ) | Out-Null
 }
 
 function Get-BtnNoahMenuHandler {
