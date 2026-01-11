@@ -37,6 +37,83 @@ function Save-NoahConfig {
     Set-Content -LiteralPath $configPath -Value $json -Encoding UTF8
 }
 
+function Test-NoahServerRunning {
+    param(
+        [Parameter(Mandatory=$true)][string]$ApiServerUrl
+    )
+
+    try {
+        $headers = @{
+            "accept" = "*/*"
+            "api-version" = "2"
+        }
+        
+        # Try a simple GET request to see if server is responding
+        $response = Invoke-RestMethod -Uri "$ApiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+function Start-NoahServer {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) {
+        return @{ Success = $false; Message = "NOAH exe path not configured." }
+    }
+
+    # Check if server is already running
+    $apiServerUrl = [string]$Config.apiServerUrl
+    if ([string]::IsNullOrWhiteSpace($apiServerUrl)) {
+        $apiServerUrl = "http://localhost:4000"
+    }
+    $apiServerUrl = $apiServerUrl.TrimEnd('/')
+
+    if (Test-NoahServerRunning -ApiServerUrl $apiServerUrl) {
+        return @{ Success = $true; Message = "Server is already running." }
+    }
+
+    # Start the server process
+    $exeDir = Split-Path -Parent $exePath
+    
+    try {
+        $proc = Start-Process `
+            -FilePath $exePath `
+            -WorkingDirectory $exeDir `
+            -WindowStyle Minimized `
+            -PassThru `
+            -ErrorAction Stop
+
+        if (-not $proc) {
+            return @{ Success = $false; Message = "Failed to start NOAH server process." }
+        }
+
+        # Wait for server to be ready (polling with timeout)
+        $maxWaitSeconds = 30
+        $checkIntervalMs = 500
+        $maxAttempts = ($maxWaitSeconds * 1000) / $checkIntervalMs
+        $attempt = 0
+
+        while ($attempt -lt $maxAttempts) {
+            Start-Sleep -Milliseconds $checkIntervalMs
+            if (Test-NoahServerRunning -ApiServerUrl $apiServerUrl) {
+                return @{ Success = $true; Message = "Server started successfully."; Process = $proc }
+            }
+            $attempt++
+        }
+
+        return @{ Success = $false; Message = "Server started but did not become ready within $maxWaitSeconds seconds."; Process = $proc }
+    }
+    catch {
+        return @{ Success = $false; Message = "Failed to start NOAH server: $($_.Exception.Message)" }
+    }
+}
+
 function Get-NoahModels {
     param(
         [Parameter(Mandatory=$true)]$Config
@@ -49,6 +126,13 @@ function Get-NoahModels {
 
     # Ensure URL doesn't end with a slash
     $apiServerUrl = $apiServerUrl.TrimEnd('/')
+
+    # Ensure server is running before fetching models
+    $serverStartResult = Start-NoahServer -Config $Config
+    if (-not $serverStartResult.Success) {
+        Write-Error "Failed to start NOAH server: $($serverStartResult.Message)"
+        return $null
+    }
 
     $modelsUrl = "$apiServerUrl/Models"
 
@@ -136,11 +220,15 @@ function Show-NoahModelSelectionDialog {
     $dialog.AcceptButton = $btnOk
     $dialog.CancelButton = $btnCancel
 
-    # Fetch models asynchronously (using a simple approach)
+    # Fetch models (this will also ensure server is running)
+    $lblStatus.Text = "Starting NOAH server and loading models..."
+    $lblStatus.ForeColor = [System.Drawing.Color]::Blue
+    $dialog.Refresh()
+    
     $models = Get-NoahModels -Config $Config
 
     if ($null -eq $models -or $models.Count -eq 0) {
-        $lblStatus.Text = "Failed to load models. Please check the API server URL."
+        $lblStatus.Text = "Failed to load models. Please check the API server URL and ensure NOAH server can be started."
         $lblStatus.ForeColor = [System.Drawing.Color]::Red
         
         $dialogResult = $dialog.ShowDialog()
