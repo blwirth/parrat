@@ -8,6 +8,7 @@
 . "$PSScriptRoot\lib\assign-facility.ps1"
 . "$PSScriptRoot\lib\concatenate-xml.ps1"
 . "$PSScriptRoot\lib\concatenate-hl7.ps1"
+. "$PSScriptRoot\lib\concatenate-txt.ps1"
 . "$PSScriptRoot\lib\convert-txt.ps1"
 . "$PSScriptRoot\lib\add-pid.ps1"
 . "$PSScriptRoot\lib\fix-obx.ps1"
