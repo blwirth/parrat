@@ -40,7 +40,8 @@ function Parse-Hl7Messages {
         [string]$Content
     )
     
-    $messages = @()
+    # Use ArrayList for efficient appending
+    $messages = New-Object System.Collections.ArrayList
     
     # Normalize line endings to just \n
     $Content = $Content -replace "`r`n", "`n"
@@ -48,8 +49,8 @@ function Parse-Hl7Messages {
     
     # Split content into individual messages by finding MSH segments
     # Each message starts with "MSH|"
-    $messageTexts = @()
-    $currentMessage = ""
+    $messageTexts = New-Object System.Collections.ArrayList
+    $currentMessageLines = New-Object System.Collections.ArrayList
     
     $allLines = $Content -split "`n"
     
@@ -59,22 +60,23 @@ function Parse-Hl7Messages {
         
         if ($trimmedLine.StartsWith("MSH|")) {
             # Start of a new message
-            if (-not [string]::IsNullOrEmpty($currentMessage)) {
-                $messageTexts += $currentMessage
+            if ($currentMessageLines.Count -gt 0) {
+                [void]$messageTexts.Add(($currentMessageLines -join "`n"))
+                $currentMessageLines.Clear()
             }
-            $currentMessage = $trimmedLine
+            [void]$currentMessageLines.Add($trimmedLine)
         }
         else {
             # Continue current message
-            if (-not [string]::IsNullOrEmpty($currentMessage)) {
-                $currentMessage += "`n" + $trimmedLine
+            if ($currentMessageLines.Count -gt 0) {
+                [void]$currentMessageLines.Add($trimmedLine)
             }
         }
     }
     
     # Don't forget the last message
-    if (-not [string]::IsNullOrEmpty($currentMessage)) {
-        $messageTexts += $currentMessage
+    if ($currentMessageLines.Count -gt 0) {
+        [void]$messageTexts.Add(($currentMessageLines -join "`n"))
     }
     
     # Parse each message
@@ -83,7 +85,7 @@ function Parse-Hl7Messages {
         
         # Parse segments
         $segments = @{}
-        $allSegments = @()
+        $allSegments = New-Object System.Collections.ArrayList
         $lines = $msg -split "`n"
         
         foreach ($line in $lines) {
@@ -93,10 +95,10 @@ function Parse-Hl7Messages {
             
             $segmentType = $trimmedLine.Substring(0, 3)
             if (-not $segments.ContainsKey($segmentType)) {
-                $segments[$segmentType] = @()
+                $segments[$segmentType] = New-Object System.Collections.ArrayList
             }
-            $segments[$segmentType] += $trimmedLine
-            $allSegments += $trimmedLine
+            [void]$segments[$segmentType].Add($trimmedLine)
+            [void]$allSegments.Add($trimmedLine)
         }
         
         # Extract common fields
@@ -108,7 +110,7 @@ function Parse-Hl7Messages {
         $parsedMsh = Parse-MshSegment -MshSegment $mshLine
         $parsedObr = Parse-ObrSegment -ObrSegment $obrLine
         
-        $messages += [PSCustomObject]@{
+        [void]$messages.Add([PSCustomObject]@{
             Index = $i
             RawContent = $msg
             Segments = $segments
@@ -125,7 +127,7 @@ function Parse-Hl7Messages {
             SendingFacility = $parsedMsh.SendingFacility
             OrderDateTime = $parsedObr.OrderDateTime
             OrderingProvider = $parsedObr.OrderingProvider
-        }
+        })
     }
     
     return $messages
