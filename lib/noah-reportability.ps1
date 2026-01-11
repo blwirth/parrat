@@ -467,26 +467,44 @@ function Invoke-NoahReportabilityApi {
         $MessageId = [guid]::NewGuid().ToString()
     }
 
+    # Ensure ModelId is a valid GUID format
+    $guid = [guid]::Empty
+    if (-not [guid]::TryParse($ModelId, [ref]$guid)) {
+        return @{
+            Success = $false
+            Message = "Invalid ModelId format: $ModelId (must be a GUID)"
+        }
+    }
+    $ModelId = $guid.ToString()
+
     # Encode HL7 message as Base64
+    # HL7 uses ASCII/UTF-8, but preserve exact bytes
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($Hl7Message)
     $hl7MessageEncoded = [System.Convert]::ToBase64String($bytes)
 
     # Build request body - array of objects
-    $requestBody = @(
-        @{
-            messageId = $MessageId
-            hl7Message = $hl7MessageEncoded
-            messageEncodingFormat = "Base64"
-            modelId = $ModelId
-        }
-    ) | ConvertTo-Json -Depth 10
+    $requestObj = @{
+        messageId = $MessageId
+        hl7Message = $hl7MessageEncoded
+        messageEncodingFormat = "Base64"
+        modelId = $ModelId
+    }
+    
+    $requestBody = @($requestObj) | ConvertTo-Json -Depth 10 -Compress
 
     $endpoint = "$apiServerUrl/api/NER"
+
+    # Debug: Write request to temp file for inspection
+    $debugFile = Join-Path $env:TEMP "noah_api_request_debug.json"
+    try {
+        $requestObj | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -ErrorAction SilentlyContinue
+    }
+    catch { }
 
     try {
         $headers = @{
             "Content-Type" = "application/json"
-            "accept" = "application/json"
+            "Accept" = "application/json"
             "api-version" = "2"
         }
 
@@ -536,10 +554,25 @@ function Invoke-NoahReportabilityApi {
             Stop-NoahServer -Process $ServerProcess
         }
         
+        $errorDetails = $_.Exception.Message
+        if ($_.Exception.Response) {
+            try {
+                $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                $responseBody = $reader.ReadToEnd()
+                $reader.Close()
+                $errorDetails += "`nResponse: $responseBody"
+            }
+            catch {
+                # Ignore errors reading response stream
+            }
+        }
+        
         return @{
             Success = $false
-            Message = "Failed to POST to NOAH API: $($_.Exception.Message)"
+            Message = "Failed to POST to NOAH API: $errorDetails"
             Exception = $_.Exception
+            RequestBody = $requestBody
+            DebugFile = $debugFile
         }
     }
 }
