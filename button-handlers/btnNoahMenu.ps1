@@ -1,8 +1,7 @@
 function Invoke-PostSelectedHL7 {
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars,
-        [Parameter(Mandatory=$true)][string]$OutputFormat
+        [hashtable]$ScriptVars
     )
 
     $fileType = $script:FileType
@@ -44,16 +43,24 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
+    # Show model selection dialog
+    $config = Get-NoahConfig
+    $selection = Show-NoahModelSelectionDialog -Config $config
+
+    if ($null -eq $selection) {
+        return
+    }
+
     try {
         $Controls['lblStatus'].Text = "NOAH reportability: running..."
         $Controls['form'].Refresh()
 
-        $config = Get-NoahConfig
         $result = Invoke-NoahReportabilityFilterForMessage `
             -MessageIndex $idx `
             -Hl7Messages $ScriptVars['Hl7Messages'] `
             -Config $config `
-            -OutputFormat $OutputFormat
+            -ModelId $selection.ModelId `
+            -OutputFormat $selection.OutputFormat
 
         $recordLabel = "Message"
         $recordCount = $ScriptVars['Hl7Messages'].Count
@@ -75,8 +82,7 @@ function Invoke-PostSelectedHL7 {
 function Invoke-PostCustomPayload {
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars,
-        [Parameter(Mandatory=$true)][string]$OutputFormat
+        [hashtable]$ScriptVars
     )
 
     # Show dialog to get custom text
@@ -86,15 +92,23 @@ function Invoke-PostCustomPayload {
         return
     }
 
+    # Show model selection dialog
+    $config = Get-NoahConfig
+    $selection = Show-NoahModelSelectionDialog -Config $config
+
+    if ($null -eq $selection) {
+        return
+    }
+
     try {
         $Controls['lblStatus'].Text = "NOAH reportability (custom): running..."
         $Controls['form'].Refresh()
 
-        $config = Get-NoahConfig
         $result = Invoke-NoahReportabilityFilterForCustomPayload `
             -CustomText $customText `
             -Config $config `
-            -OutputFormat $OutputFormat
+            -ModelId $selection.ModelId `
+            -OutputFormat $selection.OutputFormat
 
         $recordLabel = "Custom Payload"
         $recordIndex = 0
@@ -205,38 +219,24 @@ function Get-BtnNoahMenuHandler {
         # Create context menu
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-        # Menu item 1: POST current HL7 (HL7 output)
-        $menuItemSelectedHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelectedHl7.Text = "POST current HL7 (HL7 output)"
-        $menuItemSelectedHl7.Add_Click({
-            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "hl7"
-        })
-
-        # Menu item 2: POST current HL7 (XML output)
-        $menuItemSelectedXml = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelectedXml.Text = "POST current HL7 (XML output)"
-        $menuItemSelectedXml.Add_Click({
-            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "xml"
+        # Menu item 1: POST current HL7
+        $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSelected.Text = "POST current HL7"
+        $menuItemSelected.Add_Click({
+            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
         })
 
         # Separator
         $separator = New-Object System.Windows.Forms.ToolStripSeparator
 
-        # Menu item 3: POST custom payload (HL7 output)
-        $menuItemCustomHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustomHl7.Text = "POST custom payload (HL7 output)"
-        $menuItemCustomHl7.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "hl7"
+        # Menu item 2: POST custom payload
+        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemCustom.Text = "POST custom payload"
+        $menuItemCustom.Add_Click({
+            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
         })
 
-        # Menu item 4: POST custom payload (XML output)
-        $menuItemCustomXml = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustomXml.Text = "POST custom payload (XML output)"
-        $menuItemCustomXml.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "xml"
-        })
-
-        $contextMenu.Items.AddRange(@($menuItemSelectedHl7, $menuItemSelectedXml, $separator, $menuItemCustomHl7, $menuItemCustomXml))
+        $contextMenu.Items.AddRange(@($menuItemSelected, $separator, $menuItemCustom))
 
         # Show the context menu at the button location
         $btn = $Controls['btnNoahMenu']

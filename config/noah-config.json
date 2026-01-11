@@ -3,5 +3,6 @@
     "modelId":  "d61300da-8184-4ce3-a59f-f6c4a9265811",
     "output":  "hl7",
     "separateImpossiblesAndMets":  false,
-    "workingRoot":  ""
+    "workingRoot":  "",
+    "apiServerUrl":  "http://localhost:4000"
 }

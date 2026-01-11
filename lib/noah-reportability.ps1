@@ -23,6 +23,7 @@ function Get-NoahConfig {
         output  = "hl7"   # "hl7" or "xml"
         separateImpossiblesAndMets = $false
         workingRoot = ""  # if empty, uses $env:TEMP
+        apiServerUrl = "http://localhost:4000"
     }
 }
 
@@ -34,6 +35,152 @@ function Save-NoahConfig {
     $configPath = Get-NoahConfigPath
     $json = $Config | ConvertTo-Json -Depth 6
     Set-Content -LiteralPath $configPath -Value $json -Encoding UTF8
+}
+
+function Get-NoahModels {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    $apiServerUrl = [string]$Config.apiServerUrl
+    if ([string]::IsNullOrWhiteSpace($apiServerUrl)) {
+        $apiServerUrl = "http://localhost:4000"
+    }
+
+    # Ensure URL doesn't end with a slash
+    $apiServerUrl = $apiServerUrl.TrimEnd('/')
+
+    $modelsUrl = "$apiServerUrl/Models"
+
+    try {
+        $headers = @{
+            "accept" = "*/*"
+            "api-version" = "2"
+        }
+
+        $response = Invoke-RestMethod -Uri $modelsUrl -Method Get -Headers $headers -ErrorAction Stop
+        return $response
+    }
+    catch {
+        Write-Error "Failed to fetch NOAH models from $modelsUrl : $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Show-NoahModelSelectionDialog {
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $dialog = New-Object System.Windows.Forms.Form
+    $dialog.Text = "NOAH Model Selection"
+    $dialog.Width = 500
+    $dialog.Height = 250
+    $dialog.StartPosition = "CenterScreen"
+    $dialog.FormBorderStyle = "FixedDialog"
+    $dialog.MaximizeBox = $false
+    $dialog.MinimizeBox = $false
+
+    # Label for model selection
+    $lblModel = New-Object System.Windows.Forms.Label
+    $lblModel.Location = New-Object System.Drawing.Point(10, 15)
+    $lblModel.Size = New-Object System.Drawing.Size(460, 20)
+    $lblModel.Text = "Select Model:"
+
+    # ComboBox for model selection
+    $cmbModel = New-Object System.Windows.Forms.ComboBox
+    $cmbModel.Location = New-Object System.Drawing.Point(10, 40)
+    $cmbModel.Size = New-Object System.Drawing.Size(460, 25)
+    $cmbModel.DropDownStyle = "DropDownList"
+    $cmbModel.Enabled = $false
+
+    # Label for output format
+    $lblOutput = New-Object System.Windows.Forms.Label
+    $lblOutput.Location = New-Object System.Drawing.Point(10, 80)
+    $lblOutput.Size = New-Object System.Drawing.Size(460, 20)
+    $lblOutput.Text = "Output Format:"
+
+    # ComboBox for output format
+    $cmbOutput = New-Object System.Windows.Forms.ComboBox
+    $cmbOutput.Location = New-Object System.Drawing.Point(10, 105)
+    $cmbOutput.Size = New-Object System.Drawing.Size(460, 25)
+    $cmbOutput.DropDownStyle = "DropDownList"
+    $cmbOutput.Items.AddRange(@("HL7", "XML"))
+    $cmbOutput.SelectedIndex = 0
+
+    # Status label
+    $lblStatus = New-Object System.Windows.Forms.Label
+    $lblStatus.Location = New-Object System.Drawing.Point(10, 140)
+    $lblStatus.Size = New-Object System.Drawing.Size(460, 20)
+    $lblStatus.Text = "Loading models..."
+    $lblStatus.ForeColor = [System.Drawing.Color]::Blue
+
+    # Buttons
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Text = "OK"
+    $btnOk.Width = 100
+    $btnOk.Location = New-Object System.Drawing.Point(280, 170)
+    $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $btnOk.Enabled = $false
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Location = New-Object System.Drawing.Point(390, 170)
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+    $dialog.Controls.AddRange(@($lblModel, $cmbModel, $lblOutput, $cmbOutput, $lblStatus, $btnOk, $btnCancel))
+    $dialog.AcceptButton = $btnOk
+    $dialog.CancelButton = $btnCancel
+
+    # Fetch models asynchronously (using a simple approach)
+    $models = Get-NoahModels -Config $Config
+
+    if ($null -eq $models -or $models.Count -eq 0) {
+        $lblStatus.Text = "Failed to load models. Please check the API server URL."
+        $lblStatus.ForeColor = [System.Drawing.Color]::Red
+        
+        $dialogResult = $dialog.ShowDialog()
+        return $null
+    }
+
+    # Populate model ComboBox
+    foreach ($model in $models) {
+        $displayText = "$($model.name) ($($model.id))"
+        $cmbModel.Items.Add($displayText)
+    }
+
+    if ($cmbModel.Items.Count -gt 0) {
+        $cmbModel.SelectedIndex = 0
+        $cmbModel.Enabled = $true
+        $btnOk.Enabled = $true
+        $lblStatus.Text = "Select a model and output format, then click OK."
+        $lblStatus.ForeColor = [System.Drawing.Color]::Black
+    }
+    else {
+        $lblStatus.Text = "No models available."
+        $lblStatus.ForeColor = [System.Drawing.Color]::Red
+    }
+
+    $dialogResult = $dialog.ShowDialog()
+
+    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
+        $selectedModelIndex = $cmbModel.SelectedIndex
+        if ($selectedModelIndex -ge 0 -and $selectedModelIndex -lt $models.Count) {
+            $selectedModel = $models[$selectedModelIndex]
+            $selectedOutput = $cmbOutput.SelectedItem.ToString().ToLowerInvariant()
+            
+            return @{
+                ModelId = $selectedModel.id
+                OutputFormat = $selectedOutput
+            }
+        }
+    }
+
+    return $null
 }
 
 function Resolve-NoahExePath {
@@ -175,21 +322,18 @@ function Invoke-NoahReportabilityFilterForMessage {
         [Parameter(Mandatory=$true)][int]$MessageIndex,
         [Parameter(Mandatory=$true)][array]$Hl7Messages,
         [Parameter(Mandatory=$true)]$Config,
-        [Parameter(Mandatory=$false)][string]$OutputFormat
+        [Parameter(Mandatory=$true)][string]$ModelId,
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     $exePath = Resolve-NoahExePath -Config $Config
     if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
 
-    $modelId = Resolve-NoahModelId -Config $Config
-    if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
-
-    # Use provided OutputFormat or fall back to Config.output
-    if ([string]::IsNullOrWhiteSpace($OutputFormat)) {
-        $output = ([string]$Config.output).ToLowerInvariant()
-    } else {
-        $output = ([string]$OutputFormat).ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($ModelId)) {
+        return @{ Success = $false; Message = "NOAH model id not provided." }
     }
+
+    $output = ([string]$OutputFormat).ToLowerInvariant()
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
     $workingRoot = [string]$Config.workingRoot
@@ -315,21 +459,18 @@ function Invoke-NoahReportabilityFilterForCustomPayload {
     param(
         [Parameter(Mandatory=$true)][string]$CustomText,
         [Parameter(Mandatory=$true)]$Config,
-        [Parameter(Mandatory=$false)][string]$OutputFormat
+        [Parameter(Mandatory=$true)][string]$ModelId,
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     $exePath = Resolve-NoahExePath -Config $Config
     if (-not $exePath) { return @{ Success = $false; Message = "NOAH exe not selected." } }
 
-    $modelId = Resolve-NoahModelId -Config $Config
-    if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
-
-    # Use provided OutputFormat or fall back to Config.output
-    if ([string]::IsNullOrWhiteSpace($OutputFormat)) {
-        $output = ([string]$Config.output).ToLowerInvariant()
-    } else {
-        $output = ([string]$OutputFormat).ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($ModelId)) {
+        return @{ Success = $false; Message = "NOAH model id not provided." }
     }
+
+    $output = ([string]$OutputFormat).ToLowerInvariant()
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
     $workingRoot = [string]$Config.workingRoot
