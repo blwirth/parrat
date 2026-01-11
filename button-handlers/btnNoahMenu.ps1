@@ -1,7 +1,8 @@
 function Invoke-PostSelectedHL7 {
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$ScriptVars,
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     $fileType = $script:FileType
@@ -12,106 +13,59 @@ function Invoke-PostSelectedHL7 {
     }
     $idx = [int]$idx
     
-    # Check for XML file
-    if ($fileType -eq 'xml' -or $fileType -eq $null) {
-        if ($ScriptVars['Tumors'].Count -eq 0 -or -not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "No XML document loaded.",
-                "NOAH Reportability",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-            return
-        }
-
-        if ($idx -lt 0 -or $idx -ge $ScriptVars['Tumors'].Count) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Select a tumor first (click a row in the left grid).",
-                "NOAH Reportability",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-            return
-        }
-
-        try {
-            $Controls['lblStatus'].Text = "NOAH reportability: running..."
-            $Controls['form'].Refresh()
-
-            $config = Get-NoahConfig
-            $result = Invoke-NoahReportabilityFilterForTumor `
-                -TumorIndex $idx `
-                -XmlDoc $ScriptVars['XmlDoc'] `
-                -NsMgr $ScriptVars['NsMgr'] `
-                -Config $config
-
-            $recordLabel = "Tumor"
-            $recordCount = $ScriptVars['Tumors'].Count
-        }
-        catch {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Unexpected error: $($_.Exception.Message)",
-                "NOAH Reportability - Error",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Error
-            ) | Out-Null
-            $Controls['lblStatus'].Text = "NOAH reportability: error"
-            return
-        }
-    }
-    # Check for HL7 file
-    elseif ($fileType -eq 'hl7') {
-        if ($ScriptVars['Hl7Messages'].Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "No HL7 messages loaded.",
-                "NOAH Reportability",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-            return
-        }
-
-        if ($idx -lt 0 -or $idx -ge $ScriptVars['Hl7Messages'].Count) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Select a message first (click a row in the left grid).",
-                "NOAH Reportability",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-            return
-        }
-
-        try {
-            $Controls['lblStatus'].Text = "NOAH reportability: running..."
-            $Controls['form'].Refresh()
-
-            $config = Get-NoahConfig
-            $result = Invoke-NoahReportabilityFilterForMessage `
-                -MessageIndex $idx `
-                -Hl7Messages $ScriptVars['Hl7Messages'] `
-                -Config $config
-
-            $recordLabel = "Message"
-            $recordCount = $ScriptVars['Hl7Messages'].Count
-        }
-        catch {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Unexpected error: $($_.Exception.Message)",
-                "NOAH Reportability - Error",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Error
-            ) | Out-Null
-            $Controls['lblStatus'].Text = "NOAH reportability: error"
-            return
-        }
-    }
-    else {
+    # Check for HL7 file (NOAH only accepts HL7 inputs)
+    if ($fileType -ne 'hl7') {
         [System.Windows.Forms.MessageBox]::Show(
-            "No file loaded.",
+            "No HL7 file loaded. NOAH only accepts HL7 inputs.",
             "NOAH Reportability",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Information
         ) | Out-Null
+        return
+    }
+
+    if ($ScriptVars['Hl7Messages'].Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "No HL7 messages loaded.",
+            "NOAH Reportability",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+        return
+    }
+
+    if ($idx -lt 0 -or $idx -ge $ScriptVars['Hl7Messages'].Count) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Select a message first (click a row in the left grid).",
+            "NOAH Reportability",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+        return
+    }
+
+    try {
+        $Controls['lblStatus'].Text = "NOAH reportability: running..."
+        $Controls['form'].Refresh()
+
+        $config = Get-NoahConfig
+        $result = Invoke-NoahReportabilityFilterForMessage `
+            -MessageIndex $idx `
+            -Hl7Messages $ScriptVars['Hl7Messages'] `
+            -Config $config `
+            -OutputFormat $OutputFormat
+
+        $recordLabel = "Message"
+        $recordCount = $ScriptVars['Hl7Messages'].Count
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Unexpected error: $($_.Exception.Message)",
+            "NOAH Reportability - Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+        $Controls['lblStatus'].Text = "NOAH reportability: error"
         return
     }
 
@@ -121,7 +75,8 @@ function Invoke-PostSelectedHL7 {
 function Invoke-PostCustomPayload {
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$ScriptVars,
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     # Show dialog to get custom text
@@ -138,7 +93,8 @@ function Invoke-PostCustomPayload {
         $config = Get-NoahConfig
         $result = Invoke-NoahReportabilityFilterForCustomPayload `
             -CustomText $customText `
-            -Config $config
+            -Config $config `
+            -OutputFormat $OutputFormat
 
         $recordLabel = "Custom Payload"
         $recordIndex = 0
@@ -249,21 +205,38 @@ function Get-BtnNoahMenuHandler {
         # Create context menu
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-        # Menu item 1: POST Selected HL7
-        $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelected.Text = "POST Selected HL7"
-        $menuItemSelected.Add_Click({
-            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
+        # Menu item 1: POST current HL7 (HL7 output)
+        $menuItemSelectedHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSelectedHl7.Text = "POST current HL7 (HL7 output)"
+        $menuItemSelectedHl7.Add_Click({
+            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "hl7"
         })
 
-        # Menu item 2: POST Custom Payload
-        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustom.Text = "POST Custom Payload"
-        $menuItemCustom.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
+        # Menu item 2: POST current HL7 (XML output)
+        $menuItemSelectedXml = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSelectedXml.Text = "POST current HL7 (XML output)"
+        $menuItemSelectedXml.Add_Click({
+            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "xml"
         })
 
-        $contextMenu.Items.AddRange(@($menuItemSelected, $menuItemCustom))
+        # Separator
+        $separator = New-Object System.Windows.Forms.ToolStripSeparator
+
+        # Menu item 3: POST custom payload (HL7 output)
+        $menuItemCustomHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemCustomHl7.Text = "POST custom payload (HL7 output)"
+        $menuItemCustomHl7.Add_Click({
+            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "hl7"
+        })
+
+        # Menu item 4: POST custom payload (XML output)
+        $menuItemCustomXml = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemCustomXml.Text = "POST custom payload (XML output)"
+        $menuItemCustomXml.Add_Click({
+            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars -OutputFormat "xml"
+        })
+
+        $contextMenu.Items.AddRange(@($menuItemSelectedHl7, $menuItemSelectedXml, $separator, $menuItemCustomHl7, $menuItemCustomXml))
 
         # Show the context menu at the button location
         $btn = $Controls['btnNoahMenu']

@@ -167,14 +167,15 @@ function Invoke-NoahReportabilityFilterForTumor {
         }
     }
 
-    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
 }
 
 function Invoke-NoahReportabilityFilterForMessage {
     param(
         [Parameter(Mandatory=$true)][int]$MessageIndex,
         [Parameter(Mandatory=$true)][array]$Hl7Messages,
-        [Parameter(Mandatory=$true)]$Config
+        [Parameter(Mandatory=$true)]$Config,
+        [Parameter(Mandatory=$false)][string]$OutputFormat
     )
 
     $exePath = Resolve-NoahExePath -Config $Config
@@ -183,7 +184,12 @@ function Invoke-NoahReportabilityFilterForMessage {
     $modelId = Resolve-NoahModelId -Config $Config
     if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
 
-    $output = ([string]$Config.output).ToLowerInvariant()
+    # Use provided OutputFormat or fall back to Config.output
+    if ([string]::IsNullOrWhiteSpace($OutputFormat)) {
+        $output = ([string]$Config.output).ToLowerInvariant()
+    } else {
+        $output = ([string]$OutputFormat).ToLowerInvariant()
+    }
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
     $workingRoot = [string]$Config.workingRoot
@@ -208,7 +214,7 @@ function Invoke-NoahReportabilityFilterForMessage {
         }
     }
 
-    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
 }
 
 function New-MinimalHl7Message {
@@ -308,7 +314,8 @@ function Show-CustomPayloadDialog {
 function Invoke-NoahReportabilityFilterForCustomPayload {
     param(
         [Parameter(Mandatory=$true)][string]$CustomText,
-        [Parameter(Mandatory=$true)]$Config
+        [Parameter(Mandatory=$true)]$Config,
+        [Parameter(Mandatory=$false)][string]$OutputFormat
     )
 
     $exePath = Resolve-NoahExePath -Config $Config
@@ -317,7 +324,12 @@ function Invoke-NoahReportabilityFilterForCustomPayload {
     $modelId = Resolve-NoahModelId -Config $Config
     if (-not $modelId) { return @{ Success = $false; Message = "NOAH model id not provided." } }
 
-    $output = ([string]$Config.output).ToLowerInvariant()
+    # Use provided OutputFormat or fall back to Config.output
+    if ([string]::IsNullOrWhiteSpace($OutputFormat)) {
+        $output = ([string]$Config.output).ToLowerInvariant()
+    } else {
+        $output = ([string]$OutputFormat).ToLowerInvariant()
+    }
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
     $workingRoot = [string]$Config.workingRoot
@@ -346,7 +358,7 @@ function Invoke-NoahReportabilityFilterForCustomPayload {
         }
     }
 
-    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $modelId -OutputFormat $output
 }
 
 function Invoke-NoahReportabilityFilter {
@@ -355,10 +367,11 @@ function Invoke-NoahReportabilityFilter {
         [Parameter(Mandatory=$true)]$Folders,
         [Parameter(Mandatory=$true)]$Config,
         [Parameter(Mandatory=$true)][string]$ExePath,
-        [Parameter(Mandatory=$true)][string]$ModelId
+        [Parameter(Mandatory=$true)][string]$ModelId,
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
-    $output = ([string]$Config.output).ToLowerInvariant()
+    $output = ([string]$OutputFormat).ToLowerInvariant()
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
     $args = @(
