@@ -12,6 +12,7 @@
 . "$PSScriptRoot\lib\convert-txt.ps1"
 . "$PSScriptRoot\lib\add-pid.ps1"
 . "$PSScriptRoot\lib\fix-obx.ps1"
+. "$PSScriptRoot\lib\remove-empty-obx5.ps1"
 . "$PSScriptRoot\lib\naaccr-dictionary.ps1"
 . "$PSScriptRoot\lib\export-config.ps1"
 . "$PSScriptRoot\lib\export-selected-xml.ps1"
@@ -37,6 +38,7 @@
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnFixObx.ps1"
+. "$PSScriptRoot\button-handlers\btnRemoveEmptyObx5.ps1"
 . "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
@@ -107,8 +109,8 @@ $btnAddPid.DisplayStyle = 'Text'
 $btnAddPid.Enabled = $false  # Disabled until file is loaded (XML-specific)
 [void]$toolStrip.Items.Add($btnAddPid)
 
-$btnFixObx = New-Object System.Windows.Forms.ToolStripButton
-$btnFixObx.Text = "Fix OBX"
+$btnFixObx = New-Object System.Windows.Forms.ToolStripDropDownButton
+$btnFixObx.Text = "Modify HL7..."
 $btnFixObx.DisplayStyle = 'Text'
 $btnFixObx.Enabled = $false  # Disabled until file is loaded (HL7-specific)
 [void]$toolStrip.Items.Add($btnFixObx)
