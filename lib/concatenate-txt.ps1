@@ -109,17 +109,11 @@ function Show-TxtConcatenationPreview {
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
     
-    # Split container for file list and content preview
-    $splitContainer = New-Object System.Windows.Forms.SplitContainer
-    $splitContainer.Location = New-Object System.Drawing.Point(10, 60)
-    $splitContainer.Size = New-Object System.Drawing.Size(1560, 580)
-    $splitContainer.Anchor = 'Top,Left,Right,Bottom'
-    $splitContainer.Orientation = 'Vertical'
-    $splitContainer.SplitterDistance = 300
-    
-    # DataGridView for file list (left)
+    # DataGridView for file list
     $gridFiles = New-Object System.Windows.Forms.DataGridView
-    $gridFiles.Dock = 'Fill'
+    $gridFiles.Location = New-Object System.Drawing.Point(10, 60)
+    $gridFiles.Size = New-Object System.Drawing.Size(1560, 580)
+    $gridFiles.Anchor = 'Top,Left,Right,Bottom'
     $gridFiles.ReadOnly = $true
     $gridFiles.AllowUserToAddRows = $false
     $gridFiles.AllowUserToDeleteRows = $false
@@ -136,45 +130,6 @@ function Show-TxtConcatenationPreview {
     [void]$tableFiles.Columns.Add("FilePath", [string])
     
     $gridFiles.DataSource = $tableFiles
-    
-    # DataGridView for line preview (right top)
-    $gridLines = New-Object System.Windows.Forms.DataGridView
-    $gridLines.Dock = 'Fill'
-    $gridLines.ReadOnly = $true
-    $gridLines.AllowUserToAddRows = $false
-    $gridLines.AllowUserToDeleteRows = $false
-    $gridLines.RowHeadersVisible = $false
-    $gridLines.AutoSizeColumnsMode = "AllCells"
-    $gridLines.SelectionMode = 'FullRowSelect'
-    $gridLines.MultiSelect = $false
-    
-    # Build combined line preview DataTable
-    $tableLines = New-Object System.Data.DataTable
-    [void]$tableLines.Columns.Add("File", [string])
-    [void]$tableLines.Columns.Add("LineNumber", [int])
-    [void]$tableLines.Columns.Add("LineContent", [string])
-    
-    $gridLines.DataSource = $tableLines
-    
-    # RichTextBox for full content preview (right bottom)
-    $rtbPreview = New-Object System.Windows.Forms.RichTextBox
-    $rtbPreview.Dock = 'Fill'
-    $rtbPreview.ReadOnly = $true
-    $rtbPreview.Font = New-Object System.Drawing.Font("Consolas", 9)
-    $rtbPreview.WordWrap = $false
-    
-    # Inner split container for lines grid and preview
-    $splitInner = New-Object System.Windows.Forms.SplitContainer
-    $splitInner.Dock = 'Fill'
-    $splitInner.Orientation = 'Horizontal'
-    $splitInner.SplitterDistance = 300
-    
-    $splitInner.Panel1.Controls.Add($gridLines)
-    $splitInner.Panel2.Controls.Add($rtbPreview)
-    
-    # Add to split container
-    $splitContainer.Panel1.Controls.Add($gridFiles)
-    $splitContainer.Panel2.Controls.Add($splitInner)
     
     # Function to update the UI when file list changes
     $script:UpdateTxtPreviewUI = {
@@ -202,58 +157,10 @@ function Show-TxtConcatenationPreview {
             $row["FilePath"] = $item.FilePath
             [void]$tableFiles.Rows.Add($row)
         }
-        
-        # Update line preview grid
-        $tableLines.Clear()
-        foreach ($item in $script:txtFileInfos) {
-            $fileName = [System.IO.Path]::GetFileName($item.FilePath)
-            $preview = Get-TxtFilePreview -Content $item.Info.Content
-            
-            foreach ($line in $preview) {
-                $row = $tableLines.NewRow()
-                $row["File"] = $fileName
-                $row["LineNumber"] = $line.LineNumber
-                $row["LineContent"] = $line.LineContent
-                [void]$tableLines.Rows.Add($row)
-            }
-        }
-        
-        # Clear preview
-        $rtbPreview.Clear()
     }
     
     # Initial UI update
     & $script:UpdateTxtPreviewUI
-    
-    # Grid selection handler - show file content
-    $gridFiles.Add_SelectionChanged({
-        if ($gridFiles.SelectedRows.Count -eq 0) { return }
-        
-        $selectedRow = $gridFiles.SelectedRows[0]
-        $filePath = [string]$selectedRow.Cells["FilePath"].Value
-        
-        # Find the file and show its content
-        $fileItem = $script:txtFileInfos | Where-Object { $_.FilePath -eq $filePath } | Select-Object -First 1
-        if ($fileItem) {
-            $rtbPreview.Clear()
-            $rtbPreview.Text = $fileItem.Info.Content
-        }
-    })
-    
-    # Grid selection handler - show line content in preview
-    $gridLines.Add_SelectionChanged({
-        if ($gridLines.SelectedRows.Count -eq 0) { return }
-        
-        $selectedRow = $gridLines.SelectedRows[0]
-        $fileName = [string]$selectedRow.Cells["File"].Value
-        
-        # Find the file and show its content
-        $fileItem = $script:txtFileInfos | Where-Object { [System.IO.Path]::GetFileName($_.FilePath) -eq $fileName } | Select-Object -First 1
-        if ($fileItem) {
-            $rtbPreview.Clear()
-            $rtbPreview.Text = $fileItem.Info.Content
-        }
-    })
     
     # File management buttons panel
     $pnlFileButtons = New-Object System.Windows.Forms.Panel
@@ -545,7 +452,7 @@ function Show-TxtConcatenationPreview {
     })
     
     # Add controls to form
-    $previewForm.Controls.AddRange(@($lblSummary, $splitContainer, $pnlFileButtons, $btnConcatenate, $btnClose))
+    $previewForm.Controls.AddRange(@($lblSummary, $gridFiles, $pnlFileButtons, $btnConcatenate, $btnClose))
     
     [void]$previewForm.ShowDialog()
     

@@ -90,45 +90,44 @@ function Load-XmlFile {
             [void]$table.Columns.Add("primarySite", [string])
             [void]$table.Columns.Add("dateOfDiagnosis", [string])
 
+            # Helper function to build a hashtable of Item values by naaccrId
+            $buildItemLookup = {
+                param($parentNode)
+                $lookup = @{}
+                if ($null -ne $parentNode) {
+                    foreach ($child in $parentNode.ChildNodes) {
+                        if ($child -is [System.Xml.XmlElement] -and $child.LocalName -eq "Item") {
+                            $naaccrId = $child.GetAttribute("naaccrId")
+                            if (-not [string]::IsNullOrEmpty($naaccrId)) {
+                                $lookup[$naaccrId] = $child.InnerText
+                            }
+                        }
+                    }
+                }
+                return $lookup
+            }
+
             for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
                 $tumor = $ScriptVars['Tumors'][$i]
-                $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $ScriptVars['NsMgr'])
-
-                $nameLast 			= ""
-                $nameFirst 			= ""
-                $dateOfBirth		= ""
-                $dxDate 			= ""
-                $pathReportNumber1 	= ""
-                $primarySite		= ""
-
-                if ($patient -ne $null) {
-                    $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $ScriptVars['NsMgr'])
-                    $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $ScriptVars['NsMgr'])
-                    $dbNode = $patient.SelectSingleNode("./n:Item[@naaccrId='dateOfBirth']", $ScriptVars['NsMgr'])
-
-                    if ($nlNode) { $nameLast = $nlNode.InnerText }
-                    if ($nfNode) { $nameFirst = $nfNode.InnerText }
-                    if ($dbNode) { $dateOfBirth = $dbNode.InnerText }
+                $patient = $tumor.ParentNode
+                # Navigate up to Patient if not direct parent
+                while ($patient -ne $null -and $patient.LocalName -ne "Patient") {
+                    $patient = $patient.ParentNode
                 }
 
-                $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $ScriptVars['NsMgr'])
-                if ($dxNode) { $dxDate = $dxNode.InnerText }
-                
-                $pathNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $ScriptVars['NsMgr'])
-                if ($pathNode) { $pathReportNumber1 = $pathNode.InnerText }
-                
-                $primaryNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='primarySite']", $ScriptVars['NsMgr'])
-                if ($primaryNode) { $primarySite = $primaryNode.InnerText }
+                # Build lookups once per tumor/patient for O(1) access
+                $patientItems = & $buildItemLookup $patient
+                $tumorItems = & $buildItemLookup $tumor
 
                 $row = $table.NewRow()
                 $row["Selected"] = $false
                 $row["Index"] = $i + 1
-                $row["nameLast"] = $nameLast
-                $row["nameFirst"] = $nameFirst
-                $row["dateOfBirth"] = $dateOfBirth
-                $row["pathReportNumber1"] = $pathReportNumber1
-                $row["primarySite"] = $primarySite
-                $row["dateOfDiagnosis"] = $dxDate
+                $row["nameLast"] = if ($patientItems.ContainsKey("nameLast")) { $patientItems["nameLast"] } else { "" }
+                $row["nameFirst"] = if ($patientItems.ContainsKey("nameFirst")) { $patientItems["nameFirst"] } else { "" }
+                $row["dateOfBirth"] = if ($patientItems.ContainsKey("dateOfBirth")) { $patientItems["dateOfBirth"] } else { "" }
+                $row["pathReportNumber1"] = if ($tumorItems.ContainsKey("pathReportNumber1")) { $tumorItems["pathReportNumber1"] } else { "" }
+                $row["primarySite"] = if ($tumorItems.ContainsKey("primarySite")) { $tumorItems["primarySite"] } else { "" }
+                $row["dateOfDiagnosis"] = if ($tumorItems.ContainsKey("dateOfDiagnosis")) { $tumorItems["dateOfDiagnosis"] } else { "" }
 
                 [void]$table.Rows.Add($row)
             }

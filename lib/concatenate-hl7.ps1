@@ -136,17 +136,11 @@ function Show-Hl7ConcatenationPreview {
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
     
-    # Split container for file list and message preview
-    $splitContainer = New-Object System.Windows.Forms.SplitContainer
-    $splitContainer.Location = New-Object System.Drawing.Point(10, 60)
-    $splitContainer.Size = New-Object System.Drawing.Size(1560, 580)
-    $splitContainer.Anchor = 'Top,Left,Right,Bottom'
-    $splitContainer.Orientation = 'Vertical'
-    $splitContainer.SplitterDistance = 300
-    
-    # DataGridView for file list (left)
+    # DataGridView for file list
     $gridFiles = New-Object System.Windows.Forms.DataGridView
-    $gridFiles.Dock = 'Fill'
+    $gridFiles.Location = New-Object System.Drawing.Point(10, 60)
+    $gridFiles.Size = New-Object System.Drawing.Size(1560, 580)
+    $gridFiles.Anchor = 'Top,Left,Right,Bottom'
     $gridFiles.ReadOnly = $true
     $gridFiles.AllowUserToAddRows = $false
     $gridFiles.AllowUserToDeleteRows = $false
@@ -163,47 +157,6 @@ function Show-Hl7ConcatenationPreview {
     [void]$tableFiles.Columns.Add("FilePath", [string])
     
     $gridFiles.DataSource = $tableFiles
-    
-    # DataGridView for message preview (right)
-    $gridMessages = New-Object System.Windows.Forms.DataGridView
-    $gridMessages.Dock = 'Fill'
-    $gridMessages.ReadOnly = $true
-    $gridMessages.AllowUserToAddRows = $false
-    $gridMessages.AllowUserToDeleteRows = $false
-    $gridMessages.RowHeadersVisible = $false
-    $gridMessages.AutoSizeColumnsMode = "AllCells"
-    $gridMessages.SelectionMode = 'FullRowSelect'
-    $gridMessages.MultiSelect = $false
-    
-    # Build combined message preview DataTable
-    $tableMessages = New-Object System.Data.DataTable
-    [void]$tableMessages.Columns.Add("File", [string])
-    [void]$tableMessages.Columns.Add("MessageIndex", [int])
-    [void]$tableMessages.Columns.Add("MessageType", [string])
-    [void]$tableMessages.Columns.Add("PatientId", [string])
-    [void]$tableMessages.Columns.Add("PatientName", [string])
-    
-    $gridMessages.DataSource = $tableMessages
-    
-    # RichTextBox for message content preview (when a row is selected)
-    $rtbPreview = New-Object System.Windows.Forms.RichTextBox
-    $rtbPreview.Dock = 'Fill'
-    $rtbPreview.ReadOnly = $true
-    $rtbPreview.Font = New-Object System.Drawing.Font("Consolas", 9)
-    $rtbPreview.WordWrap = $false
-    
-    # Inner split container for messages grid and preview
-    $splitInner = New-Object System.Windows.Forms.SplitContainer
-    $splitInner.Dock = 'Fill'
-    $splitInner.Orientation = 'Horizontal'
-    $splitInner.SplitterDistance = 300
-    
-    $splitInner.Panel1.Controls.Add($gridMessages)
-    $splitInner.Panel2.Controls.Add($rtbPreview)
-    
-    # Add to split container
-    $splitContainer.Panel1.Controls.Add($gridFiles)
-    $splitContainer.Panel2.Controls.Add($splitInner)
     
     # Function to update the UI when file list changes
     $script:UpdateHl7PreviewUI = {
@@ -231,56 +184,10 @@ function Show-Hl7ConcatenationPreview {
             $row["FilePath"] = $item.FilePath
             [void]$tableFiles.Rows.Add($row)
         }
-        
-        # Update message preview grid
-        $tableMessages.Clear()
-        foreach ($item in $script:hl7FileInfos) {
-            $fileName = [System.IO.Path]::GetFileName($item.FilePath)
-            $preview = Get-Hl7MessagePreview -Content $item.Info.Content
-            
-            foreach ($msg in $preview) {
-                $row = $tableMessages.NewRow()
-                $row["File"] = $fileName
-                $row["MessageIndex"] = $msg.MessageIndex
-                $row["MessageType"] = $msg.MessageType
-                $row["PatientId"] = $msg.PatientId
-                $row["PatientName"] = $msg.PatientName
-                [void]$tableMessages.Rows.Add($row)
-            }
-        }
-        
-        # Clear preview
-        $rtbPreview.Clear()
     }
     
     # Initial UI update
     & $script:UpdateHl7PreviewUI
-    
-    # Grid selection handler - show message content
-    $gridMessages.Add_SelectionChanged({
-        if ($gridMessages.SelectedRows.Count -eq 0) { return }
-        
-        $selectedRow = $gridMessages.SelectedRows[0]
-        $fileName = [string]$selectedRow.Cells["File"].Value
-        $msgIndex = [int]$selectedRow.Cells["MessageIndex"].Value - 1
-        
-        # Find the file and message
-        $fileItem = $script:hl7FileInfos | Where-Object { [System.IO.Path]::GetFileName($_.FilePath) -eq $fileName } | Select-Object -First 1
-        if ($fileItem) {
-            $messages = $fileItem.Info.Content -split "(?m)^MSH\|"
-            $messages = $messages | Where-Object { $_ -match '\S' }
-            
-            if ($msgIndex -ge 0 -and $msgIndex -lt $messages.Count) {
-                $msg = $messages[$msgIndex]
-                if (-not $msg.StartsWith("MSH|")) {
-                    $msg = "MSH|" + $msg
-                }
-                
-                $rtbPreview.Clear()
-                $rtbPreview.Text = $msg
-            }
-        }
-    })
     
     # File management buttons panel
     $pnlFileButtons = New-Object System.Windows.Forms.Panel
@@ -572,7 +479,7 @@ function Show-Hl7ConcatenationPreview {
     })
     
     # Add controls to form
-    $previewForm.Controls.AddRange(@($lblSummary, $splitContainer, $pnlFileButtons, $btnConcatenate, $btnClose))
+    $previewForm.Controls.AddRange(@($lblSummary, $gridFiles, $pnlFileButtons, $btnConcatenate, $btnClose))
     
     [void]$previewForm.ShowDialog()
     

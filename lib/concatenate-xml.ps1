@@ -250,17 +250,11 @@ function Show-ConcatenationPreview {
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 40)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
     
-    # Split container for file list and tumor preview
-    $splitContainer = New-Object System.Windows.Forms.SplitContainer
-    $splitContainer.Location = New-Object System.Drawing.Point(10, 60)
-    $splitContainer.Size = New-Object System.Drawing.Size(1560, 580)
-    $splitContainer.Anchor = 'Top,Left,Right,Bottom'
-    $splitContainer.Orientation = 'Vertical'
-    $splitContainer.SplitterDistance = 300
-    
-    # DataGridView for file list (left)
+    # DataGridView for file list
     $gridFiles = New-Object System.Windows.Forms.DataGridView
-    $gridFiles.Dock = 'Fill'
+    $gridFiles.Location = New-Object System.Drawing.Point(10, 60)
+    $gridFiles.Size = New-Object System.Drawing.Size(1560, 580)
+    $gridFiles.Anchor = 'Top,Left,Right,Bottom'
     $gridFiles.ReadOnly = $true
     $gridFiles.AllowUserToAddRows = $false
     $gridFiles.AllowUserToDeleteRows = $false
@@ -276,32 +270,6 @@ function Show-ConcatenationPreview {
     [void]$tableFiles.Columns.Add("FilePath", [string])
     
     $gridFiles.DataSource = $tableFiles
-    
-    # DataGridView for tumor preview (right)
-    $gridTumors = New-Object System.Windows.Forms.DataGridView
-    $gridTumors.Dock = 'Fill'
-    $gridTumors.ReadOnly = $true
-    $gridTumors.AllowUserToAddRows = $false
-    $gridTumors.AllowUserToDeleteRows = $false
-    $gridTumors.RowHeadersVisible = $false
-    $gridTumors.AutoSizeColumnsMode = "AllCells"
-    $gridTumors.SelectionMode = 'FullRowSelect'
-    $gridTumors.MultiSelect = $false
-    
-    # Build combined tumor preview DataTable
-    $tableTumors = New-Object System.Data.DataTable
-    [void]$tableTumors.Columns.Add("File", [string])
-    [void]$tableTumors.Columns.Add("TumorIndex", [int])
-    [void]$tableTumors.Columns.Add("NameLast", [string])
-    [void]$tableTumors.Columns.Add("NameFirst", [string])
-    [void]$tableTumors.Columns.Add("DateOfDiagnosis", [string])
-    [void]$tableTumors.Columns.Add("PathReportNumber1", [string])
-    
-    $gridTumors.DataSource = $tableTumors
-    
-    # Add to split container
-    $splitContainer.Panel1.Controls.Add($gridFiles)
-    $splitContainer.Panel2.Controls.Add($gridTumors)
     
     # Function to update the UI when file list changes
     $script:UpdateXmlPreviewUI = {
@@ -323,24 +291,6 @@ function Show-ConcatenationPreview {
             $row["TumorCount"] = $item.Info.TumorCount
             $row["FilePath"] = $item.FilePath
             [void]$tableFiles.Rows.Add($row)
-        }
-        
-        # Update tumor preview grid
-        $tableTumors.Clear()
-        foreach ($item in $script:xmlFileInfos) {
-            $fileName = [System.IO.Path]::GetFileName($item.FilePath)
-            $preview = Get-TumorPreview -Tumors $item.Info.Tumors -NsMgr $item.Info.NsMgr
-            
-            foreach ($tumor in $preview) {
-                $row = $tableTumors.NewRow()
-                $row["File"] = $fileName
-                $row["TumorIndex"] = $tumor.TumorIndex
-                $row["NameLast"] = $tumor.NameLast
-                $row["NameFirst"] = $tumor.NameFirst
-                $row["DateOfDiagnosis"] = $tumor.DateOfDiagnosis
-                $row["PathReportNumber1"] = $tumor.PathReportNumber1
-                [void]$tableTumors.Rows.Add($row)
-            }
         }
     }
     
@@ -644,7 +594,7 @@ function Show-ConcatenationPreview {
     })
     
     # Add controls to form
-    $previewForm.Controls.AddRange(@($lblSummary, $splitContainer, $pnlFileButtons, $btnConcatenate, $btnClose))
+    $previewForm.Controls.AddRange(@($lblSummary, $gridFiles, $pnlFileButtons, $btnConcatenate, $btnClose))
     
     [void]$previewForm.ShowDialog()
     
