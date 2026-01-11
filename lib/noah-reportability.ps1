@@ -482,7 +482,7 @@ function Invoke-NoahReportabilityApi {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($Hl7Message)
     $hl7MessageEncoded = [System.Convert]::ToBase64String($bytes)
 
-    # Build request body - array of objects
+    # Build request body - array of objects wrapped in "value" property
     $requestObj = @{
         messageId = $MessageId
         hl7Message = $hl7MessageEncoded
@@ -490,14 +490,19 @@ function Invoke-NoahReportabilityApi {
         modelId = $ModelId
     }
     
-    $requestBody = @($requestObj) | ConvertTo-Json -Depth 10 -Compress
+    # Wrap array in "value" property as required by the API
+    $requestBodyObj = @{
+        value = @($requestObj)
+    }
+    
+    $requestBody = $requestBodyObj | ConvertTo-Json -Depth 10 -Compress
 
     $endpoint = "$apiServerUrl/api/NER"
 
     # Debug: Write request to temp file for inspection
     $debugFile = Join-Path $env:TEMP "noah_api_request_debug.json"
     try {
-        $requestObj | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -ErrorAction SilentlyContinue
+        $requestBodyObj | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -ErrorAction SilentlyContinue
     }
     catch { }
 
