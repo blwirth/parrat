@@ -24,6 +24,7 @@
 . "$PSScriptRoot\lib\export-preview.ps1"
 . "$PSScriptRoot\lib\noah-reportability.ps1"
 . "$PSScriptRoot\lib\noah-results-viewer.ps1"
+. "$PSScriptRoot\lib\split-file.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
@@ -50,6 +51,7 @@
 . "$PSScriptRoot\button-handlers\btnExportAllHl7Csv.ps1"
 . "$PSScriptRoot\button-handlers\btnPrev.ps1"
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
+. "$PSScriptRoot\button-handlers\btnSplit.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -131,6 +133,12 @@ $btnConcatenate.Text = "Concatenate..."
 $btnConcatenate.DisplayStyle = 'Text'
 # Concatenate stays enabled - doesn't require a file
 [void]$toolStrip.Items.Add($btnConcatenate)
+
+$btnSplit = New-Object System.Windows.Forms.ToolStripButton
+$btnSplit.Text = "Split..."
+$btnSplit.DisplayStyle = 'Text'
+# Split stays enabled - doesn't require a file to be loaded
+[void]$toolStrip.Items.Add($btnSplit)
 
 $btnConvertTxt = New-Object System.Windows.Forms.ToolStripButton
 $btnConvertTxt.Text = "Convert TXT"
@@ -673,6 +681,9 @@ $menuItemConcatenateTxt.Add_Click({
     Start-ConcatenateTxt
 })
 [void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateTxt)
+
+# Wire up Split button
+$btnSplit.Add_Click((Get-BtnSplitHandler))
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
