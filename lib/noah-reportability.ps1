@@ -3,6 +3,59 @@ function Get-NoahConfigPath {
     return [System.IO.Path]::Combine($root, "config", "noah-config.json")
 }
 
+function Get-NoahModelsPath {
+    $root = Split-Path -Parent $PSScriptRoot
+    return [System.IO.Path]::Combine($root, "config", "models.json")
+}
+
+function Get-CachedNoahModels {
+    <#
+    .SYNOPSIS
+    Load cached NOAH models from config/models.json
+    
+    .OUTPUTS
+    PSCustomObject with lastUpdated and models properties, or null if cache doesn't exist/is invalid
+    #>
+    $modelsPath = Get-NoahModelsPath
+    if (-not (Test-Path -LiteralPath $modelsPath)) {
+        return $null
+    }
+
+    try {
+        $raw = Get-Content -LiteralPath $modelsPath -Raw
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            return $null
+        }
+        $cache = $raw | ConvertFrom-Json
+        return $cache
+    }
+    catch {
+        return $null
+    }
+}
+
+function Save-CachedNoahModels {
+    <#
+    .SYNOPSIS
+    Save NOAH models to config/models.json cache
+    
+    .PARAMETER Models
+    Array of model objects with id and name properties
+    #>
+    param(
+        [Parameter(Mandatory=$true)][array]$Models
+    )
+
+    $modelsPath = Get-NoahModelsPath
+    $cache = @{
+        lastUpdated = (Get-Date).ToString("o")
+        models = $Models
+    }
+    
+    $json = $cache | ConvertTo-Json -Depth 6
+    Set-Content -LiteralPath $modelsPath -Value $json -Encoding UTF8
+}
+
 function Get-NoahConfig {
     $configPath = Get-NoahConfigPath
     if (Test-Path -LiteralPath $configPath) {
@@ -35,6 +88,231 @@ function Save-NoahConfig {
     $configPath = Get-NoahConfigPath
     $json = $Config | ConvertTo-Json -Depth 6
     Set-Content -LiteralPath $configPath -Value $json -Encoding UTF8
+}
+
+function Show-NoahSettingsDialog {
+    <#
+    .SYNOPSIS
+    Show NOAH Settings dialog for configuring exe path and refreshing models cache
+    #>
+    param(
+        [Parameter(Mandatory=$true)]$Config
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $dialog = New-Object System.Windows.Forms.Form
+    $dialog.Text = "NOAH Settings"
+    $dialog.Width = 600
+    $dialog.Height = 450
+    $dialog.StartPosition = "CenterScreen"
+    $dialog.FormBorderStyle = "FixedDialog"
+    $dialog.MaximizeBox = $false
+    $dialog.MinimizeBox = $false
+
+    # === EXE Path Section ===
+    $lblExePath = New-Object System.Windows.Forms.Label
+    $lblExePath.Location = New-Object System.Drawing.Point(10, 15)
+    $lblExePath.Size = New-Object System.Drawing.Size(560, 20)
+    $lblExePath.Text = "NOAH Executable Path:"
+
+    $txtExePath = New-Object System.Windows.Forms.TextBox
+    $txtExePath.Location = New-Object System.Drawing.Point(10, 40)
+    $txtExePath.Size = New-Object System.Drawing.Size(470, 25)
+    $txtExePath.Text = [string]$Config.exePath
+    $txtExePath.ReadOnly = $true
+
+    $btnBrowse = New-Object System.Windows.Forms.Button
+    $btnBrowse.Text = "Browse..."
+    $btnBrowse.Width = 90
+    $btnBrowse.Location = New-Object System.Drawing.Point(490, 38)
+    $btnBrowse.Add_Click({
+        $ofd = New-Object System.Windows.Forms.OpenFileDialog
+        $ofd.Filter = "NOAH Client (NOAHClientCentralRegistry.exe)|NOAHClientCentralRegistry.exe|Executable (*.exe)|*.exe|All files (*.*)|*.*"
+        $ofd.Title = "Select NOAHClientCentralRegistry.exe"
+        if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            $txtExePath.Text = $ofd.FileName
+        }
+    })
+
+    # === Output Format Section ===
+    $lblOutput = New-Object System.Windows.Forms.Label
+    $lblOutput.Location = New-Object System.Drawing.Point(10, 75)
+    $lblOutput.Size = New-Object System.Drawing.Size(120, 20)
+    $lblOutput.Text = "Output Format:"
+
+    $cmbOutput = New-Object System.Windows.Forms.ComboBox
+    $cmbOutput.Location = New-Object System.Drawing.Point(130, 72)
+    $cmbOutput.Size = New-Object System.Drawing.Size(100, 25)
+    $cmbOutput.DropDownStyle = "DropDownList"
+    $cmbOutput.Items.AddRange(@("hl7", "xml"))
+    $outputIdx = if ($Config.output -eq "xml") { 1 } else { 0 }
+    $cmbOutput.SelectedIndex = $outputIdx
+
+    # === Models Section ===
+    $grpModels = New-Object System.Windows.Forms.GroupBox
+    $grpModels.Text = "Cached Models"
+    $grpModels.Location = New-Object System.Drawing.Point(10, 110)
+    $grpModels.Size = New-Object System.Drawing.Size(565, 220)
+
+    $lblLastUpdated = New-Object System.Windows.Forms.Label
+    $lblLastUpdated.Location = New-Object System.Drawing.Point(10, 25)
+    $lblLastUpdated.Size = New-Object System.Drawing.Size(400, 20)
+
+    # Load cached models
+    $cachedModels = Get-CachedNoahModels
+    if ($cachedModels -and $cachedModels.lastUpdated) {
+        try {
+            $lastUpdatedDate = [DateTime]::Parse($cachedModels.lastUpdated)
+            $lblLastUpdated.Text = "Last updated: $($lastUpdatedDate.ToString('yyyy-MM-dd HH:mm:ss'))"
+        }
+        catch {
+            $lblLastUpdated.Text = "Last updated: $($cachedModels.lastUpdated)"
+        }
+    }
+    else {
+        $lblLastUpdated.Text = "Last updated: Never (no cached models)"
+    }
+
+    $lstModels = New-Object System.Windows.Forms.ListBox
+    $lstModels.Location = New-Object System.Drawing.Point(10, 50)
+    $lstModels.Size = New-Object System.Drawing.Size(540, 120)
+    $lstModels.Font = New-Object System.Drawing.Font("Consolas", 9)
+
+    if ($cachedModels -and $cachedModels.models -and $cachedModels.models.Count -gt 0) {
+        foreach ($model in $cachedModels.models) {
+            $lstModels.Items.Add("$($model.name) - $($model.id)")
+        }
+    }
+    else {
+        $lstModels.Items.Add("(No models cached - click Refresh to fetch from API)")
+    }
+
+    $btnRefresh = New-Object System.Windows.Forms.Button
+    $btnRefresh.Text = "Refresh Models from API"
+    $btnRefresh.Width = 180
+    $btnRefresh.Location = New-Object System.Drawing.Point(10, 180)
+
+    $lblRefreshStatus = New-Object System.Windows.Forms.Label
+    $lblRefreshStatus.Location = New-Object System.Drawing.Point(200, 183)
+    $lblRefreshStatus.Size = New-Object System.Drawing.Size(350, 20)
+    $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Blue
+
+    $grpModels.Controls.AddRange(@($lblLastUpdated, $lstModels, $btnRefresh, $lblRefreshStatus))
+
+    # Refresh button click handler
+    $btnRefresh.Add_Click({
+        # Validate exe path first
+        $exePath = $txtExePath.Text
+        if ([string]::IsNullOrWhiteSpace($exePath) -or -not (Test-Path -LiteralPath $exePath)) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Please configure the NOAH executable path first.",
+                "NOAH Settings",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            ) | Out-Null
+            return
+        }
+
+        $btnRefresh.Enabled = $false
+        $lblRefreshStatus.Text = "Starting NOAH server..."
+        $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Blue
+        $dialog.Refresh()
+
+        $serverProcess = $null
+        try {
+            # Create a temporary config with the current exe path
+            $tempConfig = @{
+                exePath = $exePath
+                apiServerUrl = $Config.apiServerUrl
+            }
+
+            # Start the server
+            $serverResult = Start-NoahServer -Config $tempConfig
+            if (-not $serverResult.Success) {
+                $lblRefreshStatus.Text = "Failed: $($serverResult.Message)"
+                $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Red
+                return
+            }
+
+            $serverProcess = $serverResult.Process
+            $lblRefreshStatus.Text = "Fetching models from API..."
+            $dialog.Refresh()
+
+            # Fetch models
+            $apiServerUrl = [string]$Config.apiServerUrl
+            if ([string]::IsNullOrWhiteSpace($apiServerUrl)) {
+                $apiServerUrl = "http://localhost:4000"
+            }
+            $apiServerUrl = $apiServerUrl.TrimEnd('/')
+
+            $headers = @{
+                "accept" = "*/*"
+                "api-version" = "2"
+            }
+
+            $models = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -ErrorAction Stop
+
+            if ($null -eq $models -or $models.Count -eq 0) {
+                $lblRefreshStatus.Text = "No models returned from API"
+                $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Orange
+                return
+            }
+
+            # Save to cache
+            Save-CachedNoahModels -Models $models
+
+            # Update UI
+            $lstModels.Items.Clear()
+            foreach ($model in $models) {
+                $lstModels.Items.Add("$($model.name) - $($model.id)")
+            }
+            $lblLastUpdated.Text = "Last updated: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))"
+            $lblRefreshStatus.Text = "Successfully loaded $($models.Count) model(s)"
+            $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Green
+        }
+        catch {
+            $lblRefreshStatus.Text = "Error: $($_.Exception.Message)"
+            $lblRefreshStatus.ForeColor = [System.Drawing.Color]::Red
+        }
+        finally {
+            # Always stop the server if we started it
+            if ($null -ne $serverProcess) {
+                Stop-NoahServer -Process $serverProcess
+            }
+            $btnRefresh.Enabled = $true
+        }
+    })
+
+    # === Buttons ===
+    $btnSave = New-Object System.Windows.Forms.Button
+    $btnSave.Text = "Save"
+    $btnSave.Width = 100
+    $btnSave.Location = New-Object System.Drawing.Point(380, 370)
+    $btnSave.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Location = New-Object System.Drawing.Point(490, 370)
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+    $dialog.Controls.AddRange(@($lblExePath, $txtExePath, $btnBrowse, $lblOutput, $cmbOutput, $grpModels, $btnSave, $btnCancel))
+    $dialog.AcceptButton = $btnSave
+    $dialog.CancelButton = $btnCancel
+
+    $dialogResult = $dialog.ShowDialog()
+
+    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
+        # Save config changes
+        $Config.exePath = $txtExePath.Text
+        $Config.output = $cmbOutput.SelectedItem.ToString()
+        Save-NoahConfig -Config $Config
+        return $true
+    }
+
+    return $false
 }
 
 function Start-NoahServer {
@@ -176,6 +454,14 @@ function Get-NoahModels {
 }
 
 function Show-NoahModelSelectionDialog {
+    <#
+    .SYNOPSIS
+    Show model selection dialog using cached models (no server required)
+    
+    .DESCRIPTION
+    Loads models from config/models.json cache. If cache is empty,
+    prompts user to go to Settings to refresh models from API.
+    #>
     param(
         [Parameter(Mandatory=$true)]$Config
     )
@@ -183,10 +469,17 @@ function Show-NoahModelSelectionDialog {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
+    # Load cached models
+    $cachedModels = Get-CachedNoahModels
+    $models = @()
+    if ($cachedModels -and $cachedModels.models -and $cachedModels.models.Count -gt 0) {
+        $models = $cachedModels.models
+    }
+
     $dialog = New-Object System.Windows.Forms.Form
     $dialog.Text = "NOAH Model Selection"
     $dialog.Width = 500
-    $dialog.Height = 250
+    $dialog.Height = 180
     $dialog.StartPosition = "CenterScreen"
     $dialog.FormBorderStyle = "FixedDialog"
     $dialog.MaximizeBox = $false
@@ -203,67 +496,37 @@ function Show-NoahModelSelectionDialog {
     $cmbModel.Location = New-Object System.Drawing.Point(10, 40)
     $cmbModel.Size = New-Object System.Drawing.Size(460, 25)
     $cmbModel.DropDownStyle = "DropDownList"
-    $cmbModel.Enabled = $false
-
-    # Label for output format
-    $lblOutput = New-Object System.Windows.Forms.Label
-    $lblOutput.Location = New-Object System.Drawing.Point(10, 80)
-    $lblOutput.Size = New-Object System.Drawing.Size(460, 20)
-    $lblOutput.Text = "Output Format:"
-
-    # ComboBox for output format
-    $cmbOutput = New-Object System.Windows.Forms.ComboBox
-    $cmbOutput.Location = New-Object System.Drawing.Point(10, 105)
-    $cmbOutput.Size = New-Object System.Drawing.Size(460, 25)
-    $cmbOutput.DropDownStyle = "DropDownList"
-    $cmbOutput.Items.AddRange(@("HL7", "XML"))
-    $cmbOutput.SelectedIndex = 0
 
     # Status label
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.Location = New-Object System.Drawing.Point(10, 140)
-    $lblStatus.Size = New-Object System.Drawing.Size(460, 20)
-    $lblStatus.Text = "Starting server and loading models..."
-    $lblStatus.ForeColor = [System.Drawing.Color]::Blue
+    $lblStatus.Location = New-Object System.Drawing.Point(10, 75)
+    $lblStatus.Size = New-Object System.Drawing.Size(460, 35)
 
     # Buttons
     $btnOk = New-Object System.Windows.Forms.Button
-    $btnOk.Text = "OK"
+    $btnOk.Text = "Run Filter"
     $btnOk.Width = 100
-    $btnOk.Location = New-Object System.Drawing.Point(280, 170)
+    $btnOk.Location = New-Object System.Drawing.Point(280, 115)
     $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $btnOk.Enabled = $false
 
     $btnCancel = New-Object System.Windows.Forms.Button
     $btnCancel.Text = "Cancel"
     $btnCancel.Width = 100
-    $btnCancel.Location = New-Object System.Drawing.Point(390, 170)
+    $btnCancel.Location = New-Object System.Drawing.Point(390, 115)
     $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 
-    $dialog.Controls.AddRange(@($lblModel, $cmbModel, $lblOutput, $cmbOutput, $lblStatus, $btnOk, $btnCancel))
+    $dialog.Controls.AddRange(@($lblModel, $cmbModel, $lblStatus, $btnOk, $btnCancel))
     $dialog.AcceptButton = $btnOk
     $dialog.CancelButton = $btnCancel
 
-    # Track server process
-    $serverProcess = $null
-
-    # Fetch models from API (this will start the server)
-    $lblStatus.Text = "Starting server and loading models..."
-    $lblStatus.ForeColor = [System.Drawing.Color]::Blue
-    $dialog.Refresh()
-    
-    $models = Get-NoahModels -Config $Config -ServerProcess ([ref]$serverProcess)
-
-    if ($null -eq $models -or $models.Count -eq 0) {
-        $lblStatus.Text = "Failed to load models. Please check the API server URL."
+    # Check if we have cached models
+    if ($models.Count -eq 0) {
+        $cmbModel.Enabled = $false
+        $btnOk.Enabled = $false
+        $lblStatus.Text = "No cached models. Go to NOAH > Settings to refresh models from API."
         $lblStatus.ForeColor = [System.Drawing.Color]::Red
         
-        # Stop server if we started it
-        if ($null -ne $serverProcess) {
-            Stop-NoahServer -Process $serverProcess
-        }
-        
-        $dialogResult = $dialog.ShowDialog()
+        $dialog.ShowDialog() | Out-Null
         return $null
     }
 
@@ -273,40 +536,38 @@ function Show-NoahModelSelectionDialog {
         $cmbModel.Items.Add($displayText)
     }
 
-    if ($cmbModel.Items.Count -gt 0) {
-        $cmbModel.SelectedIndex = 0
-        $cmbModel.Enabled = $true
-        $btnOk.Enabled = $true
-        $lblStatus.Text = "Select a model and output format, then click OK. Server is running."
-        $lblStatus.ForeColor = [System.Drawing.Color]::Black
-    }
-    else {
-        $lblStatus.Text = "No models available."
-        $lblStatus.ForeColor = [System.Drawing.Color]::Red
-        
-        # Stop server if we started it
-        if ($null -ne $serverProcess) {
-            Stop-NoahServer -Process $serverProcess
+    # Select first item or previously used model
+    $selectedIdx = 0
+    if (-not [string]::IsNullOrWhiteSpace($Config.modelId)) {
+        for ($i = 0; $i -lt $models.Count; $i++) {
+            if ($models[$i].id -eq $Config.modelId) {
+                $selectedIdx = $i
+                break
+            }
         }
     }
+    $cmbModel.SelectedIndex = $selectedIdx
+
+    # Show output format info (uses config setting)
+    $outputFormat = if ($Config.output -eq "xml") { "XML" } else { "HL7" }
+    $lblStatus.Text = "Output format: $outputFormat (change in Settings)"
+    $lblStatus.ForeColor = [System.Drawing.Color]::Gray
 
     $dialogResult = $dialog.ShowDialog()
-
-    # Stop server when dialog closes (unless OK was clicked and we'll need it for POST)
-    if ($dialogResult -ne [System.Windows.Forms.DialogResult]::OK -and $null -ne $serverProcess) {
-        Stop-NoahServer -Process $serverProcess
-    }
 
     if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
         $selectedModelIndex = $cmbModel.SelectedIndex
         if ($selectedModelIndex -ge 0 -and $selectedModelIndex -lt $models.Count) {
             $selectedModel = $models[$selectedModelIndex]
-            $selectedOutput = $cmbOutput.SelectedItem.ToString().ToLowerInvariant()
+            
+            # Save selected model to config for next time
+            $Config.modelId = $selectedModel.id
+            Save-NoahConfig -Config $Config
             
             return @{
                 ModelId = $selectedModel.id
-                OutputFormat = $selectedOutput
-                ServerProcess = $serverProcess  # Keep server running for POST
+                ModelName = $selectedModel.name
+                OutputFormat = $Config.output
             }
         }
     }
@@ -583,27 +844,65 @@ function Invoke-NoahReportabilityApi {
 }
 
 function Invoke-NoahReportabilityFilterForMessage {
+    <#
+    .SYNOPSIS
+    Run NOAH reportability filter on an HL7 message using CLI
+    
+    .DESCRIPTION
+    Uses NOAHClientCentralRegistry.exe CLI to process the HL7 message.
+    Creates temp folders, writes HL7 to file, runs CLI, and returns results.
+    #>
     param(
         [Parameter(Mandatory=$true)][int]$MessageIndex,
         [Parameter(Mandatory=$true)][array]$Hl7Messages,
         [Parameter(Mandatory=$true)]$Config,
         [Parameter(Mandatory=$true)][string]$ModelId,
-        [Parameter(Mandatory=$true)][string]$OutputFormat,
-        [Parameter(Mandatory=$false)][System.Diagnostics.Process]$ServerProcess = $null
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     if ([string]::IsNullOrWhiteSpace($ModelId)) {
         return @{ Success = $false; Message = "NOAH model id not provided." }
     }
 
-    # Get the HL7 message content
-    $hl7Message = $Hl7Messages[$MessageIndex].RawContent
-    
-    # Generate message ID
-    $messageId = "message_{0}" -f ($MessageIndex + 1)
+    # Resolve exe path
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) {
+        return @{ Success = $false; Message = "NOAH exe not selected." }
+    }
 
-    # POST to API (server should already be running)
-    return Invoke-NoahReportabilityApi -Hl7Message $hl7Message -Config $Config -ModelId $ModelId -MessageId $messageId -ServerProcess $ServerProcess
+    # Get output format from config if not specified
+    $output = ([string]$OutputFormat).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
+    # Determine working root
+    $workingRoot = [string]$Config.workingRoot
+    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
+    if (-not (Test-Path -LiteralPath $workingRoot)) {
+        $workingRoot = $env:TEMP
+    }
+
+    # Create working folders
+    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
+
+    # Get the HL7 message content and write to temp file
+    $hl7Message = $Hl7Messages[$MessageIndex].RawContent
+    $inputFileName = "message_{0}.hl7" -f ($MessageIndex + 1)
+    $inputPath = Join-Path $folders.source $inputFileName
+
+    try {
+        # Write HL7 message to file - use ASCII encoding for HL7
+        Set-Content -LiteralPath $inputPath -Value $hl7Message -Encoding ASCII -NoNewline
+    }
+    catch {
+        return @{
+            Success = $false
+            Message = "Failed to write HL7 message to temp file: $($_.Exception.Message)"
+            WorkingFolder = $folders.base
+        }
+    }
+
+    # Run CLI
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $ModelId -OutputFormat $output
 }
 
 function New-MinimalHl7Message {
@@ -701,26 +1000,63 @@ function Show-CustomPayloadDialog {
 }
 
 function Invoke-NoahReportabilityFilterForCustomPayload {
+    <#
+    .SYNOPSIS
+    Run NOAH reportability filter on custom text using CLI
+    
+    .DESCRIPTION
+    Generates a minimal HL7 message with the custom text and processes via CLI.
+    #>
     param(
         [Parameter(Mandatory=$true)][string]$CustomText,
         [Parameter(Mandatory=$true)]$Config,
         [Parameter(Mandatory=$true)][string]$ModelId,
-        [Parameter(Mandatory=$true)][string]$OutputFormat,
-        [Parameter(Mandatory=$false)][System.Diagnostics.Process]$ServerProcess = $null
+        [Parameter(Mandatory=$true)][string]$OutputFormat
     )
 
     if ([string]::IsNullOrWhiteSpace($ModelId)) {
         return @{ Success = $false; Message = "NOAH model id not provided." }
     }
 
+    # Resolve exe path
+    $exePath = Resolve-NoahExePath -Config $Config
+    if (-not $exePath) {
+        return @{ Success = $false; Message = "NOAH exe not selected." }
+    }
+
+    # Get output format
+    $output = ([string]$OutputFormat).ToLowerInvariant()
+    if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
+
+    # Determine working root
+    $workingRoot = [string]$Config.workingRoot
+    if ([string]::IsNullOrWhiteSpace($workingRoot)) { $workingRoot = $env:TEMP }
+    if (-not (Test-Path -LiteralPath $workingRoot)) {
+        $workingRoot = $env:TEMP
+    }
+
+    # Create working folders
+    $folders = New-NoahWorkingFolders -OutputFormat $output -WorkingRoot $workingRoot
+
     # Generate minimal HL7 message with custom text
     $hl7Message = New-MinimalHl7Message -CustomText $CustomText
+    $inputFileName = "custom_payload_{0}.hl7" -f [guid]::NewGuid().ToString().Substring(0, 8)
+    $inputPath = Join-Path $folders.source $inputFileName
 
-    # Generate message ID
-    $messageId = "custom_payload_{0}" -f [guid]::NewGuid().ToString().Substring(0, 8)
+    try {
+        # Write HL7 message to file - use ASCII encoding for HL7
+        Set-Content -LiteralPath $inputPath -Value $hl7Message -Encoding ASCII -NoNewline
+    }
+    catch {
+        return @{
+            Success = $false
+            Message = "Failed to write HL7 message to temp file: $($_.Exception.Message)"
+            WorkingFolder = $folders.base
+        }
+    }
 
-    # POST to API (server should already be running)
-    return Invoke-NoahReportabilityApi -Hl7Message $hl7Message -Config $Config -ModelId $ModelId -MessageId $messageId -ServerProcess $ServerProcess
+    # Run CLI
+    return Invoke-NoahReportabilityFilter -InputPath $inputPath -Folders $folders -Config $Config -ExePath $exePath -ModelId $ModelId -OutputFormat $output
 }
 
 function Invoke-NoahReportabilityFilter {

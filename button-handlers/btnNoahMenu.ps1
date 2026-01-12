@@ -43,7 +43,7 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
-    # Show model selection dialog (this starts the server)
+    # Show model selection dialog (loads from cache, no server needed)
     $config = Get-NoahConfig
     $selection = Show-NoahModelSelectionDialog -Config $config
 
@@ -52,17 +52,16 @@ function Invoke-PostSelectedHL7 {
     }
 
     try {
-        $Controls['lblStatus'].Text = "NOAH reportability: running..."
+        $Controls['lblStatus'].Text = "NOAH reportability: running CLI..."
         $Controls['form'].Refresh()
 
-        # Server is already running from the dialog, pass the process handle
+        # Run CLI-based filter (no server needed)
         $result = Invoke-NoahReportabilityFilterForMessage `
             -MessageIndex $idx `
             -Hl7Messages $ScriptVars['Hl7Messages'] `
             -Config $config `
             -ModelId $selection.ModelId `
-            -OutputFormat $selection.OutputFormat `
-            -ServerProcess $selection.ServerProcess
+            -OutputFormat $selection.OutputFormat
 
         $recordLabel = "Message"
         $recordCount = $ScriptVars['Hl7Messages'].Count
@@ -78,7 +77,7 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
-    Show-NoahResult -Result $result -Controls $Controls -RecordLabel $recordLabel -RecordIndex $idx -RecordCount $recordCount
+    Show-NoahCliResult -Result $result -Controls $Controls -RecordLabel $recordLabel -RecordIndex $idx -RecordCount $recordCount
 }
 
 function Invoke-PostCustomPayload {
@@ -94,7 +93,7 @@ function Invoke-PostCustomPayload {
         return
     }
 
-    # Show model selection dialog (this starts the server)
+    # Show model selection dialog (loads from cache, no server needed)
     $config = Get-NoahConfig
     $selection = Show-NoahModelSelectionDialog -Config $config
 
@@ -103,16 +102,15 @@ function Invoke-PostCustomPayload {
     }
 
     try {
-        $Controls['lblStatus'].Text = "NOAH reportability (custom): running..."
+        $Controls['lblStatus'].Text = "NOAH reportability (custom): running CLI..."
         $Controls['form'].Refresh()
 
-        # Server is already running from the dialog, pass the process handle
+        # Run CLI-based filter (no server needed)
         $result = Invoke-NoahReportabilityFilterForCustomPayload `
             -CustomText $customText `
             -Config $config `
             -ModelId $selection.ModelId `
-            -OutputFormat $selection.OutputFormat `
-            -ServerProcess $selection.ServerProcess
+            -OutputFormat $selection.OutputFormat
 
         $recordLabel = "Custom Payload"
         $recordIndex = 0
@@ -129,10 +127,14 @@ function Invoke-PostCustomPayload {
         return
     }
 
-    Show-NoahResult -Result $result -Controls $Controls -RecordLabel $recordLabel -RecordIndex $recordIndex -RecordCount $recordCount
+    Show-NoahCliResult -Result $result -Controls $Controls -RecordLabel $recordLabel -RecordIndex $recordIndex -RecordCount $recordCount
 }
 
-function Show-NoahResult {
+function Show-NoahCliResult {
+    <#
+    .SYNOPSIS
+    Show NOAH CLI results - looks for result JSON and shows results viewer
+    #>
     param(
         [Parameter(Mandatory=$true)]$Result,
         [Parameter(Mandatory=$true)][hashtable]$Controls,
@@ -165,35 +167,68 @@ function Show-NoahResult {
     $class = $Result.Classification
     $Controls['lblStatus'].Text = "NOAH reportability: {0}" -f $class
 
-    # API-based results - show in message box
-    $title = "NOAH Reportability"
-    $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
+    # Look for the result JSON file in the reports folder
+    $reportsFolder = Join-Path $Result.WorkingFolder "reports"
+    $resultFilePath = Get-NoahResultFile -ReportsFolder $reportsFolder
 
-    if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-    elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
-    elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
-    else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+    if ($resultFilePath) {
+        # Show the results viewer window
+        Show-NoahResultsWindow `
+            -ResultFilePath $resultFilePath `
+            -WorkingFolder $Result.WorkingFolder `
+            -RecordLabel $RecordLabel `
+            -RecordIndex $RecordIndex `
+            -RecordCount $RecordCount
+    }
+    else {
+        # Fallback to simple message box if no result file found
+        $title = "NOAH Reportability"
+        $icon  = [System.Windows.Forms.MessageBoxIcon]::Information
 
-    $message = @()
-    $message += ("$RecordLabel : {0} of {1}" -f ($RecordIndex + 1), $RecordCount)
-    $message += ("Result: {0}" -f $class.ToUpperInvariant())
-    
-    if ($Result.ApiResponse) {
-        $apiResp = $Result.ApiResponse
-        if ($apiResp.impossibleCombination -eq "true") {
-            $message += "Impossible Combination: Yes"
-        }
-        if ($apiResp.metastaticReport -eq $true) {
-            $message += "Metastatic Report: Yes"
+        if ($class -eq "reportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+        elseif ($class -eq "nonreportable") { $icon = [System.Windows.Forms.MessageBoxIcon]::Information }
+        elseif ($class -eq "mixed") { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+        else { $icon = [System.Windows.Forms.MessageBoxIcon]::Warning }
+
+        $message = @()
+        $message += ("$RecordLabel : {0} of {1}" -f ($RecordIndex + 1), $RecordCount)
+        $message += ("Result: {0}" -f $class.ToUpperInvariant())
+        $message += ("Exit code: {0}" -f $Result.ExitCode)
+        $message += ""
+        $message += "Working folder:"
+        $message += $Result.WorkingFolder
+
+        $dialogResult = [System.Windows.Forms.MessageBox]::Show(
+            ($message -join "`r`n") + "`r`n`r`nOpen working folder?",
+            $title,
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            $icon
+        )
+
+        if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+            if ($Result.WorkingFolder -and (Test-Path -LiteralPath $Result.WorkingFolder)) {
+                Start-Process "explorer.exe" -ArgumentList "`"$($Result.WorkingFolder)`""
+            }
         }
     }
+}
 
-    [System.Windows.Forms.MessageBox]::Show(
-        ($message -join "`r`n"),
-        $title,
-        [System.Windows.Forms.MessageBoxButtons]::OK,
-        $icon
-    ) | Out-Null
+function Invoke-NoahSettings {
+    <#
+    .SYNOPSIS
+    Open NOAH Settings dialog
+    #>
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
+    $config = Get-NoahConfig
+    $saved = Show-NoahSettingsDialog -Config $config
+
+    if ($saved) {
+        $Controls['lblStatus'].Text = "NOAH settings saved"
+    }
 }
 
 function Get-BtnNoahMenuHandler {
@@ -206,24 +241,31 @@ function Get-BtnNoahMenuHandler {
         # Create context menu
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-        # Menu item 1: POST current HL7
+        # Menu item 1: Filter current HL7
         $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelected.Text = "POST current HL7"
+        $menuItemSelected.Text = "Filter current HL7"
         $menuItemSelected.Add_Click({
             Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
+        })
+
+        # Menu item 2: Filter custom payload
+        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemCustom.Text = "Filter custom payload"
+        $menuItemCustom.Add_Click({
+            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
         })
 
         # Separator
         $separator = New-Object System.Windows.Forms.ToolStripSeparator
 
-        # Menu item 2: POST custom payload
-        $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustom.Text = "POST custom payload"
-        $menuItemCustom.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
+        # Menu item 3: Settings
+        $menuItemSettings = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSettings.Text = "Settings..."
+        $menuItemSettings.Add_Click({
+            Invoke-NoahSettings -Controls $Controls -ScriptVars $ScriptVars
         })
 
-        $contextMenu.Items.AddRange(@($menuItemSelected, $separator, $menuItemCustom))
+        $contextMenu.Items.AddRange(@($menuItemSelected, $menuItemCustom, $separator, $menuItemSettings))
 
         # Show the context menu at the button location
         $btn = $Controls['btnNoahMenu']

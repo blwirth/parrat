@@ -556,25 +556,33 @@ $btnNoahMenu.Add_DropDownOpening({
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
     $isHl7 = ($fileType -eq 'hl7')
     
-    # POST current HL7 - only enabled if HL7 file is loaded
-    $menuItemPostCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemPostCurrent.Text = "POST current HL7"
-    $menuItemPostCurrent.Enabled = $isHl7
-    $menuItemPostCurrent.Add_Click({
+    # Filter current HL7 - only enabled if HL7 file is loaded
+    $menuItemFilterCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemFilterCurrent.Text = "Filter current HL7"
+    $menuItemFilterCurrent.Enabled = $isHl7
+    $menuItemFilterCurrent.Add_Click({
         Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
     })
-    [void]$toolStripButton.DropDownItems.Add($menuItemPostCurrent)
+    [void]$toolStripButton.DropDownItems.Add($menuItemFilterCurrent)
     
-    # Separator
-    [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-    
-    # POST custom payload - always enabled
+    # Filter custom payload - always enabled
     $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemCustom.Text = "POST custom payload"
+    $menuItemCustom.Text = "Filter custom payload"
     $menuItemCustom.Add_Click({
         Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
     })
     [void]$toolStripButton.DropDownItems.Add($menuItemCustom)
+    
+    # Separator
+    [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    
+    # Settings - always enabled
+    $menuItemSettings = New-Object System.Windows.Forms.ToolStripMenuItem
+    $menuItemSettings.Text = "Settings..."
+    $menuItemSettings.Add_Click({
+        Invoke-NoahSettings -Controls $script:Controls -ScriptVars $script:ScriptVars
+    })
+    [void]$toolStripButton.DropDownItems.Add($menuItemSettings)
 })
 
 # Set up Dedup dropdown menu
