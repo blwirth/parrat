@@ -52,6 +52,7 @@
 . "$PSScriptRoot\button-handlers\btnPrev.ps1"
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
 . "$PSScriptRoot\button-handlers\btnSplit.ps1"
+. "$PSScriptRoot\button-handlers\btnManageTables.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -151,6 +152,12 @@ $btnNoahMenu.Text = "NOAH..."
 $btnNoahMenu.DisplayStyle = 'Text'
 # NOAH stays enabled - doesn't require a file
 [void]$toolStrip.Items.Add($btnNoahMenu)
+
+$btnManageTables = New-Object System.Windows.Forms.ToolStripDropDownButton
+$btnManageTables.Text = "Manage Coding Tables..."
+$btnManageTables.DisplayStyle = 'Text'
+# Manage Tables stays enabled - doesn't require a file
+[void]$toolStrip.Items.Add($btnManageTables)
 
 [void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
@@ -330,6 +337,7 @@ $script:Controls = @{
     'btnAddPid' = $btnAddPid
     'btnFixObx' = $btnFixObx
     'btnNoahMenu' = $btnNoahMenu
+    'btnManageTables' = $btnManageTables
 }
 
 # Global controls reference for cross-file access
@@ -681,6 +689,9 @@ $menuItemConcatenateTxt.Add_Click({
     Start-ConcatenateTxt
 })
 [void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateTxt)
+
+# Set up Manage Coding Tables dropdown menu (populated dynamically on DropDownOpening)
+$btnManageTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
 # Wire up Split button
 $btnSplit.Add_Click((Get-BtnSplitHandler))
