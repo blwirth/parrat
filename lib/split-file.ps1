@@ -78,8 +78,14 @@ function Get-FileSplitBucket {
         return $SplitCount - 1
     }
     
+    # Trim and check again (in case string had only whitespace)
+    $trimmed = $LastName.Trim()
+    if ([string]::IsNullOrEmpty($trimmed)) {
+        return $SplitCount - 1
+    }
+    
     # Get first character and normalize to uppercase
-    $firstChar = $LastName.Trim().Substring(0, 1).ToUpperInvariant()
+    $firstChar = $trimmed.Substring(0, 1).ToUpperInvariant()
     
     # Check if it's a letter A-Z
     if ($firstChar -lt 'A' -or $firstChar -gt 'Z') {
@@ -152,6 +158,7 @@ function Scan-XmlFileForSplit {
         
         # Extract last names for each patient
         $patientData = New-Object System.Collections.ArrayList
+        $totalTumors = 0
         
         foreach ($patient in $patients) {
             $nameLastNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $nsMgr)
@@ -160,6 +167,7 @@ function Scan-XmlFileForSplit {
             # Count tumors in this patient
             $tumors = $patient.SelectNodes("./n:Tumor", $nsMgr)
             $tumorCount = if ($tumors) { $tumors.Count } else { 0 }
+            $totalTumors += $tumorCount
             
             [void]$patientData.Add(@{
                 LastName = $nameLast
@@ -167,10 +175,6 @@ function Scan-XmlFileForSplit {
                 PatientNode = $patient
             })
         }
-        
-        # Total tumors
-        $totalTumors = ($patientData | Measure-Object -Property TumorCount -Sum).Sum
-        if ($null -eq $totalTumors) { $totalTumors = 0 }
         
         return @{
             Success = $true
@@ -368,7 +372,7 @@ function Show-SplitOptionsDialog {
     Add-Type -AssemblyName System.Drawing
     
     $fileName = [System.IO.Path]::GetFileName($FilePath)
-    $recordLabel = if ($FileType -eq 'xml') { "patients" } else { "messages" }
+    $recordLabel = if ($FileType -eq 'xml') { "tumors" } else { "messages" }
     
     $dialog = New-Object System.Windows.Forms.Form
     $dialog.Text = "Split File by Last Name"
@@ -441,12 +445,20 @@ function Show-SplitOptionsDialog {
         $ranges = Get-AlphabetRanges -SplitCount $splitCount
         $distribution = Get-SplitDistribution -LastNames $LastNames -SplitCount $splitCount
         
-        $previewLines = @("Estimated distribution:")
+        # For XML, distribution is by patient but we show tumor totals
+        # For HL7, distribution is by message (same as total)
+        $distLabel = if ($FileType -eq 'xml') { 
+            "patients" 
+        } else { 
+            $recordLabel 
+        }
+        
+        $previewLines = @("Estimated distribution (by $distLabel):")
         for ($i = 0; $i -lt $ranges.Count; $i++) {
             $range = $ranges[$i]
             $count = $distribution[$i]
-            $pct = if ($TotalRecords -gt 0) { [math]::Round(($count / $TotalRecords) * 100, 1) } else { 0 }
-            $previewLines += ("  {0}: ~{1} $recordLabel ({2}%)" -f $range.Label, $count, $pct)
+            $pct = if ($LastNames.Count -gt 0) { [math]::Round(($count / $LastNames.Count) * 100, 1) } else { 0 }
+            $previewLines += ("  {0}: ~{1} {2} ({3}%)" -f $range.Label, $count, $distLabel, $pct)
         }
         
         # Note about malformed records
@@ -465,7 +477,7 @@ function Show-SplitOptionsDialog {
         
         if ($malformedCount -gt 0) {
             $previewLines += ""
-            $previewLines += "Note: $malformedCount $recordLabel with missing/invalid last names"
+            $previewLines += "Note: $malformedCount $distLabel with missing/invalid last names"
             $previewLines += "      will be placed in the last file ($($ranges[-1].Label))"
         }
         
@@ -802,7 +814,8 @@ function Start-SplitFile {
                 return
             }
             
-            $totalRecords = $scanResult.TotalPatients
+            # Use tumor count as the total records (that's what we're actually splitting)
+            $totalRecords = $scanResult.TotalTumors
             $lastNames = $scanResult.PatientData | ForEach-Object { $_.LastName }
         }
         
