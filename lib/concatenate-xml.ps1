@@ -608,7 +608,8 @@ function Write-ConcatenatedXml {
     param(
         [array]$HeaderInfos,
         [hashtable]$ReferenceInfo,
-        [string]$OutputPath
+        [string]$OutputPath,
+        [switch]$ShowProgress
     )
     
     # Create new XML document
@@ -627,8 +628,17 @@ function Write-ConcatenatedXml {
     $newRoot.SetAttribute("specificationVersion", "1.7")
     [void]$newDoc.AppendChild($newRoot)
     
+    $totalFiles = $HeaderInfos.Count
+    $currentFile = 0
+    
     # Concatenate all Patient elements from all files
     foreach ($item in $HeaderInfos) {
+        $currentFile++
+        
+        if ($ShowProgress -and ($currentFile % 50 -eq 0 -or $currentFile -eq $totalFiles)) {
+            Write-Progress -Activity "Concatenating XML files" -Status "Processing file $currentFile of $totalFiles" -PercentComplete (($currentFile / $totalFiles) * 100)
+        }
+        
         $xmlDoc = $item.Info.XmlDoc
         $nsMgr = $item.Info.NsMgr
         $root = $xmlDoc.DocumentElement
@@ -643,6 +653,10 @@ function Write-ConcatenatedXml {
         }
     }
     
+    if ($ShowProgress) {
+        Write-Progress -Activity "Concatenating XML files" -Status "Writing output file..." -PercentComplete 95
+    }
+    
     # Save with formatting
     $settings = New-Object System.Xml.XmlWriterSettings
     $settings.Indent = $true
@@ -652,6 +666,124 @@ function Write-ConcatenatedXml {
     $writer = [System.Xml.XmlWriter]::Create($OutputPath, $settings)
     $newDoc.Save($writer)
     $writer.Close()
+    
+    if ($ShowProgress) {
+        Write-Progress -Activity "Concatenating XML files" -Completed
+    }
+}
+
+function Write-ConcatenatedXmlFromPaths {
+    param(
+        [string[]]$FilePaths,
+        [string]$OutputPath
+    )
+    
+    # Fast streaming mode for large batches - validates headers on first file only
+    # then streams Patient nodes from each file
+    
+    $totalFiles = $FilePaths.Count
+    $currentFile = 0
+    $totalTumors = 0
+    
+    Write-Progress -Activity "Concatenating XML files" -Status "Reading first file for header info..." -PercentComplete 0
+    
+    # Get reference info from first file
+    $firstFile = $FilePaths[0]
+    $refInfo = Get-XmlHeaderInfo -FilePath $firstFile
+    if (-not $refInfo.Success) {
+        return @{
+            Success = $false
+            Error = "Failed to read first file: $($refInfo.Error)"
+        }
+    }
+    
+    # Create new XML document
+    $newDoc = New-Object System.Xml.XmlDocument
+    $newDoc.XmlResolver = $null
+    
+    # Add XML declaration
+    $newDecl = $newDoc.CreateXmlDeclaration($refInfo.XmlVersion, "UTF-8", $null)
+    [void]$newDoc.AppendChild($newDecl)
+    
+    # Create NaaccrData root element
+    $newRoot = $newDoc.CreateElement("NaaccrData", $refInfo.Xmlns)
+    $newRoot.SetAttribute("baseDictionaryUri", $refInfo.BaseDictionaryUri)
+    $newRoot.SetAttribute("recordType", $refInfo.RecordType)
+    $newRoot.SetAttribute("timeGenerated", (Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffK"))
+    $newRoot.SetAttribute("specificationVersion", "1.7")
+    [void]$newDoc.AppendChild($newRoot)
+    
+    $errors = @()
+    
+    foreach ($filePath in $FilePaths) {
+        $currentFile++
+        
+        if ($currentFile % 50 -eq 0 -or $currentFile -eq $totalFiles) {
+            Write-Progress -Activity "Concatenating XML files" -Status "Processing file $currentFile of $totalFiles" -PercentComplete (($currentFile / $totalFiles) * 90)
+        }
+        
+        try {
+            # Load XML file
+            $xml = New-Object System.Xml.XmlDocument
+            $xml.XmlResolver = $null
+            $xml.Load($filePath)
+            
+            $root = $xml.DocumentElement
+            if ($root -eq $null -or $root.LocalName -ne "NaaccrData") {
+                $errors += "Skipped '$([System.IO.Path]::GetFileName($filePath))': Not a valid NAACCR XML"
+                continue
+            }
+            
+            # Quick header validation (skip detailed validation for speed)
+            $fileRecordType = $root.GetAttribute("recordType")
+            if ($fileRecordType -ne $refInfo.RecordType) {
+                $errors += "Skipped '$([System.IO.Path]::GetFileName($filePath))': recordType mismatch ($fileRecordType vs $($refInfo.RecordType))"
+                continue
+            }
+            
+            # Set up namespace manager
+            $xmlns = $root.NamespaceURI
+            $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+            $nsMgr.AddNamespace("n", $xmlns)
+            
+            # Get all Patient nodes from this file
+            $patients = $root.SelectNodes("./n:Patient", $nsMgr)
+            
+            foreach ($patient in $patients) {
+                $importedPatient = $newDoc.ImportNode($patient, $true)
+                [void]$newRoot.AppendChild($importedPatient)
+                
+                # Count tumors
+                $tumors = $patient.SelectNodes("./n:Tumor", $nsMgr)
+                $totalTumors += $tumors.Count
+            }
+        }
+        catch {
+            $errors += "Error processing '$([System.IO.Path]::GetFileName($filePath))': $($_.Exception.Message)"
+        }
+    }
+    
+    Write-Progress -Activity "Concatenating XML files" -Status "Writing output file..." -PercentComplete 95
+    
+    # Save with formatting
+    $settings = New-Object System.Xml.XmlWriterSettings
+    $settings.Indent = $true
+    $settings.NewLineChars = "`r`n"
+    $settings.NewLineHandling = "Replace"
+    
+    $writer = [System.Xml.XmlWriter]::Create($OutputPath, $settings)
+    $newDoc.Save($writer)
+    $writer.Close()
+    
+    Write-Progress -Activity "Concatenating XML files" -Completed
+    
+    return @{
+        Success = $true
+        FilesProcessed = $currentFile
+        TotalTumors = $totalTumors
+        Errors = $errors
+        OutputPath = $OutputPath
+    }
 }
 
 function Start-ConcatenateXml {
@@ -672,6 +804,152 @@ function Start-ConcatenateXml {
             return
         }
         
+        # For large batches, offer fast mode to skip preview
+        if ($ofd.FileNames.Count -gt 200) {
+            $result = [System.Windows.Forms.MessageBox]::Show(
+                "You selected $($ofd.FileNames.Count) files.`n`nLoading and validating all XML files for preview may be slow.`n`nWould you like to use Fast Mode?`n`n• Yes = Skip preview, concatenate directly (recommended for large batches)`n• No = Load preview with full validation (may take a while)`n• Cancel = Go back",
+                "Large Batch Detected",
+                [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
+                [System.Windows.Forms.MessageBoxIcon]::Question
+            )
+            
+            if ($result -eq [System.Windows.Forms.DialogResult]::Cancel) {
+                return
+            }
+            
+            if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+                Start-FastConcatenateXml -FilePaths $ofd.FileNames
+                return
+            }
+        }
+        
         Show-ConcatenationPreview -XmlFiles $ofd.FileNames
+    }
+}
+
+function Start-FastConcatenateXml {
+    param(
+        [string[]]$FilePaths
+    )
+    
+    # Get output directory
+    $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $folderDialog.Description = "Select output directory for concatenated XML"
+    
+    if ($folderDialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+    
+    $outputDir = $folderDialog.SelectedPath
+    
+    # Get output filename
+    $inputForm = New-Object System.Windows.Forms.Form
+    $inputForm.Text = "Enter Output Filename"
+    $inputForm.Width = 400
+    $inputForm.Height = 150
+    $inputForm.StartPosition = "CenterScreen"
+    
+    $lblPrompt = New-Object System.Windows.Forms.Label
+    $lblPrompt.Location = New-Object System.Drawing.Point(10, 10)
+    $lblPrompt.Size = New-Object System.Drawing.Size(370, 40)
+    $lblPrompt.Text = "Enter the output filename (without .xml extension):"
+    
+    $txtFilename = New-Object System.Windows.Forms.TextBox
+    $txtFilename.Location = New-Object System.Drawing.Point(10, 50)
+    $txtFilename.Width = 370
+    $txtFilename.Text = "concatenated"
+    
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Text = "OK"
+    $btnOk.Location = New-Object System.Drawing.Point(200, 80)
+    $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Location = New-Object System.Drawing.Point(280, 80)
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    
+    $inputForm.Controls.AddRange(@($lblPrompt, $txtFilename, $btnOk, $btnCancel))
+    $inputForm.AcceptButton = $btnOk
+    $inputForm.CancelButton = $btnCancel
+    
+    $dialogResult = $inputForm.ShowDialog()
+    
+    if ($dialogResult -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+    
+    $filename = $txtFilename.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($filename)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Filename cannot be empty.",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+        return
+    }
+    
+    # Ensure .xml extension
+    if (-not $filename.EndsWith(".xml", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $filename += ".xml"
+    }
+    
+    $outputPath = [System.IO.Path]::Combine($outputDir, $filename)
+    
+    # Check if file exists
+    if (Test-Path $outputPath) {
+        $overwrite = [System.Windows.Forms.MessageBox]::Show(
+            "File already exists:`n$outputPath`n`nOverwrite?",
+            "File Exists",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Question
+        )
+        
+        if ($overwrite -ne [System.Windows.Forms.DialogResult]::Yes) {
+            return
+        }
+    }
+    
+    # Run concatenation with progress
+    try {
+        $result = Write-ConcatenatedXmlFromPaths -FilePaths $FilePaths -OutputPath $outputPath
+        
+        if ($result.Success) {
+            $message = "Concatenation complete!`n`nFiles processed: $($result.FilesProcessed)`nTotal tumors: $($result.TotalTumors)`nOutput: $outputPath"
+            
+            if ($result.Errors.Count -gt 0) {
+                $message += "`n`nWarnings ($($result.Errors.Count) files skipped):`n"
+                # Show first 5 errors max
+                $errorsToShow = $result.Errors | Select-Object -First 5
+                $message += ($errorsToShow -join "`n")
+                if ($result.Errors.Count -gt 5) {
+                    $message += "`n... and $($result.Errors.Count - 5) more"
+                }
+            }
+            
+            [System.Windows.Forms.MessageBox]::Show(
+                $message,
+                "Success",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+        }
+        else {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Error during concatenation: $($result.Error)",
+                "Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+        }
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Error during concatenation: $($_.Exception.Message)",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
     }
 }

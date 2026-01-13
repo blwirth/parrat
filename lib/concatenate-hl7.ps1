@@ -491,25 +491,119 @@ function Show-Hl7ConcatenationPreview {
 function Write-ConcatenatedHl7 {
     param(
         [array]$FileInfos,
+        [string]$OutputPath,
+        [switch]$ShowProgress
+    )
+    
+    # Use StreamWriter for efficient file writing - avoids O(n²) string concatenation
+    $stream = $null
+    try {
+        $stream = New-Object System.IO.StreamWriter($OutputPath, $false, [System.Text.Encoding]::ASCII)
+        $needsNewline = $false
+        $totalFiles = $FileInfos.Count
+        $currentFile = 0
+        
+        foreach ($item in $FileInfos) {
+            $currentFile++
+            
+            if ($ShowProgress -and ($currentFile % 100 -eq 0 -or $currentFile -eq $totalFiles)) {
+                Write-Progress -Activity "Concatenating HL7 files" -Status "Processing file $currentFile of $totalFiles" -PercentComplete (($currentFile / $totalFiles) * 100)
+            }
+            
+            # Support both cached content and streaming from file path
+            $content = if ($null -ne $item.Info -and $null -ne $item.Info.Content) {
+                $item.Info.Content
+            } elseif ($null -ne $item.FilePath -and (Test-Path $item.FilePath)) {
+                Get-Content -Path $item.FilePath -Raw -Encoding ASCII
+            } else {
+                $null
+            }
+            
+            if ([string]::IsNullOrEmpty($content)) { continue }
+            
+            # Trim trailing whitespace from content
+            $trimmedContent = $content.TrimEnd("`r", "`n")
+            if ([string]::IsNullOrEmpty($trimmedContent)) { continue }
+            
+            # Add newline separator between files to prevent MSH| from concatenating onto previous OBX
+            if ($needsNewline) {
+                $stream.Write("`r`n")
+            }
+            
+            $stream.Write($trimmedContent)
+            $needsNewline = $true
+        }
+        
+        if ($ShowProgress) {
+            Write-Progress -Activity "Concatenating HL7 files" -Completed
+        }
+    }
+    finally {
+        if ($null -ne $stream) {
+            $stream.Close()
+            $stream.Dispose()
+        }
+    }
+}
+
+function Write-ConcatenatedHl7FromPaths {
+    param(
+        [string[]]$FilePaths,
         [string]$OutputPath
     )
     
-    $combinedContent = ""
-    
-    foreach ($item in $FileInfos) {
-        $content = $item.Info.Content
+    # Ultra-fast streaming mode - reads directly from files, no preview/caching
+    # Use for very large batches (1000+ files)
+    $stream = $null
+    try {
+        $stream = New-Object System.IO.StreamWriter($OutputPath, $false, [System.Text.Encoding]::ASCII)
+        $needsNewline = $false
+        $totalFiles = $FilePaths.Count
+        $currentFile = 0
         
-        # Ensure previous content ends with a newline before appending next file
-        # This prevents MSH| headers from being concatenated onto previous OBX lines
-        if ($combinedContent.Length -gt 0 -and -not $combinedContent.EndsWith("`n") -and -not $combinedContent.EndsWith("`r")) {
-            $combinedContent += "`r`n"
+        foreach ($filePath in $FilePaths) {
+            $currentFile++
+            
+            if ($currentFile % 100 -eq 0 -or $currentFile -eq $totalFiles) {
+                Write-Progress -Activity "Concatenating HL7 files" -Status "Processing file $currentFile of $totalFiles" -PercentComplete (($currentFile / $totalFiles) * 100)
+            }
+            
+            if (-not (Test-Path $filePath)) { continue }
+            
+            $content = Get-Content -Path $filePath -Raw -Encoding ASCII
+            if ([string]::IsNullOrEmpty($content)) { continue }
+            
+            $trimmedContent = $content.TrimEnd("`r", "`n")
+            if ([string]::IsNullOrEmpty($trimmedContent)) { continue }
+            
+            if ($needsNewline) {
+                $stream.Write("`r`n")
+            }
+            
+            $stream.Write($trimmedContent)
+            $needsNewline = $true
         }
         
-        $combinedContent += $content
+        Write-Progress -Activity "Concatenating HL7 files" -Completed
+        
+        return @{
+            Success = $true
+            FilesProcessed = $currentFile
+            OutputPath = $OutputPath
+        }
     }
-    
-    # Write with ASCII encoding and no trailing newline
-    Set-Content -Path $OutputPath -Value $combinedContent -Encoding ASCII -NoNewline
+    catch {
+        return @{
+            Success = $false
+            Error = $_.Exception.Message
+        }
+    }
+    finally {
+        if ($null -ne $stream) {
+            $stream.Close()
+            $stream.Dispose()
+        }
+    }
 }
 
 function Start-ConcatenateHl7 {
@@ -530,6 +624,140 @@ function Start-ConcatenateHl7 {
             return
         }
         
+        # For large batches, offer fast mode to skip preview
+        if ($ofd.FileNames.Count -gt 500) {
+            $result = [System.Windows.Forms.MessageBox]::Show(
+                "You selected $($ofd.FileNames.Count) files.`n`nLoading all files for preview may be slow.`n`nWould you like to use Fast Mode?`n`n• Yes = Skip preview, concatenate directly (recommended for large batches)`n• No = Load preview (may take a while)`n• Cancel = Go back",
+                "Large Batch Detected",
+                [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
+                [System.Windows.Forms.MessageBoxIcon]::Question
+            )
+            
+            if ($result -eq [System.Windows.Forms.DialogResult]::Cancel) {
+                return
+            }
+            
+            if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+                Start-FastConcatenateHl7 -FilePaths $ofd.FileNames
+                return
+            }
+        }
+        
         Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames
+    }
+}
+
+function Start-FastConcatenateHl7 {
+    param(
+        [string[]]$FilePaths
+    )
+    
+    # Get output directory
+    $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $folderDialog.Description = "Select output directory for concatenated HL7 file"
+    
+    if ($folderDialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+    
+    $outputDir = $folderDialog.SelectedPath
+    
+    # Get output filename
+    $inputForm = New-Object System.Windows.Forms.Form
+    $inputForm.Text = "Enter Output Filename"
+    $inputForm.Width = 400
+    $inputForm.Height = 150
+    $inputForm.StartPosition = "CenterScreen"
+    
+    $lblPrompt = New-Object System.Windows.Forms.Label
+    $lblPrompt.Location = New-Object System.Drawing.Point(10, 10)
+    $lblPrompt.Size = New-Object System.Drawing.Size(370, 40)
+    $lblPrompt.Text = "Enter the output filename (without .hl7 extension):"
+    
+    $txtFilename = New-Object System.Windows.Forms.TextBox
+    $txtFilename.Location = New-Object System.Drawing.Point(10, 50)
+    $txtFilename.Width = 370
+    $txtFilename.Text = "concatenated"
+    
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Text = "OK"
+    $btnOk.Location = New-Object System.Drawing.Point(200, 80)
+    $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Location = New-Object System.Drawing.Point(280, 80)
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    
+    $inputForm.Controls.AddRange(@($lblPrompt, $txtFilename, $btnOk, $btnCancel))
+    $inputForm.AcceptButton = $btnOk
+    $inputForm.CancelButton = $btnCancel
+    
+    $dialogResult = $inputForm.ShowDialog()
+    
+    if ($dialogResult -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+    
+    $filename = $txtFilename.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($filename)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Filename cannot be empty.",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+        return
+    }
+    
+    # Ensure .hl7 extension
+    if (-not $filename.EndsWith(".hl7", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $filename += ".hl7"
+    }
+    
+    $outputPath = [System.IO.Path]::Combine($outputDir, $filename)
+    
+    # Check if file exists
+    if (Test-Path $outputPath) {
+        $overwrite = [System.Windows.Forms.MessageBox]::Show(
+            "File already exists:`n$outputPath`n`nOverwrite?",
+            "File Exists",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Question
+        )
+        
+        if ($overwrite -ne [System.Windows.Forms.DialogResult]::Yes) {
+            return
+        }
+    }
+    
+    # Run concatenation with progress
+    try {
+        $result = Write-ConcatenatedHl7FromPaths -FilePaths $FilePaths -OutputPath $outputPath
+        
+        if ($result.Success) {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Concatenation complete!`n`nFiles processed: $($result.FilesProcessed)`nOutput: $outputPath",
+                "Success",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+        }
+        else {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Error during concatenation: $($result.Error)",
+                "Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+        }
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Error during concatenation: $($_.Exception.Message)",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
     }
 }
