@@ -499,7 +499,12 @@ function Write-ConcatenatedHl7 {
     foreach ($item in $FileInfos) {
         $content = $item.Info.Content
         
-        # Just append the content directly (no extra newlines)
+        # Ensure previous content ends with a newline before appending next file
+        # This prevents MSH| headers from being concatenated onto previous OBX lines
+        if ($combinedContent.Length -gt 0 -and -not $combinedContent.EndsWith("`n") -and -not $combinedContent.EndsWith("`r")) {
+            $combinedContent += "`r`n"
+        }
+        
         $combinedContent += $content
     }
     
