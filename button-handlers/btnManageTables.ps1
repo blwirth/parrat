@@ -1,6 +1,12 @@
 # btnManageTables.ps1
 # Coding Table Editor - Manage Laterality, Topography, and Skin Topography lookup tables
 
+# Compute dictionary paths at load time (when dot-sourced from main.ps1)
+$script:DictDir = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries"
+$script:LateralityFilePath = Join-Path $script:DictDir "Laterality.json"
+$script:TopographyFilePath = Join-Path $script:DictDir "Topography.jsonl"
+$script:SkinTopoFilePath = Join-Path $script:DictDir "TopographyMelanoma.jsonl"
+
 function Read-CodingTableFile {
     <#
     .SYNOPSIS
@@ -553,42 +559,35 @@ function Get-BtnManageTablesHandler {
         [hashtable]$Controls,
         [hashtable]$ScriptVars
     )
-    
+
     return {
         param($toolStripButton, $e)
         
         # Clear existing items
         $toolStripButton.DropDownItems.Clear()
         
-        # Determine dictionary folder path
-        $scriptRoot = $PSScriptRoot
-        $dictDir = Join-Path (Split-Path $scriptRoot -Parent) "data\dictionaries"
-        
         # Laterality
         $menuItemLaterality = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemLaterality.Text = "Laterality"
-        $lateralityPath = Join-Path $dictDir "Laterality.json"
         $menuItemLaterality.Add_Click({
-            Show-CodingTableEditor -FilePath $lateralityPath -TableType 'laterality' -Title "Laterality"
-        }.GetNewClosure())
+            Show-CodingTableEditor -FilePath $script:LateralityFilePath -TableType 'laterality' -Title "Laterality"
+        })
         [void]$toolStripButton.DropDownItems.Add($menuItemLaterality)
         
         # Topography
         $menuItemTopography = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemTopography.Text = "Topography"
-        $topographyPath = Join-Path $dictDir "Topography.jsonl"
         $menuItemTopography.Add_Click({
-            Show-CodingTableEditor -FilePath $topographyPath -TableType 'topography' -Title "Topography"
-        }.GetNewClosure())
+            Show-CodingTableEditor -FilePath $script:TopographyFilePath -TableType 'topography' -Title "Topography"
+        })
         [void]$toolStripButton.DropDownItems.Add($menuItemTopography)
         
         # Skin Topography (Melanoma)
         $menuItemSkinTopo = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemSkinTopo.Text = "Skin Topography"
-        $skinTopoPath = Join-Path $dictDir "TopographyMelanoma.jsonl"
         $menuItemSkinTopo.Add_Click({
-            Show-CodingTableEditor -FilePath $skinTopoPath -TableType 'topography' -Title "Skin Topography"
-        }.GetNewClosure())
+            Show-CodingTableEditor -FilePath $script:SkinTopoFilePath -TableType 'topography' -Title "Skin Topography"
+        })
         [void]$toolStripButton.DropDownItems.Add($menuItemSkinTopo)
     }
 }
