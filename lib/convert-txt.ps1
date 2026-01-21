@@ -51,7 +51,7 @@ function Convert-DateToHL7 {
     }
 }
 
-function Parse-PatientLine {
+function Get-PatientLine {
     param([string]$Line)
     
     $result = @{
@@ -93,7 +93,7 @@ function Parse-PatientLine {
     return $result
 }
 
-function Parse-SpecimenDate {
+function Get-SpecimenDate {
     param([string]$Line)
     
     if ($Line -match 'COLL:\s*(\d{2}/\d{2}/\d{2,4})') {
@@ -102,7 +102,7 @@ function Parse-SpecimenDate {
     return ''
 }
 
-function Parse-PathReportID {
+function Get-PathReportID {
     param([string]$Line)
     
     if ($Line -match 'SPEC\s*[:#]\s*(?:.*?:)?(\S+)\s+COLL:') {
@@ -111,7 +111,7 @@ function Parse-PathReportID {
     return ''
 }
 
-function Build-MSHSegment {
+function New-MSHSegment {
     param(
         [int]$CaseNumber,
         [string]$CLIA,
@@ -121,7 +121,7 @@ function Build-MSHSegment {
     return "MSH|^~\&|E-Path Case=$CaseNumber|$CLIA|E-Path|NHSCR|$TransmitDate||ORU^R01^ORU_R01||P|2.5.1|||||USA||ENG||VOL_V_40_ORU_R01^NAACCR_CP"
 }
 
-function Build-PIDSegment {
+function New-PIDSegment {
     param(
         [hashtable]$PatientData,
         [string]$BirthDateHL7
@@ -136,7 +136,7 @@ function Build-PIDSegment {
     return "PID|1||$mrn^^^^MR^~^^^^SS||$last^$first^$middle||$BirthDateHL7|$sex|||Unknown^^Unknown^ZZ^99999|||"
 }
 
-function Build-OBRSegment {
+function New-OBRSegment {
     param(
         [string]$PathReportID,
         [string]$SpecimenDateHL7
@@ -147,7 +147,7 @@ function Build-OBRSegment {
     return "OBR|1||$PathReportID||||$SpecimenDateHL7||||||||||||||||||F||||||||"
 }
 
-function Build-OBXSegment {
+function New-OBXSegment {
     param(
         [int]$LineNumber,
         [string]$TextLine
@@ -157,103 +157,81 @@ function Build-OBXSegment {
 }
 
 #region SJH-Specific Helper Functions
-function Parse-SJH-MinDateFromLine {
-    param([string]$Line)
+#region SJH Parsing Helpers
+
+function Get-SJHDateFromString {
+    # Parse a date string like "1/1/2024" or "01/01/2024"
+    param([string]$DateString)
     
-    # Match M/D/YY, MM/DD/YY, M/D/YYYY, MM/DD/YYYY
-    $dateRe = [regex]'\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b'
-    $dateMatches = $dateRe.Matches($Line)
-    if ($dateMatches.Count -eq 0) { return $null }
+    if ([string]::IsNullOrWhiteSpace($DateString)) { return $null }
     
-    $dates = foreach ($m in $dateMatches) {
-        $s = $m.Groups[1].Value
-        $dt = $null
-        # Try common parse formats
-        $formats = @('M/d/yy','MM/dd/yy','M/d/yyyy','MM/dd/yyyy')
-        if ([DateTime]::TryParseExact($s, $formats, $null, [Globalization.DateTimeStyles]::None, [ref]$dt)) {
-            $dt
-        } else {
-            # Fall back
-            if ([DateTime]::TryParse($s, [ref]$dt)) { $dt }
-        }
+    try {
+        return [DateTime]::Parse($DateString)
+    } catch {
+        return $null
     }
-    
-    $dates = $dates | Where-Object { $_ -is [DateTime] }
-    if (-not $dates) { return $null }
-    return ($dates | Sort-Object | Select-Object -First 1)
 }
 
-function Parse-SJH-PatientLine {
+function Get-SJHCaseLine {
+    # Parse the case header line: NC24-1 Patient JOHN, DOE Age: 45 Sex: M Date Taken: 1/1/2024 ...
     param([string]$Line)
     
     $result = @{
+        PathReportID = ''
         NameLast = ''
         NameFirst = ''
         NameMiddle = ''
-        Sex = ''
         Age = $null
+        Sex = ''
+        MRN = ''
+        SpecimenDate = $null
     }
     
-    # Name pattern: Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?
-    $nameRe = [regex]'Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?(?=\s*(?:Age:|\d{4,7}\b|MD:|MRN:|$))'
-    $m = $nameRe.Match($Line)
-    if ($m.Success) {
-        $result.NameLast = $m.Groups[1].Value
-        $result.NameFirst = $m.Groups[2].Value
-        if ($m.Groups.Count -ge 4 -and $m.Groups[3].Value) {
-            $result.NameMiddle = $m.Groups[3].Value
+    # Path Report ID: NC24-1, NH24-123, NS25-45, etc.
+    if ($Line -match '\b(N[A-Z]\d{2}-\d+)\b') {
+        $result.PathReportID = $matches[1]
+    }
+    
+    # Patient name: "Patient LAST, FIRST" or "Patient LAST, FIRST MIDDLE" — stop before "Age:" or "Sex:"
+    if ($Line -match 'Patient\s+([A-Za-z\-]+),\s*([A-Za-z\-]+)(?:\s+((?!Age\b|Sex\b)[A-Za-z\-]+))?') {
+        $result.NameLast = $matches[1]
+        $result.NameFirst = $matches[2]
+        if ($matches[3]) {
+            $result.NameMiddle = $matches[3]
         }
     }
     
-    # Sex pattern: Sex:\s*([MF])\b
-    $sexRe = [regex]'Sex:\s*([MF])\b'
-    $m = $sexRe.Match($Line)
-    if ($m.Success) {
-        $result.Sex = $m.Groups[1].Value
+    # Age
+    if ($Line -match 'Age:\s*(\d+)') {
+        $result.Age = [int]$matches[1]
     }
     
-    # Age pattern: Age:\s*(\d{1,3})\b
-    $ageRe = [regex]'Age:\s*(\d{1,3})\b'
-    $m = $ageRe.Match($Line)
-    if ($m.Success) {
-        $result.Age = [int]$m.Groups[1].Value
+    # Sex
+    if ($Line -match 'Sex:\s*([MFU])') {
+        $result.Sex = $matches[1]
+    }
+    
+    # MRN
+    if ($Line -match 'MRN:\s*(\d+)') {
+        $result.MRN = $matches[1]
+    }
+    
+    # Date Taken (specimen date)
+    if ($Line -match 'Date Taken:\s*(\d{1,2}/\d{1,2}/\d{2,4})') {
+        $result.SpecimenDate = Get-SJHDateFromString $matches[1]
     }
     
     return $result
 }
 
-function Parse-SJH-MRN {
-    param([string]$Line)
-    
-    # MRN pattern: (?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))
-    $mrnRe = [regex]'(?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))'
-    $m = $mrnRe.Match($Line)
-    if ($m.Success) {
-        return $m.Groups[1].Value
-    }
-    return ''
-}
-
-function Parse-SJH-PathReportID {
-    param([string]$Line)
-    
-    # Path report ID pattern: \b(NH|NS|NC)2[0-9]-\d+\b
-    $pathIdRe = [regex]'\b(NH|NS|NC)2[0-9]-\d+\b'
-    $m = $pathIdRe.Match($Line)
-    if ($m.Success) {
-        return $m.Value
-    }
-    return ''
-}
-
-function Derive-SJH-DOB {
+function Get-SJHDOB {
     param(
-        [int]$Age,
+        [object]$Age,
         [DateTime]$SpecimenDate
     )
     
     if ($Age -and $SpecimenDate) {
-        $dobYear = $SpecimenDate.Year - $Age
+        $dobYear = $SpecimenDate.Year - [int]$Age
         if ($dobYear -ge 1800 -and $dobYear -le 2200) {
             return ('{0}9999' -f $dobYear.ToString('0000'))
         }
@@ -261,7 +239,7 @@ function Derive-SJH-DOB {
     return $script:UnknownDate
 }
 
-function Normalize-SJH-Whitespace {
+function Format-SJHWhitespace {
     param([string]$s)
     if ($null -eq $s) { return '' }
     return ([regex]::Replace($s.Trim(), '\s+', ' '))
@@ -271,7 +249,7 @@ function Normalize-SJH-Whitespace {
 #endregion
 
 #region Parsing Functions
-function Parse-Standard-Cases {
+function Get-StandardCases {
     param(
         [string]$InputPath,
         [string]$FacilityName
@@ -343,18 +321,18 @@ function Parse-Standard-Cases {
         
         # Parse patient information from PATIENT: line
         if ($line -match '^PATIENT:') {
-            $patientInfo = Parse-PatientLine $line
+            $patientInfo = Get-PatientLine $line
             $currentCase.PatientData = $patientInfo
         }
         
         # Parse specimen date from any line containing it
-        $specimenDate = Parse-SpecimenDate $line
+        $specimenDate = Get-SpecimenDate $line
         if ($specimenDate) {
             $currentCase.SpecimenDate = $specimenDate
         }
         
         # Parse path report ID from any line containing it
-        $pathReportID = Parse-PathReportID $line
+        $pathReportID = Get-PathReportID $line
         if ($pathReportID) {
             $currentCase.PathReportID = $pathReportID
         }
@@ -371,19 +349,14 @@ function Parse-Standard-Cases {
     return $cases
 }
 
-function Parse-SJH-Cases {
+function Get-SJHCases {
     param([string]$InputPath)
     
-    # Read and preprocess input file
+    # Read input file
     $rawText = [System.IO.File]::ReadAllText($InputPath, [System.Text.Encoding]::Default)
     
-    # Normalize case boundaries by inserting newlines before embedded IDs
-    $yy = ([DateTime]::Now.Year % 100).ToString('00')
-    $boundaryPattern = "(?<!\r?\n)(?=N[A-Z]($yy|22|23|24)-\d{1,6}\s+(Patient:|MRN:))"
-    $normalized = [regex]::Replace($rawText, $boundaryPattern, "`r`n")
-    
     # Split to lines
-    $lines = $normalized -split "\r?\n"
+    $lines = $rawText -split "\r?\n"
     
     # Skip line prefixes
     $skipPrefixes = @(
@@ -393,18 +366,16 @@ function Parse-SJH-Cases {
         'Part Type:'
     )
     
-    # Case detection regex
-    $caseStartRe = [regex]'^\s*(?:NH|NS|NC)2[0-9]-\d+'
+    # Case start pattern: NC24-1, NH24-123, NS25-45, etc. at start of line
+    $caseStartRe = [regex]'^N[A-Z]\d{2}-\d+'
     
     # Storage for parsed cases
     $cases = [System.Collections.ArrayList]::new()
     $caseNumber = 0
-    
-    # Current case state
     $currentCase = $null
     
     foreach ($line0 in $lines) {
-        $line = Normalize-SJH-Whitespace $line0
+        $line = Format-SJHWhitespace $line0
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         
         # Skip unwanted lines
@@ -417,68 +388,43 @@ function Parse-SJH-Cases {
         }
         if ($skip) { continue }
         
-        # Check for case boundary
+        # Check for case boundary (line starts with path report ID)
         if ($caseStartRe.IsMatch($line)) {
             # Save previous case if exists
             if ($currentCase) {
                 [void]$cases.Add($currentCase)
             }
             
+            # Parse the case header line
+            $caseInfo = Get-SJHCaseLine $line
+            
             # Start new case
             $caseNumber++
             $currentCase = @{
                 CaseNumber = $caseNumber
                 PatientData = @{
-                    NameLast = ''
-                    NameFirst = ''
-                    NameMiddle = ''
+                    NameLast = $caseInfo.NameLast
+                    NameFirst = $caseInfo.NameFirst
+                    NameMiddle = $caseInfo.NameMiddle
                     BirthDate = ''
-                    Sex = ''
-                    MedicalRecordNumber = ''
+                    Sex = $caseInfo.Sex
+                    MedicalRecordNumber = $caseInfo.MRN
                 }
-                SpecimenDate = ''
-                PathReportID = ''
+                SpecimenDate = if ($caseInfo.SpecimenDate) { $caseInfo.SpecimenDate.ToString('MM/dd/yyyy') } else { '' }
+                PathReportID = $caseInfo.PathReportID
                 TextLines = [System.Collections.ArrayList]::new()
-                Age = $null
-                SpecimenDateObj = $null
+                Age = $caseInfo.Age
+                SpecimenDateObj = $caseInfo.SpecimenDate
+            }
+            
+            # Derive DOB from Age and SpecimenDate
+            if ($currentCase.Age -and $currentCase.SpecimenDateObj) {
+                $currentCase.PatientData.BirthDate = Get-SJHDOB -Age $currentCase.Age -SpecimenDate $currentCase.SpecimenDateObj
             }
         }
         
         if ($null -eq $currentCase) {
             continue
-        }
-        
-        # Parse patient name, sex, age from line
-        $patientInfo = Parse-SJH-PatientLine $line
-        if ($patientInfo.NameLast) {
-            $currentCase.PatientData.NameLast = $patientInfo.NameLast
-            $currentCase.PatientData.NameFirst = $patientInfo.NameFirst
-            $currentCase.PatientData.NameMiddle = $patientInfo.NameMiddle
-        }
-        if ($patientInfo.Sex) {
-            $currentCase.PatientData.Sex = $patientInfo.Sex
-        }
-        if ($patientInfo.Age) {
-            $currentCase.Age = $patientInfo.Age
-        }
-        
-        # Parse MRN
-        $mrn = Parse-SJH-MRN $line
-        if ($mrn) {
-            $currentCase.PatientData.MedicalRecordNumber = $mrn
-        }
-        
-        # Parse path report ID
-        $pathID = Parse-SJH-PathReportID $line
-        if ($pathID) {
-            $currentCase.PathReportID = $pathID
-        }
-        
-        # Parse specimen date (earliest date on line)
-        $minDate = Parse-SJH-MinDateFromLine $line
-        if ($minDate) {
-            $currentCase.SpecimenDateObj = $minDate
-            $currentCase.SpecimenDate = $minDate.ToString('MM/dd/yyyy')
         }
         
         # Add line to text
@@ -488,13 +434,6 @@ function Parse-SJH-Cases {
     # Save final case
     if ($currentCase) {
         [void]$cases.Add($currentCase)
-    }
-    
-    # Derive DOB for each case
-    foreach ($case in $cases) {
-        if ($case.Age -and $case.SpecimenDateObj) {
-            $case.PatientData.BirthDate = Derive-SJH-DOB -Age $case.Age -SpecimenDate $case.SpecimenDateObj
-        }
     }
     
     return $cases
@@ -550,10 +489,10 @@ function Convert-PathologyTextToHL7 {
     # Branch based on facility type
     if ($FacilityName -eq 'SJH') {
         # SJH-specific parsing logic
-        $cases = Parse-SJH-Cases -InputPath $InputPath
+        $cases = Get-SJHCases -InputPath $InputPath
     } else {
         # Standard facility parsing logic (Parkland, Portsmouth, Frisbie)
-        $cases = Parse-Standard-Cases -InputPath $InputPath -FacilityName $FacilityName
+        $cases = Get-StandardCases -InputPath $InputPath -FacilityName $FacilityName
     }
     
     # Preview mode - return parsed data
@@ -584,9 +523,9 @@ function Convert-PathologyTextToHL7 {
         }
         
         # Build segments
-        $mshSegment = Build-MSHSegment -CaseNumber $case.CaseNumber -CLIA $facilityConfig.CLIA
-        $pidSegment = Build-PIDSegment -PatientData $case.PatientData -BirthDateHL7 $birthDateHL7
-        $obrSegment = Build-OBRSegment -PathReportID $case.PathReportID -SpecimenDateHL7 $specimenDateHL7
+        $mshSegment = New-MSHSegment -CaseNumber $case.CaseNumber -CLIA $facilityConfig.CLIA
+        $pidSegment = New-PIDSegment -PatientData $case.PatientData -BirthDateHL7 $birthDateHL7
+        $obrSegment = New-OBRSegment -PathReportID $case.PathReportID -SpecimenDateHL7 $specimenDateHL7
         
         [void]$hl7Lines.Add($mshSegment)
         [void]$hl7Lines.Add($pidSegment)
@@ -597,14 +536,14 @@ function Convert-PathologyTextToHL7 {
         if ($FacilityName -eq 'SJH') {
             if ($case.TextLines.Count -gt 1) {
                 for ($i = 1; $i -lt $case.TextLines.Count; $i++) {
-                    $obxSegment = Build-OBXSegment -LineNumber ($i) -TextLine $case.TextLines[$i]
+                    $obxSegment = New-OBXSegment -LineNumber ($i) -TextLine $case.TextLines[$i]
                     [void]$hl7Lines.Add($obxSegment)
                 }
             }
         } else {
             # Standard facilities: include all OBX segments
             for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
-                $obxSegment = Build-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
+                $obxSegment = New-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
                 [void]$hl7Lines.Add($obxSegment)
             }
         }

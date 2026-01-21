@@ -325,33 +325,49 @@ Facility: $($cmbFacility.SelectedItem)
                     $txtOriginalText.Text = $case.TextLines -join "`r`n"
                     
                     # Generate HL7 preview for this case
-                    $birthDateHL7 = if ($case.PatientData.BirthDate) {
-                        try {
-                            if ($case.PatientData.BirthDate -match '^\d{2}/\d{2}/\d{2}$') {
-                                [DateTime]::ParseExact($case.PatientData.BirthDate, 'MM/dd/yy', $null).ToString('yyyyMMdd')
-                            } else {
-                                [DateTime]::ParseExact($case.PatientData.BirthDate, 'MM/dd/yyyy', $null).ToString('yyyyMMdd')
-                            }
-                        } catch { '99999999' }
-                    } else { '99999999' }
+                    $isSJH = $cmbFacility.SelectedItem.ToString() -eq 'SJH'
                     
-                    $specimenDateHL7 = if ($case.SpecimenDate) {
-                        try {
-                            if ($case.SpecimenDate -match '^\d{2}/\d{2}/\d{2}$') {
-                                [DateTime]::ParseExact($case.SpecimenDate, 'MM/dd/yy', $null).ToString('yyyyMMdd')
-                            } else {
-                                [DateTime]::ParseExact($case.SpecimenDate, 'MM/dd/yyyy', $null).ToString('yyyyMMdd')
-                            }
-                        } catch { '99999999' }
-                    } else { '99999999' }
+                    if ($isSJH) {
+                        # SJH: BirthDate is already in HL7 format (YYYY9999), SpecimenDateObj has the DateTime
+                        $birthDateHL7 = if ($case.PatientData.BirthDate) { $case.PatientData.BirthDate } else { '99999999' }
+                        $specimenDateHL7 = if ($case.SpecimenDateObj) { $case.SpecimenDateObj.ToString('yyyyMMdd') } else { '99999999' }
+                    } else {
+                        # Standard facilities: parse date strings
+                        $birthDateHL7 = if ($case.PatientData.BirthDate) {
+                            try {
+                                if ($case.PatientData.BirthDate -match '^\d{2}/\d{2}/\d{2}$') {
+                                    [DateTime]::ParseExact($case.PatientData.BirthDate, 'MM/dd/yy', $null).ToString('yyyyMMdd')
+                                } else {
+                                    [DateTime]::ParseExact($case.PatientData.BirthDate, 'MM/dd/yyyy', $null).ToString('yyyyMMdd')
+                                }
+                            } catch { '99999999' }
+                        } else { '99999999' }
+                        
+                        $specimenDateHL7 = if ($case.SpecimenDate) {
+                            try {
+                                if ($case.SpecimenDate -match '^\d{2}/\d{2}/\d{2}$') {
+                                    [DateTime]::ParseExact($case.SpecimenDate, 'MM/dd/yy', $null).ToString('yyyyMMdd')
+                                } else {
+                                    [DateTime]::ParseExact($case.SpecimenDate, 'MM/dd/yyyy', $null).ToString('yyyyMMdd')
+                                }
+                            } catch { '99999999' }
+                        } else { '99999999' }
+                    }
                     
                     $hl7Lines = @()
                     $hl7Lines += "MSH|^~\&|E-Path Case=$($case.CaseNumber)|$($script:previewData.FacilityConfig.CLIA)|E-Path|NHSCR|99999999||ORU^R01^ORU_R01||P|2.5.1|||||USA||ENG||VOL_V_40_ORU_R01^NAACCR_CP"
                     $hl7Lines += "PID|1||$($case.PatientData.MedicalRecordNumber)^^^^MR^~^^^^SS||$($case.PatientData.NameLast)^$($case.PatientData.NameFirst)^$($case.PatientData.NameMiddle)||$birthDateHL7|$($case.PatientData.Sex)|||Unknown^^Unknown^ZZ^99999|||"
-                    $hl7Lines += "OBR|1||$($case.PathReportID)||||$specimenDateHL7|||||||||^physicianNameLast^physicianNameFirst^physicianNameMiddle|||||||||F||||||||"
+                    $hl7Lines += "OBR|1||$($case.PathReportID)||||$specimenDateHL7||||||||||||||||||F||||||||"
                     
-                    for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
-                        $hl7Lines += "OBX|$($i + 1)|TX|||$($case.TextLines[$i])"
+                    # SJH: drop first OBX and renumber; Standard: include all OBX
+                    if ($isSJH -and $case.TextLines.Count -gt 1) {
+                        for ($i = 1; $i -lt $case.TextLines.Count; $i++) {
+                            $hl7Lines += "OBX|$($i)|TX|||$($case.TextLines[$i])"
+                        }
+                    } else {
+                        for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
+                            $hl7Lines += "OBX|$($i + 1)|TX|||$($case.TextLines[$i])"
+                        }
                     }
                     
                     $txtHL7.Text = $hl7Lines -join "`r`n"
