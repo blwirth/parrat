@@ -15,6 +15,10 @@ $script:FacilityConfig = @{
         FacilityNum = '7120380'
         CLIA = 'FRISBIE MEMORIAL HOSPITAL^300014^CLIA'
     }
+    'SJH' = @{
+        FacilityNum = '120300'
+        CLIA = 'ST JOSEPH HOSPITAL^30D0896420^CLIA'
+    }
 }
 
 $script:UnknownDate = '99999999'
@@ -151,50 +155,127 @@ function Build-OBXSegment {
     
     return "OBX|$LineNumber|TX|||$TextLine"
 }
-#endregion
 
-#region Main Conversion Function
-function Convert-PathologyTextToHL7 {
-    <#
-    .SYNOPSIS
-        Converts pathology text file to HL7 format
+#region SJH-Specific Helper Functions
+function Parse-SJH-MinDateFromLine {
+    param([string]$Line)
     
-    .PARAMETER InputPath
-        Path to input text file (Level_1 format)
+    # Match M/D/YY, MM/DD/YY, M/D/YYYY, MM/DD/YYYY
+    $dateRe = [regex]'\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b'
+    $dateMatches = $dateRe.Matches($Line)
+    if ($dateMatches.Count -eq 0) { return $null }
     
-    .PARAMETER OutputPath
-        Path for output HL7 file (Level_2 format)
+    $dates = foreach ($m in $dateMatches) {
+        $s = $m.Groups[1].Value
+        $dt = $null
+        # Try common parse formats
+        $formats = @('M/d/yy','MM/dd/yy','M/d/yyyy','MM/dd/yyyy')
+        if ([DateTime]::TryParseExact($s, $formats, $null, [Globalization.DateTimeStyles]::None, [ref]$dt)) {
+            $dt
+        } else {
+            # Fall back
+            if ([DateTime]::TryParse($s, [ref]$dt)) { $dt }
+        }
+    }
     
-    .PARAMETER FacilityName
-        Name of facility (Parkland, Portsmouth, or Frisbie)
+    $dates = $dates | Where-Object { $_ -is [DateTime] }
+    if (-not $dates) { return $null }
+    return ($dates | Sort-Object | Select-Object -First 1)
+}
+
+function Parse-SJH-PatientLine {
+    param([string]$Line)
     
-    .PARAMETER PreviewOnly
-        If specified, returns parsed data without writing output file
-    #>
+    $result = @{
+        NameLast = ''
+        NameFirst = ''
+        NameMiddle = ''
+        Sex = ''
+        Age = $null
+    }
+    
+    # Name pattern: Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?
+    $nameRe = [regex]'Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?(?=\s*(?:Age:|\d{4,7}\b|MD:|MRN:|$))'
+    $m = $nameRe.Match($Line)
+    if ($m.Success) {
+        $result.NameLast = $m.Groups[1].Value
+        $result.NameFirst = $m.Groups[2].Value
+        if ($m.Groups.Count -ge 4 -and $m.Groups[3].Value) {
+            $result.NameMiddle = $m.Groups[3].Value
+        }
+    }
+    
+    # Sex pattern: Sex:\s*([MF])\b
+    $sexRe = [regex]'Sex:\s*([MF])\b'
+    $m = $sexRe.Match($Line)
+    if ($m.Success) {
+        $result.Sex = $m.Groups[1].Value
+    }
+    
+    # Age pattern: Age:\s*(\d{1,3})\b
+    $ageRe = [regex]'Age:\s*(\d{1,3})\b'
+    $m = $ageRe.Match($Line)
+    if ($m.Success) {
+        $result.Age = [int]$m.Groups[1].Value
+    }
+    
+    return $result
+}
+
+function Parse-SJH-MRN {
+    param([string]$Line)
+    
+    # MRN pattern: (?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))
+    $mrnRe = [regex]'(?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))'
+    $m = $mrnRe.Match($Line)
+    if ($m.Success) {
+        return $m.Groups[1].Value
+    }
+    return ''
+}
+
+function Parse-SJH-PathReportID {
+    param([string]$Line)
+    
+    # Path report ID pattern: \b(NH|NS|NC)2[0-9]-\d+\b
+    $pathIdRe = [regex]'\b(NH|NS|NC)2[0-9]-\d+\b'
+    $m = $pathIdRe.Match($Line)
+    if ($m.Success) {
+        return $m.Value
+    }
+    return ''
+}
+
+function Derive-SJH-DOB {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$InputPath,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$OutputPath,
-        
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Parkland', 'Portsmouth', 'Frisbie')]
-        [string]$FacilityName,
-        
-        [switch]$PreviewOnly
+        [int]$Age,
+        [DateTime]$SpecimenDate
     )
     
-    # Validate input file exists
-    if (-not (Test-Path $InputPath)) {
-        throw "Input file not found: $InputPath"
+    if ($Age -and $SpecimenDate) {
+        $dobYear = $SpecimenDate.Year - $Age
+        if ($dobYear -ge 1800 -and $dobYear -le 2200) {
+            return ('{0}9999' -f $dobYear.ToString('0000'))
+        }
     }
-    
-    # Get facility configuration
-    $facilityConfig = $script:FacilityConfig[$FacilityName]
-    if (-not $facilityConfig) {
-        throw "Unknown facility: $FacilityName"
-    }
+    return $script:UnknownDate
+}
+
+function Normalize-SJH-Whitespace {
+    param([string]$s)
+    if ($null -eq $s) { return '' }
+    return ([regex]::Replace($s.Trim(), '\s+', ' '))
+}
+#endregion
+
+#endregion
+
+#region Parsing Functions
+function Parse-Standard-Cases {
+    param(
+        [string]$InputPath,
+        [string]$FacilityName
+    )
     
     # Read input file
     $lines = Get-Content $InputPath -Encoding UTF8
@@ -287,6 +368,194 @@ function Convert-PathologyTextToHL7 {
         [void]$cases.Add($currentCase)
     }
     
+    return $cases
+}
+
+function Parse-SJH-Cases {
+    param([string]$InputPath)
+    
+    # Read and preprocess input file
+    $rawText = [System.IO.File]::ReadAllText($InputPath, [System.Text.Encoding]::Default)
+    
+    # Normalize case boundaries by inserting newlines before embedded IDs
+    $yy = ([DateTime]::Now.Year % 100).ToString('00')
+    $boundaryPattern = "(?<!\r?\n)(?=N[A-Z]($yy|22|23|24)-\d{1,6}\s+(Patient:|MRN:))"
+    $normalized = [regex]::Replace($rawText, $boundaryPattern, "`r`n")
+    
+    # Split to lines
+    $lines = $normalized -split "\r?\n"
+    
+    # Skip line prefixes
+    $skipPrefixes = @(
+        'Tissue Committee Report',
+        'Date/Time Printed:',
+        'Selection Criteria:',
+        'Part Type:'
+    )
+    
+    # Case detection regex
+    $caseStartRe = [regex]'^\s*(?:NH|NS|NC)2[0-9]-\d+'
+    
+    # Storage for parsed cases
+    $cases = [System.Collections.ArrayList]::new()
+    $caseNumber = 0
+    
+    # Current case state
+    $currentCase = $null
+    
+    foreach ($line0 in $lines) {
+        $line = Normalize-SJH-Whitespace $line0
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        
+        # Skip unwanted lines
+        $skip = $false
+        foreach ($p in $skipPrefixes) {
+            if ($line.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $skip = $true
+                break
+            }
+        }
+        if ($skip) { continue }
+        
+        # Check for case boundary
+        if ($caseStartRe.IsMatch($line)) {
+            # Save previous case if exists
+            if ($currentCase) {
+                [void]$cases.Add($currentCase)
+            }
+            
+            # Start new case
+            $caseNumber++
+            $currentCase = @{
+                CaseNumber = $caseNumber
+                PatientData = @{
+                    NameLast = ''
+                    NameFirst = ''
+                    NameMiddle = ''
+                    BirthDate = ''
+                    Sex = ''
+                    MedicalRecordNumber = ''
+                }
+                SpecimenDate = ''
+                PathReportID = ''
+                TextLines = [System.Collections.ArrayList]::new()
+                Age = $null
+                SpecimenDateObj = $null
+            }
+        }
+        
+        if ($null -eq $currentCase) {
+            continue
+        }
+        
+        # Parse patient name, sex, age from line
+        $patientInfo = Parse-SJH-PatientLine $line
+        if ($patientInfo.NameLast) {
+            $currentCase.PatientData.NameLast = $patientInfo.NameLast
+            $currentCase.PatientData.NameFirst = $patientInfo.NameFirst
+            $currentCase.PatientData.NameMiddle = $patientInfo.NameMiddle
+        }
+        if ($patientInfo.Sex) {
+            $currentCase.PatientData.Sex = $patientInfo.Sex
+        }
+        if ($patientInfo.Age) {
+            $currentCase.Age = $patientInfo.Age
+        }
+        
+        # Parse MRN
+        $mrn = Parse-SJH-MRN $line
+        if ($mrn) {
+            $currentCase.PatientData.MedicalRecordNumber = $mrn
+        }
+        
+        # Parse path report ID
+        $pathID = Parse-SJH-PathReportID $line
+        if ($pathID) {
+            $currentCase.PathReportID = $pathID
+        }
+        
+        # Parse specimen date (earliest date on line)
+        $minDate = Parse-SJH-MinDateFromLine $line
+        if ($minDate) {
+            $currentCase.SpecimenDateObj = $minDate
+            $currentCase.SpecimenDate = $minDate.ToString('MM/dd/yyyy')
+        }
+        
+        # Add line to text
+        [void]$currentCase.TextLines.Add($line)
+    }
+    
+    # Save final case
+    if ($currentCase) {
+        [void]$cases.Add($currentCase)
+    }
+    
+    # Derive DOB for each case
+    foreach ($case in $cases) {
+        if ($case.Age -and $case.SpecimenDateObj) {
+            $case.PatientData.BirthDate = Derive-SJH-DOB -Age $case.Age -SpecimenDate $case.SpecimenDateObj
+        }
+    }
+    
+    return $cases
+}
+#endregion
+
+#region Main Conversion Function
+function Convert-PathologyTextToHL7 {
+    <#
+    .SYNOPSIS
+        Converts pathology text file to HL7 format
+    
+    .PARAMETER InputPath
+        Path to input text file (Level_1 format)
+    
+    .PARAMETER OutputPath
+        Path for output HL7 file (Level_2 format)
+    
+    .PARAMETER FacilityName
+        Name of facility (Parkland, Portsmouth, Frisbie, or SJH)
+    
+    .PARAMETER PreviewOnly
+        If specified, returns parsed data without writing output file
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InputPath,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$OutputPath,
+        
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Parkland', 'Portsmouth', 'Frisbie', 'SJH')]
+        [string]$FacilityName,
+        
+        [switch]$PreviewOnly
+    )
+    
+    # Validate input file exists
+    if (-not (Test-Path $InputPath)) {
+        throw "Input file not found: $InputPath"
+    }
+    
+    # Get facility configuration
+    $facilityConfig = $script:FacilityConfig[$FacilityName]
+    if (-not $facilityConfig) {
+        throw "Unknown facility: $FacilityName"
+    }
+    
+    # Storage for parsed cases
+    $cases = [System.Collections.ArrayList]::new()
+    
+    # Branch based on facility type
+    if ($FacilityName -eq 'SJH') {
+        # SJH-specific parsing logic
+        $cases = Parse-SJH-Cases -InputPath $InputPath
+    } else {
+        # Standard facility parsing logic (Parkland, Portsmouth, Frisbie)
+        $cases = Parse-Standard-Cases -InputPath $InputPath -FacilityName $FacilityName
+    }
+    
     # Preview mode - return parsed data
     if ($PreviewOnly) {
         return @{
@@ -301,10 +570,20 @@ function Convert-PathologyTextToHL7 {
     
     foreach ($case in $cases) {
         # Convert dates to HL7 format
-        $birthDateHL7 = Convert-DateToHL7 $case.PatientData.BirthDate
-        $specimenDateHL7 = Convert-DateToHL7 $case.SpecimenDate
+        # For SJH, BirthDate is already in HL7 format (YYYY9999)
+        if ($FacilityName -eq 'SJH') {
+            $birthDateHL7 = $case.PatientData.BirthDate
+            if ($case.SpecimenDateObj) {
+                $specimenDateHL7 = $case.SpecimenDateObj.ToString('yyyyMMdd')
+            } else {
+                $specimenDateHL7 = $script:UnknownDate
+            }
+        } else {
+            $birthDateHL7 = Convert-DateToHL7 $case.PatientData.BirthDate
+            $specimenDateHL7 = Convert-DateToHL7 $case.SpecimenDate
+        }
         
-        # Build segments (using different variable names to avoid $PID conflict)
+        # Build segments
         $mshSegment = Build-MSHSegment -CaseNumber $case.CaseNumber -CLIA $facilityConfig.CLIA
         $pidSegment = Build-PIDSegment -PatientData $case.PatientData -BirthDateHL7 $birthDateHL7
         $obrSegment = Build-OBRSegment -PathReportID $case.PathReportID -SpecimenDateHL7 $specimenDateHL7
@@ -313,10 +592,21 @@ function Convert-PathologyTextToHL7 {
         [void]$hl7Lines.Add($pidSegment)
         [void]$hl7Lines.Add($obrSegment)
         
-        # Add all text lines as OBX segments
-        for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
-            $obxSegment = Build-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
-            [void]$hl7Lines.Add($obxSegment)
+        # Add text lines as OBX segments
+        # For SJH: drop the first OBX (patient info line) and renumber remaining from 1
+        if ($FacilityName -eq 'SJH') {
+            if ($case.TextLines.Count -gt 1) {
+                for ($i = 1; $i -lt $case.TextLines.Count; $i++) {
+                    $obxSegment = Build-OBXSegment -LineNumber ($i) -TextLine $case.TextLines[$i]
+                    [void]$hl7Lines.Add($obxSegment)
+                }
+            }
+        } else {
+            # Standard facilities: include all OBX segments
+            for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
+                $obxSegment = Build-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
+                [void]$hl7Lines.Add($obxSegment)
+            }
         }
     }
     

@@ -51,6 +51,7 @@ function Get-BtnConvertTxtHandler {
             [void]$cmbFacility.Items.Add("Parkland")
             [void]$cmbFacility.Items.Add("Portsmouth")
             [void]$cmbFacility.Items.Add("Frisbie")
+            [void]$cmbFacility.Items.Add("SJH")
             $cmbFacility.SelectedIndex = 0
             $topPanel.Controls.Add($cmbFacility)
 
