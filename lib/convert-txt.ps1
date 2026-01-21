@@ -173,7 +173,8 @@ function Get-SJHDateFromString {
 }
 
 function Get-SJHCaseLine {
-    # Parse the case header line: NC24-1 Patient JOHN, DOE Age: 45 Sex: M Date Taken: 1/1/2024 ...
+    # Parse the case header line: NC24-1 Patient JOHN, DOE Age: 45 Sex: M COLL: 1/1/2024 ...
+    # Based on original SAS regex patterns
     param([string]$Line)
     
     $result = @{
@@ -187,13 +188,15 @@ function Get-SJHCaseLine {
         SpecimenDate = $null
     }
     
-    # Path Report ID: NC24-1, NH24-123, NS25-45, etc.
-    if ($Line -match '\b(N[A-Z]\d{2}-\d+)\b') {
-        $result.PathReportID = $matches[1]
+    # Path Report ID: (NH|NS|NC)23-123, (NH|NS|NC)24-1, etc.
+    # Match pattern like SAS: /\b(NH|NS|NC)23-\d+/
+    if ($Line -match '\b(NH|NS|NC)\d{2}-\d+') {
+        $result.PathReportID = $matches[0]
     }
     
-    # Patient name: "Patient LAST, FIRST" or "Patient LAST, FIRST MIDDLE" — stop before "Age:" or "Sex:"
-    if ($Line -match 'Patient\s+([A-Za-z\-]+),\s*([A-Za-z\-]+)(?:\s+((?!Age\b|Sex\b)[A-Za-z\-]+))?') {
+    # Patient name: SAS pattern with optional digits, hyphens/spaces in last name, proper lookahead
+    # Pattern: /Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?(?=\s*(?:Age:|\d{4,7}\b|MD:|MRN:|$))/i
+    if ($Line -match 'Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?(?=\s*(?:Age:|\d{4,7}\b|MD:|MRN:|$))') {
         $result.NameLast = $matches[1]
         $result.NameFirst = $matches[2]
         if ($matches[3]) {
@@ -201,25 +204,24 @@ function Get-SJHCaseLine {
         }
     }
     
-    # Age
-    if ($Line -match 'Age:\s*(\d+)') {
+    # Age: /Age:\s*(\d{1,3})\b/i
+    if ($Line -match 'Age:\s*(\d{1,3})\b') {
         $result.Age = [int]$matches[1]
     }
     
-    # Sex
-    if ($Line -match 'Sex:\s*([MFU])') {
+    # Sex: /Sex:\s*([MF])\b/i
+    if ($Line -match 'Sex:\s*([MF])\b') {
         $result.Sex = $matches[1]
     }
     
-    # MRN
-    if ($Line -match 'MRN:\s*(\d+)') {
+    # MRN: More complex pattern from SAS
+    # /(?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))/i
+    if ($Line -match '(?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))') {
         $result.MRN = $matches[1]
     }
     
-    # Date Taken (specimen date)
-    if ($Line -match 'Date Taken:\s*(\d{1,2}/\d{1,2}/\d{2,4})') {
-        $result.SpecimenDate = Get-SJHDateFromString $matches[1]
-    }
+    # Note: Specimen date is parsed from all lines in Get-SJHCases using date_re pattern
+    # to find minimum date, matching SAS behavior
     
     return $result
 }
@@ -366,8 +368,9 @@ function Get-SJHCases {
         'Part Type:'
     )
     
-    # Case start pattern: NC24-1, NH24-123, NS25-45, etc. at start of line
-    $caseStartRe = [regex]'^N[A-Z]\d{2}-\d+'
+    # Case start pattern: SAS pattern /^\s*(?:NH|NS|NC)2[0-9]-\d+/
+    # Allows optional whitespace, requires year to start with 2 (23, 24, 25, etc.)
+    $caseStartRe = [regex]'^\s*(?:NH|NS|NC)2[0-9]-\d+'
     
     # Storage for parsed cases
     $cases = [System.Collections.ArrayList]::new()
@@ -410,11 +413,11 @@ function Get-SJHCases {
                     Sex = $caseInfo.Sex
                     MedicalRecordNumber = $caseInfo.MRN
                 }
-                SpecimenDate = if ($caseInfo.SpecimenDate) { $caseInfo.SpecimenDate.ToString('MM/dd/yyyy') } else { '' }
+                SpecimenDate = ''
                 PathReportID = $caseInfo.PathReportID
                 TextLines = [System.Collections.ArrayList]::new()
                 Age = $caseInfo.Age
-                SpecimenDateObj = $caseInfo.SpecimenDate
+                SpecimenDateObj = $null
             }
             
             # Derive DOB from Age and SpecimenDate
@@ -425,6 +428,65 @@ function Get-SJHCases {
         
         if ($null -eq $currentCase) {
             continue
+        }
+        
+        # Parse fields from any line (SAS pattern - fields can appear on any line in the case)
+        # Update name if found
+        if ($line -match 'Patient:\s*(?:\d{4,7}\s*)?([A-Za-z]+(?:[ \-][A-Za-z]+)*),\s*([A-Za-z]+)(?:\s+([A-Za-z]+)(?:\.)?)?(?=\s*(?:Age:|\d{4,7}\b|MD:|MRN:|$))') {
+            if (-not $currentCase.PatientData.NameLast) { $currentCase.PatientData.NameLast = $matches[1] }
+            if (-not $currentCase.PatientData.NameFirst) { $currentCase.PatientData.NameFirst = $matches[2] }
+            if ($matches[3] -and -not $currentCase.PatientData.NameMiddle) { $currentCase.PatientData.NameMiddle = $matches[3] }
+        }
+        
+        # Update age if found
+        if ($line -match 'Age:\s*(\d{1,3})\b') {
+            if (-not $currentCase.Age) {
+                $currentCase.Age = [int]$matches[1]
+            }
+        }
+        
+        # Update sex if found
+        if ($line -match 'Sex:\s*([MF])\b') {
+            if (-not $currentCase.PatientData.Sex) {
+                $currentCase.PatientData.Sex = $matches[1]
+            }
+        }
+        
+        # Update MRN if found
+        if ($line -match '(?:MRN:\s*Patient:\s*|(?<![-\/]))(\d{4,7})(?=\s*(?:MD:|MRN:|Patient:|Age:|[A-Za-z]|$))') {
+            if (-not $currentCase.PatientData.MedicalRecordNumber) {
+                $currentCase.PatientData.MedicalRecordNumber = $matches[1]
+            }
+        }
+        
+        # Update path report ID if found
+        if ($line -match '\b(NH|NS|NC)\d{2}-\d+') {
+            if (-not $currentCase.PathReportID) {
+                $currentCase.PathReportID = $matches[0]
+            }
+        }
+        
+        # Parse dates from line (SAS pattern: find all dates, take minimum)
+        # Pattern: /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/
+        $dateRe = [regex]'\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b'
+        $dateMatches = $dateRe.Matches($line)
+        if ($dateMatches.Count -gt 0) {
+            $dates = foreach ($m in $dateMatches) {
+                $dt = Get-SJHDateFromString $m.Groups[1].Value
+                if ($dt) { $dt }
+            }
+            if ($dates) {
+                $minDate = ($dates | Sort-Object | Select-Object -First 1)
+                # Update specimen date if this is earlier or if we don't have one yet
+                if (-not $currentCase.SpecimenDateObj -or $minDate -lt $currentCase.SpecimenDateObj) {
+                    $currentCase.SpecimenDateObj = $minDate
+                    $currentCase.SpecimenDate = $minDate.ToString('MM/dd/yyyy')
+                    # Recalculate DOB if we have age
+                    if ($currentCase.Age -and $currentCase.SpecimenDateObj) {
+                        $currentCase.PatientData.BirthDate = Get-SJHDOB -Age $currentCase.Age -SpecimenDate $currentCase.SpecimenDateObj
+                    }
+                }
+            }
         }
         
         # Add line to text
