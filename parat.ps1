@@ -3,6 +3,7 @@
 . "$PSScriptRoot\lib\hl7-helpers.ps1"
 . "$PSScriptRoot\lib\hl7-viewer.ps1"
 . "$PSScriptRoot\lib\diff.ps1"
+. "$PSScriptRoot\lib\diff-files.ps1"
 . "$PSScriptRoot\lib\deduplicate.ps1"
 . "$PSScriptRoot\lib\assign-site-laterality.ps1"
 . "$PSScriptRoot\lib\assign-facility.ps1"
@@ -29,6 +30,7 @@
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
 . "$PSScriptRoot\button-handlers\btnDiff.ps1"
+. "$PSScriptRoot\button-handlers\btnDiffFiles.ps1"
 . "$PSScriptRoot\button-handlers\btnDedup.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupTrueMatches.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupPrimaryKey.ps1"
@@ -83,7 +85,7 @@ $btnXml.Enabled = $false  # Disabled until file is loaded
 
 # Processing operations
 $btnDiff = New-Object System.Windows.Forms.ToolStripButton
-$btnDiff.Text = "Diff"
+$btnDiff.Text = "Diff Records"
 $btnDiff.DisplayStyle = 'Text'
 $btnDiff.Enabled = $false  # Disabled until file is loaded
 [void]$toolStrip.Items.Add($btnDiff)
@@ -128,6 +130,12 @@ $btnExport.Enabled = $false  # Disabled until file is loaded
 [void]$toolStrip.Items.Add($btnExport)
 
 [void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$btnDiffFiles = New-Object System.Windows.Forms.ToolStripButton
+$btnDiffFiles.Text = "Diff Files..."
+$btnDiffFiles.DisplayStyle = 'Text'
+# Diff Files stays enabled - doesn't require a file to be loaded
+[void]$toolStrip.Items.Add($btnDiffFiles)
 
 $btnConcatenate = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnConcatenate.Text = "Concatenate..."
@@ -329,6 +337,7 @@ $script:Controls = @{
     'lblFileName' = $lblFileName
     'btnXml' = $btnXml
     'btnDiff' = $btnDiff
+    'btnDiffFiles' = $btnDiffFiles
     'btnExport' = $btnExport
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate
@@ -555,6 +564,7 @@ $gridNav.Add_SelectionChanged({
 # Wire up button handlers
 $btnXml.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$btnDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
 $btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
