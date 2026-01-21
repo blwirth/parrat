@@ -59,7 +59,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form = $form[0]  # ensure scalar type, not array
-$form.Text   = "NAACCR XML and HL7 Utilities"
+$form.Text   = "PAthology Reports and cancer Abstract Tools"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
