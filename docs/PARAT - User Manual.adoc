@@ -1,0 +1,361 @@
+= PARAT: PAthology Report and cancer Abstract Tools
+:toc: macro
+:toclevels: 3
+:numbered:
+:title-page:
+:title-logo-image: image:logo.svg[pdfwidth=300]
+:pdf-themesdir: {docdir}
+:pdf-theme: pdf-theme.yml
+:imagesdir: ../logo
+
+<<<
+toc::[]
+<<<
+
+== Overview
+
+This application consists of a collection of PowerShell utilities for managing ePath-related files. Original files are read-only, and write operations are performed on a copy of the original file so that the original record is always retained and unmodified.
+
+<<<
+
+== Main Utilities
+
+These utilities require the working file to be loaded into the application.
+
+=== Opening a File
+
+To select a file to view, click *Open…* and navigate the native file explorer. Supported file formats currently include HL7 and XML. Pipe-delimited files are not supported. Only one file can be viewed at a time.
+
+Once loaded, the left panel lists the records. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel.
+
+=== Comparing Records
+
+To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff*.
+
+This feature currently supports XML and HL7 records. Only two records may be compared. A warning is shown if fewer than two or more than two records are selected.
+
+=== Showing the Original Record
+
+To show the raw message, select the message and click *Show Raw*. This function supports both XML and HL7 records.
+
+For both file types, the appropriate file-level headers or opening and closing tags are shown, allowing the abstract or report to be copied from this screen and used in other software.
+
+=== Deduplicating Records
+
+There are several methods available to deduplicate messages within a single file. After clicking *Deduplicate…*, select the appropriate method from the context menu.
+
+The methods below are listed from most conservative to least conservative.
+
+==== Deduplication Methods
+
+* *True matches*: Records that are identical across most fields are considered matches, except for the following meta fields:
++
+--
+* `dateCaseReportReceived`
+* `dateCaseReportLoaded`
+* `dateCaseReportExported`
+* `pathDateSpecCollect1`
+* `pathDateSpecCollect2`
+* `pathDateSpecCollect3`
+* `pathDateSpecCollect4`
+* `pathDateSpecCollect5`
+* `physician3`
+* `physicianManaging`
+* `physicianFollowUp`
+--
+
+* *pathReportNumber1*: Records with identical `pathReportNumber1` values are considered matches. For some reporters, addenda use the same `pathReportNumber1` value.
+
+* *Primary key*: Records with identical `nameLast`, `nameFirst`, `dateOfBirth`, `primarySite`, and `laterality` values are considered matches.
++
+For best results, primary site and laterality should be assigned to cases missing these values prior to using this method, as null values are considered matches.
+
+[NOTE]
+====
+These variables can currently only be modified from the program files.
+====
+
+==== Record Retention Rules
+
+For all deduplication methods, a series of rules is applied to determine which report is retained and which are designated as duplicates.
+
+. *Rule 1: Earliest `dateCaseReportLoaded`*
++
+--
+If any duplicate has `dateCaseReportLoaded` populated, the record with the earliest date is retained.
+--
+
+. *Rule 2: Earliest `dateCaseReportReceived`*
++
+--
+If Rule 1 does not apply, the record with the earliest `dateCaseReportReceived` is retained.
+
+If multiple records share the earliest date, proceed to Rule 3 among those records.
+--
+
+. *Rule 3: Non-empty `physician3`*
++
+--
+Among records tied on date (or when no dates exist), preference is given to the record with a non-empty `physician3`.
+--
+
+. *Rule 4: First occurrence (fallback)*
++
+--
+If none of the above rules apply, the first record in the duplicate group is retained.
+--
+
+Before deduplication, a summary is displayed. This summary can be saved in `.csv` format.
+
+The deduplicated file is saved to the same location as the original file, with the suffix `-dedup` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+
+[NOTE]
+====
+Currently, only XML records can be deduplicated.
+====
+
+=== Assigning Primary Site and Laterality
+
+To assign primary site and laterality to records missing this data, select *Assign Site/Lat*.
+
+This function uses the JSONL files located in `/data/dictionaries`. For information on editing these files within the client, see <<Managing Coding Tables>>.
+
+Several heuristics are applied to assign the most accurate primary site. In general:
+
+* Breast primaries are coded to `C509`, rather than a more specific breast subsite.
+* Lymph node site `C779` is generally not assigned when another primary site is listed on the report, except for cases containing hard-coded hematologic and lymphoid malignancy phrases.
+
+This functionality is currently simple and does not accurately handle metastatic reports. For example, a liver biopsy showing metastatic lung cancer will likely be coded to the liver.
+
+Existing primary site and laterality values are not overwritten.
+
+A summary of the changes to be applied is displayed and may be saved in `.csv` format.
+
+The new file is saved to the same location as the original file, with the suffix `-psite` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+
+[NOTE]
+====
+Only NAACCR XML files contain these variables. As a result, only these records can be assigned primary site and laterality.
+====
+
+=== Assigning Facility
+
+To assign a 10-digit facility code, select *Assign Facility*.
+
+Example:
+
+[source,xml]
+----
+<Item naaccrId="reportingFacility">0006120000</Item>
+----
+
+Seven-digit facility codes present in the filename are automatically detected. If no seven-digit code is identified, the facility code may be entered manually.
+
+Optionally, existing facility codes may be overwritten by selecting the appropriate checkbox. A warning is shown during confirmation.
+
+The facility code is assigned to every record in the file.
+
+The new file is saved to the same location as the original file, with the suffix `-facility` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+
+[NOTE]
+====
+Only NAACCR XML files contain the reporting facility field. As a result, only these records can be assigned a facility code.
+====
+
+=== Assigning Patient ID
+
+Records that do not have a patient ID
+
+[source,xml]
+----
+<Item naaccrId="patientId">00000001</Item>
+----
+
+can be assigned one by selecting *Add PID*. A unique patient ID is required to use the files in Match*Pro.
+
+CRS Plus exports abstracts that are pending by default. All pending abstracts have `0`s for the patient ID, which causes multiplicative matching in Match*Pro. In this case, there is an option to assign only these records a patient ID starting at `90000001` (an arbitrarily high number not likely to be used).
+
+This does not overwrite existing valid patient IDs, which may be useful for tracking files downstream.
+
+[NOTE]
+====
+Since only NAACCR XML files contain the patient ID variable, only these records can be assigned a patient ID.
+====
+
+=== Modifying OBX Segments
+
+==== Fixing Malformed OBX Segments
+
+To fix malformed OBX segments that cause NOAH to fail processing an HL7 record, select *Fix OBX3.1*.
+
+Malformed OBX segments contain fewer than five pipe delimiters. For example:
+
+[source,hl7]
+----
+OBX|1|TX|
+OBX|2|TX|||
+OBX|3|TX
+----
+
+In the above example, OBX lines 1 and 3 are malformed. This function adds the required number of pipe delimiters to these segments.
+
+OBX line 2 is not considered malformed despite having an empty OBX-5 value. NOAH can parse empty OBX-3.1 identifiers, although the absence of a LOINC identifier prevents optimal record classification.
+
+For information on removing empty OBX segments, see <<Removing Empty OBX Segments>>.
+
+==== Removing Empty OBX Segments
+
+Some HL7 records contain excessive empty OBX segments (segments with no OBX-5 value). While these provide visual spacing, they are non-performant for downstream processing.
+
+To remove trailing and duplicate intra-record empty OBX segments, select *Remove Empty Segments*.
+
+Example:
+
+[source,hl7]
+----
+OBX|1|TX|||Authorizing Provider: John Doe
+OBX|2|TX|||
+OBX|3|TX|||
+OBX|4|TX|||Ordering Facility: Hospital A
+...
+OBX|102|TX|||
+OBX|103|TX|||
+OBX|104|TX|||
+OBX|105|TX|||
+----
+
+In this example:
+- OBX segments 2 and 3 are empty intra-record segments
+- OBX segments 102–105 are empty trailing segments
+
+This function removes these lines so records process faster in NOAH and other downstream software.
+
+[NOTE]
+====
+NOAH automatically removes empty segments when outputting to XML. HL7 records are not truncated by NOAH, so this feature is only useful when outputting to HL7.
+====
+
+=== Exporting Records
+
+There are several methods for exporting records.
+
+* *Export Selected as XML* or *Export Selected as HL7*
++
+Exports the currently selected record. Any records checked in the *Selected* column of the navigation pane are included. XML records cannot be exported as HL7, and vice versa.
+
+* *Exporting as CSV*
++
+--
+* *Export All as CSV*: exports every record in the file.
+* *Export Selected as CSV*: exports only records checked in the *Selected* column.
+--
+
+When exporting XML records to CSV, column headers may be selected based on version 25 of the NAACCR data dictionary. The application reads from the truncated JSON file in the `/dictionaries` folder.
+
+If the JSON file is missing, the application falls back to the XML data dictionary. The JSON dictionary can be regenerated using:
+
+`/scripts/generate-dictionary-json.ps1`
+
+Custom header configurations can be saved via *Save Config* and loaded via *Load Config*.
+
+[NOTE]
+====
+Column headers cannot currently be configured when exporting HL7 records to CSV.
+====
+
+=== Classifying Record Reportability with NOAH
+
+To classify the reportability of the selected record, select *NOAH…* and then *POST Selected HL7*.
+
+The raw HL7 message is sent to NOAH’s reportability, entity recognition, and coding API. Results are returned in a new pop-up window, and output files are stored in a temporary folder, which can be accessed via *Open Working Folder*.
+
+On first use, the model GUID must be configured. This can be obtained from NOAH’s *Update NLP Models* screen. The path to the NOAH executable must also be configured. These settings are stored in the `/config` folder.
+
+If NOAH is already running on another server, the POST request will fail.
+
+[NOTE]
+====
+Since NOAH only accepts HL7 records, *POST Selected HL7* is disabled when an XML file is loaded.
+====
+
+For sending a custom payload independent of a loaded file, see <<Classifying Custom Payload Reportability with NOAH>>.
+
+<<<
+== Additional Utilities
+
+These utilities do not require a working file to be loaded.
+
+=== Concatenating Files
+
+Files can be concatenated by selecting *Concatenate…*. Only files of the same format may be concatenated.
+
+* *Concatenate XML*
++
+Only files with identical headers or versions (for example NAACCR v250) should be concatenated. To concatenate files of differing versions, first convert them using NorthCon.
+
+* *Concatenate HL7*
++
+HL7 version conversion is not supported. The header from the first file is used.
+
+A confirmation screen displays the total number of files, tumors, and record type. After confirmation, you are prompted to select the output directory and name the concatenated file.
+
+=== Converting Text Files to HL7
+
+This utility converts ePath reports initially received as PDFs into HL7.
+
+The PDF must first be converted to plain text (`.txt`) using Adobe Acrobat.
+
+To convert a text file:
+. Select *Convert TXT*
+. Browse to the input file
+. Select the correct facility from the dropdown
+
+If an incorrect facility is selected, the status label indicates no cases found.
+
+A summary of parsed cases is shown for quality review. Missing fields indicate parsing failures requiring manual review. Cases with unusually high line counts may represent improperly split cases.
+
+If the results appear correct, select *Convert to HL7*.
+
+=== Classifying Custom Payload Reportability with NOAH
+
+To send a custom payload to NOAH, select *NOAH…* and then *POST Custom Payload*.
+
+In the pop-up window, enter the text to be classified. This text is assigned to OBX-5.1 in the POST payload. Minimal required HL7 headers are preconfigured.
+
+If NOAH is already running on another server, the POST request will fail.
+
+=== Managing Coding Tables
+
+Coding tables used for assigning primary site and laterality can be managed by selecting *Manage Coding Tables…*.
+
+Available tables include:
+
+* *Laterality*
++
+A list of primary sites that receive laterality values other than `0`. Sites not listed are assigned `9`.
+
+* *Topography*
++
+A newline-delimited list of primary site codes and triggering phrases.
+
+* *Skin Topography*
++
+A newline-delimited list of skin-specific anatomical terms used when the primary site is `C44x`.
+
+These tables are stored as JSON or NDJSON files in `/data/dictionaries` and may also be edited directly using a text editor.
+
+[NOTE]
+====
+Certain heuristics can only be modified within the program files.
+====
+
+=== Splitting Files
+
+Large files can be split for manageability.
+
+To split a file:
+. Select *Split…*
+. Choose the file using the native file browser
+. Select the number of output files
+
+Files are split by last name to preserve effective deduplication. Output files are automatically named using last name ranges (for example `A–M`, `N–Z`) and saved to the same directory as the original file.

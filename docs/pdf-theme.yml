@@ -1,0 +1,30 @@
+extends: default
+page-numbering-start-at: toc
+running-content-start-at: toc
+title-page-logo-top: 35%
+title-page-logo-align: center
+title-page-title-top: 15%
+title-page-title-font-size: 24
+title-page-title-font-color: #000000
+title-page-title-text-align: center
+title-page-subtitle-font-size: 14
+title-page-subtitle-font-color: #a9a9a9
+title-page-subtitle-text-align: center
+title-page-align: center
+header-height: 30
+header-font-size: 9
+header-font-color: #999999
+header-border-color: #dddddd
+header-border-width: 0.25
+header-recto-left-content: '{document-title} - User Manual'
+header-recto-center-content: ''
+header-recto-right-content: '{section-title}'
+header-verso-left-content: '{document-title} - User Manual'
+header-verso-center-content: ''
+header-verso-right-content: '{section-title}'
+footer-recto-right-content: '{page-number}'
+footer-recto-center-content: ''
+footer-recto-left-content: ''
+footer-verso-right-content: '{page-number}'
+footer-verso-center-content: ''
+footer-verso-left-content: ''
