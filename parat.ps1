@@ -17,6 +17,7 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 . "$PSScriptRoot\lib\deduplicate.ps1"
 . "$PSScriptRoot\lib\assign-site-laterality.ps1"
 . "$PSScriptRoot\lib\assign-facility.ps1"
+. "$PSScriptRoot\lib\assign-unified.ps1"
 . "$PSScriptRoot\lib\concatenate-xml.ps1"
 . "$PSScriptRoot\lib\concatenate-hl7.ps1"
 . "$PSScriptRoot\lib\concatenate-txt.ps1"
@@ -46,6 +47,7 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 . "$PSScriptRoot\button-handlers\btnDedupPathReport.ps1"
 . "$PSScriptRoot\button-handlers\btnAssign.ps1"
 . "$PSScriptRoot\button-handlers\btnFacility.ps1"
+. "$PSScriptRoot\button-handlers\btnAssignUnified.ps1"
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnFixObx.ps1"
@@ -621,21 +623,8 @@ $mnuDiffRecords.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -Script
 $mnuDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
 $mnuConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 
-# Set up Assign dropdown menu
-$menuItemPrimarySiteLaterality = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemPrimarySiteLaterality.Text = "Primary Site and Laterality"
-$menuItemPrimarySiteLaterality.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$mnuAssign.DropDownItems.Add($menuItemPrimarySiteLaterality)
-
-$menuItemFacility = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemFacility.Text = "Facility"
-$menuItemFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$mnuAssign.DropDownItems.Add($menuItemFacility)
-
-$menuItemPid = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemPid.Text = "Patient ID"
-$menuItemPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$mnuAssign.DropDownItems.Add($menuItemPid)
+# Wire up unified Assign handler (replaces previous submenu)
+$mnuAssign.Add_Click((Get-BtnAssignUnifiedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
 # Set up Modify HL7 dropdown menu
 $menuItemFixObx31 = New-Object System.Windows.Forms.ToolStripMenuItem
