@@ -96,23 +96,11 @@ $btnDedup.DisplayStyle = 'Text'
 $btnDedup.Enabled = $false  # Disabled until file is loaded
 [void]$toolStrip.Items.Add($btnDedup)
 
-$btnAssign = New-Object System.Windows.Forms.ToolStripButton
-$btnAssign.Text = "Assign Site/Lat"
+$btnAssign = New-Object System.Windows.Forms.ToolStripDropDownButton
+$btnAssign.Text = "Assign..."
 $btnAssign.DisplayStyle = 'Text'
 $btnAssign.Enabled = $false  # Disabled until file is loaded (XML-specific)
 [void]$toolStrip.Items.Add($btnAssign)
-
-$btnFacility = New-Object System.Windows.Forms.ToolStripButton
-$btnFacility.Text = "Assign Facility"
-$btnFacility.DisplayStyle = 'Text'
-$btnFacility.Enabled = $false  # Disabled until file is loaded (XML-specific)
-[void]$toolStrip.Items.Add($btnFacility)
-
-$btnAddPid = New-Object System.Windows.Forms.ToolStripButton
-$btnAddPid.Text = "Add PID"
-$btnAddPid.DisplayStyle = 'Text'
-$btnAddPid.Enabled = $false  # Disabled until file is loaded (XML-specific)
-[void]$toolStrip.Items.Add($btnAddPid)
 
 $btnFixObx = New-Object System.Windows.Forms.ToolStripDropDownButton
 $btnFixObx.Text = "Modify HL7..."
@@ -342,8 +330,6 @@ $script:Controls = @{
     'btnDedup' = $btnDedup
     'btnConcatenate' = $btnConcatenate
     'btnAssign' = $btnAssign
-    'btnFacility' = $btnFacility
-    'btnAddPid' = $btnAddPid
     'btnFixObx' = $btnFixObx
     'btnNoahMenu' = $btnNoahMenu
     'btnManageTables' = $btnManageTables
@@ -390,12 +376,6 @@ function Update-ButtonStatesForFileType {
     
     if ($Controls['btnAssign']) {
         $Controls['btnAssign'].Enabled = $isXmlFile
-    }
-    if ($Controls['btnFacility']) {
-        $Controls['btnFacility'].Enabled = $isXmlFile
-    }
-    if ($Controls['btnAddPid']) {
-        $Controls['btnAddPid'].Enabled = $isXmlFile
     }
     
     # HL7-specific buttons should be enabled only for HL7 files
@@ -565,11 +545,24 @@ $gridNav.Add_SelectionChanged({
 $btnXml.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
-$btnAssign.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
-$btnAddPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnFixObx.Add_Click((Get-BtnFixObxHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+
+# Set up Assign dropdown menu
+$menuItemPrimarySiteLaterality = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPrimarySiteLaterality.Text = "Primary Site and Laterality"
+$menuItemPrimarySiteLaterality.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnAssign.DropDownItems.Add($menuItemPrimarySiteLaterality)
+
+$menuItemFacility = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemFacility.Text = "Facility"
+$menuItemFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnAssign.DropDownItems.Add($menuItemFacility)
+
+$menuItemPid = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPid.Text = "PID"
+$menuItemPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$btnAssign.DropDownItems.Add($menuItemPid)
 # Set up NOAH dropdown menu (populated dynamically on DropDownOpening)
 $btnNoahMenu.Add_DropDownOpening({
     param($toolStripButton, $e)
