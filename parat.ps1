@@ -202,6 +202,11 @@ $lblStatus.Text = "No file loaded"
 $lblStatus.Spring = $true
 [void]$statusStrip.Items.Add($lblStatus)
 
+$lblFileName = New-Object System.Windows.Forms.ToolStripStatusLabel
+$lblFileName.Text = ""
+$lblFileName.BorderSides = 'Left'
+[void]$statusStrip.Items.Add($lblFileName)
+
 # --- Main resizable area (panel + split containers) ---
 
 # Panel to host the split containers, leaving room for ToolStrip and bottom nav
@@ -317,14 +322,7 @@ $lblIndex.Location = New-Object System.Drawing.Point(110, 15)
 $lblIndex.Text = ""
 $lblIndex.Anchor = 'Left,Bottom'
 
-$lblFileName = New-Object System.Windows.Forms.Label
-$lblFileName.AutoSize = $true
-$lblFileName.Location = New-Object System.Drawing.Point(200, 15)
-$lblFileName.Text = ""
-$lblFileName.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$lblFileName.Anchor = 'Left,Bottom'
-
-$bottomPanel.Controls.AddRange(@($btnPrev, $btnNext, $lblIndex, $lblFileName))
+$bottomPanel.Controls.AddRange(@($btnPrev, $btnNext, $lblIndex))
 
 # Add everything to the form
 $form.Controls.AddRange(@(
