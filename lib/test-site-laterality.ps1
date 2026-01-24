@@ -123,9 +123,14 @@ function Test-SiteLateralityHeuristics {
             foreach ($row in $melTopoMap) {
                 $code = $row.Code
                 $phrase = $row.SearchPhrase
-                $pos = $low.IndexOf($phrase)
-                if ($pos -ge 0) {
-                    $p = $pos + 1
+
+                # Use word boundary matching to avoid partial matches (e.g., "lip" in "slip")
+                $escapedPhrase = [regex]::Escape($phrase)
+                $pattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
+
+                $match = [regex]::Match($low, $pattern)
+                if ($match.Success) {
+                    $p = $match.Index + 1
                     if ($bestPos -eq 0 -or $p -lt $bestPos) {
                         $bestPos = $p
                         $bestCode = $code
@@ -156,9 +161,14 @@ function Test-SiteLateralityHeuristics {
             foreach ($row in $topoMap) {
                 $code = $row.Code
                 $phrase = $row.SearchPhrase
-                $pos = $low.IndexOf($phrase)
-                if ($pos -ge 0) {
-                    $p = $pos + 1
+
+                # Use word boundary matching to avoid partial matches (e.g., "lip" in "slip")
+                $escapedPhrase = [regex]::Escape($phrase)
+                $pattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
+
+                $match = [regex]::Match($low, $pattern)
+                if ($match.Success) {
+                    $p = $match.Index + 1
                     if ($bestPos -eq 0 -or $p -lt $bestPos) {
                         $bestPos = $p
                         $bestCode = $code

@@ -212,9 +212,18 @@ function Get-BestCode {
     foreach ($row in $Map) {
         $code   = $row.Code
         $phrase = $row.SearchPhrase
-        $pos = $TextLow.IndexOf($phrase)
-        if ($pos -ge 0) {
-            $p = $pos + 1
+
+        # Use word boundary matching to avoid partial matches (e.g., "lip" in "slip")
+        # Escape regex special characters in the phrase, then wrap with boundary checks
+        # (?<![a-zA-Z]) = not preceded by a letter
+        # (?![a-zA-Z]) = not followed by a letter
+        # This allows spaces and punctuation as valid delimiters
+        $escapedPhrase = [regex]::Escape($phrase)
+        $pattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
+
+        $match = [regex]::Match($TextLow, $pattern)
+        if ($match.Success) {
+            $p = $match.Index + 1
             if ($bestPos -eq 0 -or $p -lt $bestPos) {
                 $bestPos  = $p
                 $bestCode = $code
