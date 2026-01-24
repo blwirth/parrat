@@ -119,6 +119,23 @@ $mnuConvertTxt = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuConvertTxt.Text = "Convert .txt"
 [void]$mnuFile.DropDownItems.Add($mnuConvertTxt)
 
+[void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$mnuRestart = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuRestart.Text = "Restart Application"
+$mnuRestart.Add_Click({
+    $scriptPath = $PSCommandPath
+    if (-not $scriptPath) {
+        $scriptPath = $MyInvocation.PSCommandPath
+    }
+    if (-not $scriptPath) {
+        $scriptPath = Join-Path $PSScriptRoot "parat.ps1"
+    }
+    Start-Process "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -WindowStyle Hidden
+    $form.Close()
+})
+[void]$mnuFile.DropDownItems.Add($mnuRestart)
+
 # File -> Concatenate submenu items
 $menuItemConcatenateHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemConcatenateHl7.Text = "Concatenate HL7"
