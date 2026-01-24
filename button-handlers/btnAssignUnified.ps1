@@ -116,7 +116,9 @@ function Get-BtnAssignUnifiedHandler {
                     -Options $options `
                     -OriginalFilePath $ScriptVars['CurrentFilePath'] `
                     -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors']
+                    -Tumors $ScriptVars['Tumors'] `
+                    -Controls $Controls `
+                    -ScriptVars $ScriptVars
             }
         }
         catch {

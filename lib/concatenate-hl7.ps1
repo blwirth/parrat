@@ -83,7 +83,9 @@ function Get-Hl7MessagePreview {
 
 function Show-Hl7ConcatenationPreview {
     param(
-        [array]$Hl7Files
+        [array]$Hl7Files,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
     
     # Use ArrayList for mutable file list that can be modified in event handlers
@@ -450,18 +452,26 @@ function Show-Hl7ConcatenationPreview {
             foreach ($item in $script:hl7FileInfos) {
                 $totalMessages += $item.Info.MessageCount
             }
-            
+
             # Concatenate HL7 files
             Write-ConcatenatedHl7 -FileInfos $script:hl7FileInfos -OutputPath $outputPath
-            
-            [System.Windows.Forms.MessageBox]::Show(
-                "Concatenated HL7 file saved to:`n$outputPath`n`nTotal messages: $totalMessages",
+
+            # Ask user if they want to open the newly created file
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
+                "Concatenated HL7 file saved to:`n$outputPath`n`nTotal messages: $totalMessages`n`nOpen newly created file?",
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
-            
+
             $previewForm.Close()
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Load the newly created file
+                if ($Controls -ne $null -and $ScriptVars -ne $null) {
+                    Load-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                }
+            }
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(
@@ -607,12 +617,17 @@ function Write-ConcatenatedHl7FromPaths {
 }
 
 function Start-ConcatenateHl7 {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
     # Open file dialog for multiple file selection
     $ofd = New-Object System.Windows.Forms.OpenFileDialog
     $ofd.Filter = "HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*"
     $ofd.Title = "Select HL7 files to concatenate (hold Ctrl or Shift to select multiple)"
     $ofd.Multiselect = $true
-    
+
     if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         if ($ofd.FileNames.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -623,7 +638,7 @@ function Start-ConcatenateHl7 {
             )
             return
         }
-        
+
         # For large batches, offer fast mode to skip preview
         if ($ofd.FileNames.Count -gt 500) {
             $result = [System.Windows.Forms.MessageBox]::Show(
@@ -632,24 +647,26 @@ function Start-ConcatenateHl7 {
                 [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
                 [System.Windows.Forms.MessageBoxIcon]::Question
             )
-            
+
             if ($result -eq [System.Windows.Forms.DialogResult]::Cancel) {
                 return
             }
-            
+
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                Start-FastConcatenateHl7 -FilePaths $ofd.FileNames
+                Start-FastConcatenateHl7 -FilePaths $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
                 return
             }
         }
-        
-        Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames
+
+        Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
     }
 }
 
 function Start-FastConcatenateHl7 {
     param(
-        [string[]]$FilePaths
+        [string[]]$FilePaths,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
     
     # Get output directory
@@ -734,14 +751,21 @@ function Start-FastConcatenateHl7 {
     # Run concatenation with progress
     try {
         $result = Write-ConcatenatedHl7FromPaths -FilePaths $FilePaths -OutputPath $outputPath
-        
+
         if ($result.Success) {
-            [System.Windows.Forms.MessageBox]::Show(
-                "Concatenation complete!`n`nFiles processed: $($result.FilesProcessed)`nOutput: $outputPath",
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
+                "Concatenation complete!`n`nFiles processed: $($result.FilesProcessed)`nOutput: $outputPath`n`nOpen newly created file?",
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Load the newly created file
+                if ($Controls -ne $null -and $ScriptVars -ne $null) {
+                    Load-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                }
+            }
         }
         else {
             [System.Windows.Forms.MessageBox]::Show(

@@ -1,7 +1,12 @@
 function Get-BtnConcatenateTxtHandler {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
     return {
-        Start-ConcatenateTxt
-    }
+        Start-ConcatenateTxt -Controls $Controls -ScriptVars $ScriptVars
+    }.GetNewClosure()
 }
 
 

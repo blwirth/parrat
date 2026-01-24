@@ -859,7 +859,9 @@ function Show-UnifiedPreviewReport {
         [hashtable]$Options,
         [string]$OriginalFilePath,
         [System.Xml.XmlDocument]$XmlDoc,
-        [System.Xml.XmlNodeList]$Tumors
+        [System.Xml.XmlNodeList]$Tumors,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
 
     # Count changes
@@ -1085,12 +1087,23 @@ function Show-UnifiedPreviewReport {
 
             Write-UnifiedAssignedXml -XmlDoc $XmlDoc -Tumors $Tumors -TumorAssignments $TumorAssignments -PatientAssignments $PatientAssignments -NsMgr $nsMgr -OutputPath $outputPath
 
-            [System.Windows.Forms.MessageBox]::Show(
-                "Updated XML saved to:`n$outputPath",
+            # Ask user if they want to open the newly created file
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
+                "Updated XML saved to:`n$outputPath`n`nOpen newly created file?",
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Close the preview form first
+                $reportForm.Close()
+
+                # Load the newly created file
+                if ($Controls -ne $null -and $ScriptVars -ne $null) {
+                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                }
+            }
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(

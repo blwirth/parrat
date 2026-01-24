@@ -213,7 +213,9 @@ function Get-TumorPreview {
 
 function Show-ConcatenationPreview {
     param(
-        [array]$XmlFiles
+        [array]$XmlFiles,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
     
     # Validate headers
@@ -565,18 +567,26 @@ function Show-ConcatenationPreview {
             foreach ($item in $script:xmlFileInfos) {
                 $totalTumors += $item.Info.TumorCount
             }
-            
+
             # Concatenate XMLs
             Write-ConcatenatedXml -HeaderInfos $script:xmlFileInfos -ReferenceInfo $script:xmlRefInfo -OutputPath $outputPath
-            
-            [System.Windows.Forms.MessageBox]::Show(
-                "Concatenated XML saved to:`n$outputPath`n`nTotal tumors: $totalTumors",
+
+            # Ask user if they want to open the newly created file
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
+                "Concatenated XML saved to:`n$outputPath`n`nTotal tumors: $totalTumors`n`nOpen newly created file?",
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
-            
+
             $previewForm.Close()
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Load the newly created file
+                if ($Controls -ne $null -and $ScriptVars -ne $null) {
+                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                }
+            }
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(
@@ -787,12 +797,17 @@ function Write-ConcatenatedXmlFromPaths {
 }
 
 function Start-ConcatenateXml {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
     # Open file dialog for multiple file selection
     $ofd = New-Object System.Windows.Forms.OpenFileDialog
     $ofd.Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*"
     $ofd.Title = "Select XML files to concatenate (hold Ctrl or Shift to select multiple)"
     $ofd.Multiselect = $true
-    
+
     if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         if ($ofd.FileNames.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -803,7 +818,7 @@ function Start-ConcatenateXml {
             )
             return
         }
-        
+
         # For large batches, offer fast mode to skip preview
         if ($ofd.FileNames.Count -gt 200) {
             $result = [System.Windows.Forms.MessageBox]::Show(
@@ -812,24 +827,26 @@ function Start-ConcatenateXml {
                 [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
                 [System.Windows.Forms.MessageBoxIcon]::Question
             )
-            
+
             if ($result -eq [System.Windows.Forms.DialogResult]::Cancel) {
                 return
             }
-            
+
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                Start-FastConcatenateXml -FilePaths $ofd.FileNames
+                Start-FastConcatenateXml -FilePaths $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
                 return
             }
         }
-        
-        Show-ConcatenationPreview -XmlFiles $ofd.FileNames
+
+        Show-ConcatenationPreview -XmlFiles $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
     }
 }
 
 function Start-FastConcatenateXml {
     param(
-        [string[]]$FilePaths
+        [string[]]$FilePaths,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
     
     # Get output directory
@@ -914,10 +931,10 @@ function Start-FastConcatenateXml {
     # Run concatenation with progress
     try {
         $result = Write-ConcatenatedXmlFromPaths -FilePaths $FilePaths -OutputPath $outputPath
-        
+
         if ($result.Success) {
             $message = "Concatenation complete!`n`nFiles processed: $($result.FilesProcessed)`nTotal tumors: $($result.TotalTumors)`nOutput: $outputPath"
-            
+
             if ($result.Errors.Count -gt 0) {
                 $message += "`n`nWarnings ($($result.Errors.Count) files skipped):`n"
                 # Show first 5 errors max
@@ -927,13 +944,22 @@ function Start-FastConcatenateXml {
                     $message += "`n... and $($result.Errors.Count - 5) more"
                 }
             }
-            
-            [System.Windows.Forms.MessageBox]::Show(
+
+            $message += "`n`nOpen newly created file?"
+
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
                 $message,
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Load the newly created file
+                if ($Controls -ne $null -and $ScriptVars -ne $null) {
+                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                }
+            }
         }
         else {
             [System.Windows.Forms.MessageBox]::Show(

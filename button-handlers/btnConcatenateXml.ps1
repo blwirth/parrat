@@ -1,6 +1,11 @@
 function Get-BtnConcatenateXmlHandler {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
     return {
-        Start-ConcatenateXml
-    }
+        Start-ConcatenateXml -Controls $Controls -ScriptVars $ScriptVars
+    }.GetNewClosure()
 }
 

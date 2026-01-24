@@ -56,7 +56,9 @@ function Get-TxtFilePreview {
 
 function Show-TxtConcatenationPreview {
     param(
-        [array]$TxtFiles
+        [array]$TxtFiles,
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
     )
     
     # Use ArrayList for mutable file list that can be modified in event handlers
@@ -423,18 +425,24 @@ function Show-TxtConcatenationPreview {
             foreach ($item in $script:txtFileInfos) {
                 $totalLines += $item.Info.LineCount
             }
-            
+
             # Concatenate TXT files
             Write-ConcatenatedTxt -FileInfos $script:txtFileInfos -OutputPath $outputPath
-            
-            [System.Windows.Forms.MessageBox]::Show(
-                "Concatenated TXT file saved to:`n$outputPath`n`nTotal lines: $totalLines",
+
+            # Ask user if they want to open the newly created file
+            $openResult = [System.Windows.Forms.MessageBox]::Show(
+                "Concatenated TXT file saved to:`n$outputPath`n`nTotal lines: $totalLines`n`nOpen newly created file?",
                 "Success",
-                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
-            
+
             $previewForm.Close()
+
+            if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                # Open TXT file in default text editor
+                Start-Process $outputPath
+            }
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(
@@ -489,12 +497,17 @@ function Write-ConcatenatedTxt {
 }
 
 function Start-ConcatenateTxt {
+    param(
+        [hashtable]$Controls,
+        [hashtable]$ScriptVars
+    )
+
     # Open file dialog for multiple file selection
     $ofd = New-Object System.Windows.Forms.OpenFileDialog
     $ofd.Filter = "Text Files (*.txt)|*.txt|All files (*.*)|*.*"
     $ofd.Title = "Select TXT files to concatenate (hold Ctrl or Shift to select multiple)"
     $ofd.Multiselect = $true
-    
+
     if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         if ($ofd.FileNames.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -505,7 +518,7 @@ function Start-ConcatenateTxt {
             )
             return
         }
-        
-        Show-TxtConcatenationPreview -TxtFiles $ofd.FileNames
+
+        Show-TxtConcatenationPreview -TxtFiles $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
     }
 }
