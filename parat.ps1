@@ -75,9 +75,13 @@ $mnuOpen = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuOpen.Text = "Open"
 [void]$mnuFile.DropDownItems.Add($mnuOpen)
 
+[void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
 $mnuDiffFiles = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuDiffFiles.Text = "Diff Files..."
 [void]$mnuFile.DropDownItems.Add($mnuDiffFiles)
+
+[void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
 $mnuConcatenate = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuConcatenate.Text = "Concatenate..."
@@ -86,6 +90,8 @@ $mnuConcatenate.Text = "Concatenate..."
 $mnuSplit = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuSplit.Text = "Split..."
 [void]$mnuFile.DropDownItems.Add($mnuSplit)
+
+[void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
 $mnuConvertTxt = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuConvertTxt.Text = "Convert .txt"
