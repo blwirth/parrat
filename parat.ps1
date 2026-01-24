@@ -50,7 +50,6 @@ Initialize-ParatLogging
 . "$PSScriptRoot\button-handlers\btnDedupTrueMatches.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupPrimaryKey.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupPathReport.ps1"
-. "$PSScriptRoot\button-handlers\btnAssign.ps1"
 . "$PSScriptRoot\button-handlers\btnFacility.ps1"
 . "$PSScriptRoot\button-handlers\btnAssignUnified.ps1"
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
