@@ -156,7 +156,9 @@ function Show-Hl7Message {
     }
 
     # Update navigation
-    $lblIndex.Text = "Message {0} of {1}" -f ($Index + 1), $Messages.Count
+    $dataTable = $gridNav.DataSource
+    $selectedCount = if ($null -ne $dataTable) { @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count } else { 0 }
+    $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($Index + 1), $Messages.Count, $selectedCount
     $btnPrev.Enabled = ($Index -gt 0)
     $btnNext.Enabled = ($Index -lt ($Messages.Count - 1))
 }

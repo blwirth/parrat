@@ -511,7 +511,8 @@ function Show-Tumor {
         }
     }
 
-    $lblIndex.Text = "Tumor {0} of {1}" -f ($Index + 1), $script:Tumors.Count
+    $selectedCount = @($table.Rows | Where-Object { $_["Selected"] -eq $true }).Count
+    $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($Index + 1), $script:Tumors.Count, $selectedCount
     $btnPrev.Enabled = ($Index -gt 0)
     $btnNext.Enabled = ($Index -lt ($script:Tumors.Count - 1))
     
@@ -569,6 +570,40 @@ $gridNav.Add_SelectionChanged({
     }
 })
 
+# Commit checkbox changes immediately when clicked
+$gridNav.Add_CurrentCellDirtyStateChanged({
+    if ($gridNav.IsCurrentCellDirty -and $gridNav.CurrentCell.ColumnIndex -eq 0) {
+        $gridNav.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit)
+    }
+})
+
+# Update selected count when checkbox is toggled
+$gridNav.Add_CellValueChanged({
+    param($sender, $e)
+
+    # Only handle changes to the "Selected" column (column 0)
+    if ($e.ColumnIndex -ne 0) { return }
+    if ($global:IsLoadingData -eq $true -or $script:IsLoadingData -eq $true) { return }
+
+    $dataTable = $gridNav.DataSource
+    if ($null -eq $dataTable) { return }
+
+    $selectedCount = @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count
+    $fileType = $global:FileType
+    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+
+    if ($fileType -eq 'hl7') {
+        $messages = $global:Hl7Messages
+        if ($null -eq $messages) { $messages = $script:Hl7Messages }
+        $totalCount = if ($null -ne $messages) { $messages.Count } else { 0 }
+        $currentIdx = $global:CurrentIndex
+        if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
+        $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($currentIdx + 1), $totalCount, $selectedCount
+    }
+    else {
+        $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $script:Tumors.Count, $selectedCount
+    }
+})
 
 # Wire up button handlers
 $mnuRawRecord.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
