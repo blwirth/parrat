@@ -31,18 +31,15 @@
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
 . "$PSScriptRoot\button-handlers\btnDiff.ps1"
 . "$PSScriptRoot\button-handlers\btnDiffFiles.ps1"
-. "$PSScriptRoot\button-handlers\btnDedup.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupTrueMatches.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupPrimaryKey.ps1"
 . "$PSScriptRoot\button-handlers\btnDedupPathReport.ps1"
 . "$PSScriptRoot\button-handlers\btnAssign.ps1"
 . "$PSScriptRoot\button-handlers\btnFacility.ps1"
-. "$PSScriptRoot\button-handlers\btnConcatenate.ps1"
 . "$PSScriptRoot\button-handlers\btnConvertTxt.ps1"
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnFixObx.ps1"
 . "$PSScriptRoot\button-handlers\btnRemoveEmptyObx5.ps1"
-. "$PSScriptRoot\button-handlers\btnExport.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
@@ -65,110 +62,146 @@ $form.Text   = "PARAT"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 
-# Top nav - ToolStrip
-$toolStrip = New-Object System.Windows.Forms.ToolStrip
-$toolStrip.Dock = 'Top'
+# Menubar (MenuStrip)
+$menuStrip = New-Object System.Windows.Forms.MenuStrip
+$menuStrip.Dock = 'Top'
+$form.MainMenuStrip = $menuStrip
 
-# File operations
-$btnOpen = New-Object System.Windows.Forms.ToolStripButton
-$btnOpen.Text = "Open..."
-$btnOpen.DisplayStyle = 'Text'
-[void]$toolStrip.Items.Add($btnOpen)
+# ---- Menus ----
+$mnuFile = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuFile.Text = "File"
 
-$btnXml = New-Object System.Windows.Forms.ToolStripButton
-$btnXml.Text = "Show Raw"
-$btnXml.DisplayStyle = 'Text'
-$btnXml.Enabled = $false  # Disabled until file is loaded
-[void]$toolStrip.Items.Add($btnXml)
+$mnuOpen = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuOpen.Text = "Open"
+[void]$mnuFile.DropDownItems.Add($mnuOpen)
 
-[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+$mnuDiffFiles = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuDiffFiles.Text = "Diff Files..."
+[void]$mnuFile.DropDownItems.Add($mnuDiffFiles)
 
-# Processing operations
-$btnDiff = New-Object System.Windows.Forms.ToolStripButton
-$btnDiff.Text = "Diff Records"
-$btnDiff.DisplayStyle = 'Text'
-$btnDiff.Enabled = $false  # Disabled until file is loaded
-[void]$toolStrip.Items.Add($btnDiff)
+$mnuConcatenate = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuConcatenate.Text = "Concatenate..."
+[void]$mnuFile.DropDownItems.Add($mnuConcatenate)
 
-$btnDedup = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnDedup.Text = "Deduplicate..."
-$btnDedup.DisplayStyle = 'Text'
-$btnDedup.Enabled = $false  # Disabled until file is loaded
-[void]$toolStrip.Items.Add($btnDedup)
+$mnuSplit = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuSplit.Text = "Split..."
+[void]$mnuFile.DropDownItems.Add($mnuSplit)
 
-$btnAssign = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnAssign.Text = "Assign..."
-$btnAssign.DisplayStyle = 'Text'
-$btnAssign.Enabled = $false  # Disabled until file is loaded (XML-specific)
-[void]$toolStrip.Items.Add($btnAssign)
+$mnuConvertTxt = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuConvertTxt.Text = "Convert .txt"
+[void]$mnuFile.DropDownItems.Add($mnuConvertTxt)
 
-$btnFixObx = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnFixObx.Text = "Modify HL7..."
-$btnFixObx.DisplayStyle = 'Text'
-$btnFixObx.Enabled = $false  # Disabled until file is loaded (HL7-specific)
-[void]$toolStrip.Items.Add($btnFixObx)
+# File -> Concatenate submenu items
+$menuItemConcatenateHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateHl7.Text = "Concatenate HL7"
+$menuItemConcatenateHl7.Add_Click({ Start-ConcatenateHl7 })
+[void]$mnuConcatenate.DropDownItems.Add($menuItemConcatenateHl7)
 
-[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+$menuItemConcatenateXml = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateXml.Text = "Concatenate XML"
+$menuItemConcatenateXml.Add_Click({ Start-ConcatenateXml })
+[void]$mnuConcatenate.DropDownItems.Add($menuItemConcatenateXml)
 
-# Export/Convert operations
-$btnExport = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnExport.Text = "Export..."
-$btnExport.DisplayStyle = 'Text'
-$btnExport.Enabled = $false  # Disabled until file is loaded
-[void]$toolStrip.Items.Add($btnExport)
+$menuItemConcatenateTxt = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemConcatenateTxt.Text = "Concatenate TXT"
+$menuItemConcatenateTxt.Add_Click({ Start-ConcatenateTxt })
+[void]$mnuConcatenate.DropDownItems.Add($menuItemConcatenateTxt)
 
-[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+$mnuView = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuView.Text = "View"
 
-$btnDiffFiles = New-Object System.Windows.Forms.ToolStripButton
-$btnDiffFiles.Text = "Diff Files..."
-$btnDiffFiles.DisplayStyle = 'Text'
-# Diff Files stays enabled - doesn't require a file to be loaded
-[void]$toolStrip.Items.Add($btnDiffFiles)
+$mnuRawRecord = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuRawRecord.Text = "Raw Record"
+$mnuRawRecord.Enabled = $false
+[void]$mnuView.DropDownItems.Add($mnuRawRecord)
 
-$btnConcatenate = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnConcatenate.Text = "Concatenate..."
-$btnConcatenate.DisplayStyle = 'Text'
-# Concatenate stays enabled - doesn't require a file
-[void]$toolStrip.Items.Add($btnConcatenate)
+$mnuDiffRecords = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuDiffRecords.Text = "Diff Records"
+$mnuDiffRecords.Enabled = $false
+[void]$mnuView.DropDownItems.Add($mnuDiffRecords)
 
-$btnSplit = New-Object System.Windows.Forms.ToolStripButton
-$btnSplit.Text = "Split..."
-$btnSplit.DisplayStyle = 'Text'
-# Split stays enabled - doesn't require a file to be loaded
-[void]$toolStrip.Items.Add($btnSplit)
+$mnuEdit = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuEdit.Text = "Edit"
 
-$btnConvertTxt = New-Object System.Windows.Forms.ToolStripButton
-$btnConvertTxt.Text = "Convert TXT"
-$btnConvertTxt.DisplayStyle = 'Text'
-# Convert TXT stays enabled - doesn't require a file
-[void]$toolStrip.Items.Add($btnConvertTxt)
+$mnuAssign = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuAssign.Text = "Assign..."
+$mnuAssign.Enabled = $false
+[void]$mnuEdit.DropDownItems.Add($mnuAssign)
 
-$btnNoahMenu = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnNoahMenu.Text = "NOAH..."
-$btnNoahMenu.DisplayStyle = 'Text'
-# NOAH stays enabled - doesn't require a file
-[void]$toolStrip.Items.Add($btnNoahMenu)
+[void]$mnuEdit.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
-$btnManageTables = New-Object System.Windows.Forms.ToolStripDropDownButton
-$btnManageTables.Text = "Manage Coding Tables..."
-$btnManageTables.DisplayStyle = 'Text'
-# Manage Tables stays enabled - doesn't require a file
-[void]$toolStrip.Items.Add($btnManageTables)
+$mnuModifyHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuModifyHl7.Text = "Modify HL7"
+$mnuModifyHl7.Enabled = $false
+[void]$mnuEdit.DropDownItems.Add($mnuModifyHl7)
 
-[void]$toolStrip.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+[void]$mnuEdit.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
-# Status label
-$lblStatus = New-Object System.Windows.Forms.ToolStripLabel
+$mnuDeduplicate = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuDeduplicate.Text = "Deduplicate..."
+$mnuDeduplicate.Enabled = $false
+[void]$mnuEdit.DropDownItems.Add($mnuDeduplicate)
+
+# Edit -> Deduplicate submenu items
+$menuItemTrueMatches = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemTrueMatches.Text = "Dedup true matches"
+[void]$mnuDeduplicate.DropDownItems.Add($menuItemTrueMatches)
+
+$menuItemPathReport = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPathReport.Text = "Dedup by pathReportNumber1"
+[void]$mnuDeduplicate.DropDownItems.Add($menuItemPathReport)
+
+$menuItemPrimaryKey = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemPrimaryKey.Text = "Dedup by primary key"
+[void]$mnuDeduplicate.DropDownItems.Add($menuItemPrimaryKey)
+
+$mnuExport = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuExport.Text = "Export"
+$mnuExport.Enabled = $false
+
+$mnuNoah = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuNoah.Text = "NOAH"
+
+$mnuSettings = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuSettings.Text = "Settings"
+
+$mnuManageCodingTables = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuManageCodingTables.Text = "Manage Coding Tables"
+[void]$mnuSettings.DropDownItems.Add($mnuManageCodingTables)
+
+$mnuAbout = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuAbout.Text = "About"
+
+$mnuUserManual = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuUserManual.Text = "User Manual"
+$mnuUserManual.Add_Click({ })  # no-op for now
+[void]$mnuAbout.DropDownItems.Add($mnuUserManual)
+
+[void]$menuStrip.Items.AddRange(@(
+    $mnuFile,
+    $mnuView,
+    $mnuEdit,
+    $mnuExport,
+    $mnuNoah,
+    $mnuSettings,
+    $mnuAbout
+))
+
+# Status bar (StatusStrip)
+$statusStrip = New-Object System.Windows.Forms.StatusStrip
+$statusStrip.Dock = 'Bottom'
+
+$lblStatus = New-Object System.Windows.Forms.ToolStripStatusLabel
 $lblStatus.Text = "No file loaded"
-$lblStatus.Alignment = 'Right'
-[void]$toolStrip.Items.Add($lblStatus)
+$lblStatus.Spring = $true
+[void]$statusStrip.Items.Add($lblStatus)
 
 # --- Main resizable area (panel + split containers) ---
 
 # Panel to host the split containers, leaving room for ToolStrip and bottom nav
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Dock = 'Fill'
-$mainPanel.Padding = New-Object System.Windows.Forms.Padding(10, 25, 10, 10)
+$mainPanel.Padding = New-Object System.Windows.Forms.Padding(10, 10, 10, 10)
 
 # Outer split container: left (grid) | right (inner split: path + items)
 $splitOuter = New-Object System.Windows.Forms.SplitContainer
@@ -289,9 +322,10 @@ $bottomPanel.Controls.AddRange(@($btnPrev, $btnNext, $lblIndex, $lblFileName))
 
 # Add everything to the form
 $form.Controls.AddRange(@(
-    $toolStrip,
     $mainPanel,
-    $bottomPanel
+$bottomPanel,
+    $statusStrip,
+    $menuStrip
 ))
 
 # State (script scope)
@@ -323,16 +357,19 @@ $script:Controls = @{
     'btnNext' = $btnNext
     'lblIndex' = $lblIndex
     'lblFileName' = $lblFileName
-    'btnXml' = $btnXml
-    'btnDiff' = $btnDiff
-    'btnDiffFiles' = $btnDiffFiles
-    'btnExport' = $btnExport
-    'btnDedup' = $btnDedup
-    'btnConcatenate' = $btnConcatenate
-    'btnAssign' = $btnAssign
-    'btnFixObx' = $btnFixObx
-    'btnNoahMenu' = $btnNoahMenu
-    'btnManageTables' = $btnManageTables
+    'mnuOpen' = $mnuOpen
+    'mnuDiffFiles' = $mnuDiffFiles
+    'mnuConcatenate' = $mnuConcatenate
+    'mnuSplit' = $mnuSplit
+    'mnuConvertTxt' = $mnuConvertTxt
+    'mnuRawRecord' = $mnuRawRecord
+    'mnuDiffRecords' = $mnuDiffRecords
+    'mnuAssign' = $mnuAssign
+    'mnuModifyHl7' = $mnuModifyHl7
+    'mnuDeduplicate' = $mnuDeduplicate
+    'mnuExport' = $mnuExport
+    'mnuNoah' = $mnuNoah
+    'mnuManageCodingTables' = $mnuManageCodingTables
 }
 
 # Global controls reference for cross-file access
@@ -355,35 +392,23 @@ function Update-ButtonStatesForFileType {
         [string]$FileType
     )
     
-    # Enable buttons that require a file (any file type)
+    # Enable menu items that require a file (any file type)
     $hasFile = ($null -ne $FileType -and $FileType -ne '')
     
-    if ($Controls['btnXml']) {
-        $Controls['btnXml'].Enabled = $hasFile
-    }
-    if ($Controls['btnDiff']) {
-        $Controls['btnDiff'].Enabled = $hasFile
-    }
-    if ($Controls['btnDedup']) {
-        $Controls['btnDedup'].Enabled = $hasFile
-    }
-    if ($Controls['btnExport']) {
-        $Controls['btnExport'].Enabled = $hasFile
-    }
+    if ($Controls['mnuRawRecord'])    { $Controls['mnuRawRecord'].Enabled = $hasFile }
+    if ($Controls['mnuDiffRecords'])  { $Controls['mnuDiffRecords'].Enabled = $hasFile }
+    if ($Controls['mnuDeduplicate'])  { $Controls['mnuDeduplicate'].Enabled = $hasFile }
+    if ($Controls['mnuExport'])       { $Controls['mnuExport'].Enabled = $hasFile }
     
     # XML-specific buttons should be enabled only for XML files
     $isXmlFile = ($FileType -eq 'xml')
     
-    if ($Controls['btnAssign']) {
-        $Controls['btnAssign'].Enabled = $isXmlFile
-    }
+    if ($Controls['mnuAssign']) { $Controls['mnuAssign'].Enabled = $isXmlFile }
     
     # HL7-specific buttons should be enabled only for HL7 files
     $isHl7File = ($FileType -eq 'hl7')
     
-    if ($Controls['btnFixObx']) {
-        $Controls['btnFixObx'].Enabled = $isHl7File
-    }
+    if ($Controls['mnuModifyHl7']) { $Controls['mnuModifyHl7'].Enabled = $isHl7File }
 }
 
 function Show-Tumor {
@@ -490,7 +515,7 @@ function Show-Tumor {
     $script:IsShowingTumor = $false
 }
 
-$btnOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
 # Grid row selection -> show record based on file type (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
@@ -542,29 +567,39 @@ $gridNav.Add_SelectionChanged({
 
 
 # Wire up button handlers
-$btnXml.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnDiff.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$btnDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
-$btnConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
-$btnFixObx.Add_Click((Get-BtnFixObxHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuRawRecord.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuDiffRecords.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
+$mnuConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 
 # Set up Assign dropdown menu
 $menuItemPrimarySiteLaterality = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemPrimarySiteLaterality.Text = "Primary Site and Laterality"
 $menuItemPrimarySiteLaterality.Add_Click((Get-BtnAssignHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnAssign.DropDownItems.Add($menuItemPrimarySiteLaterality)
+[void]$mnuAssign.DropDownItems.Add($menuItemPrimarySiteLaterality)
 
 $menuItemFacility = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemFacility.Text = "Facility"
 $menuItemFacility.Add_Click((Get-BtnFacilityHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnAssign.DropDownItems.Add($menuItemFacility)
+[void]$mnuAssign.DropDownItems.Add($menuItemFacility)
 
 $menuItemPid = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemPid.Text = "PID"
+$menuItemPid.Text = "Patient ID"
 $menuItemPid.Add_Click((Get-BtnAddPidHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnAssign.DropDownItems.Add($menuItemPid)
+[void]$mnuAssign.DropDownItems.Add($menuItemPid)
+
+# Set up Modify HL7 dropdown menu
+$menuItemFixObx31 = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemFixObx31.Text = "Fix OBX 3.1"
+$menuItemFixObx31.Add_Click((Get-BtnFixObx3Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$mnuModifyHl7.DropDownItems.Add($menuItemFixObx31)
+
+$menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemRemoveEmptyObx5.Text = "Remove Empty OBX 5"
+$menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$mnuModifyHl7.DropDownItems.Add($menuItemRemoveEmptyObx5)
 # Set up NOAH dropdown menu (populated dynamically on DropDownOpening)
-$btnNoahMenu.Add_DropDownOpening({
+$mnuNoah.Add_DropDownOpening({
     param($toolStripButton, $e)
     
     # Clear existing items
@@ -604,24 +639,13 @@ $btnNoahMenu.Add_DropDownOpening({
     [void]$toolStripButton.DropDownItems.Add($menuItemSettings)
 })
 
-# Set up Dedup dropdown menu
-$menuItemTrueMatches = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemTrueMatches.Text = "Dedup true matches"
+# Wire up Deduplicate submenu item handlers
 $menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnDedup.DropDownItems.Add($menuItemTrueMatches)
-
-$menuItemPathReport = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemPathReport.Text = "Dedup by pathReportNumber1"
 $menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnDedup.DropDownItems.Add($menuItemPathReport)
-
-$menuItemPrimaryKey = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemPrimaryKey.Text = "Dedup by primary key"
 $menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-[void]$btnDedup.DropDownItems.Add($menuItemPrimaryKey)
 
 # Set up Export dropdown menu (populated dynamically on DropDownOpening)
-$btnExport.Add_DropDownOpening({
+$mnuExport.Add_DropDownOpening({
     param($toolStripButton, $e)
     
     # Clear existing items
@@ -671,33 +695,11 @@ $btnExport.Add_DropDownOpening({
     [void]$toolStripButton.DropDownItems.Add($menuItemSelectedCsv)
 })
 
-# Set up Concatenate dropdown menu
-$menuItemConcatenateHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemConcatenateHl7.Text = "Concatenate HL7"
-$menuItemConcatenateHl7.Add_Click({
-    Start-ConcatenateHl7
-})
-[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateHl7)
-
-$menuItemConcatenateXml = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemConcatenateXml.Text = "Concatenate XML"
-$menuItemConcatenateXml.Add_Click({
-    Start-ConcatenateXml
-})
-[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateXml)
-
-$menuItemConcatenateTxt = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemConcatenateTxt.Text = "Concatenate TXT"
-$menuItemConcatenateTxt.Add_Click({
-    Start-ConcatenateTxt
-})
-[void]$btnConcatenate.DropDownItems.Add($menuItemConcatenateTxt)
-
 # Set up Manage Coding Tables dropdown menu (populated dynamically on DropDownOpening)
-$btnManageTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuManageCodingTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
 # Wire up Split button
-$btnSplit.Add_Click((Get-BtnSplitHandler))
+$mnuSplit.Add_Click((Get-BtnSplitHandler))
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
