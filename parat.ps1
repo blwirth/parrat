@@ -41,6 +41,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\lib\noah-results-viewer.ps1"
 . "$PSScriptRoot\lib\split-file.ps1"
 . "$PSScriptRoot\lib\test-site-laterality.ps1"
+. "$PSScriptRoot\lib\recent-files.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
@@ -91,6 +92,10 @@ $mnuFile.Text = "File"
 $mnuOpen = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuOpen.Text = "Open"
 [void]$mnuFile.DropDownItems.Add($mnuOpen)
+
+$mnuOpenRecent = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuOpenRecent.Text = "Open Recent"
+[void]$mnuFile.DropDownItems.Add($mnuOpenRecent)
 
 [void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
@@ -418,6 +423,7 @@ $script:Controls = @{
     'lblIndex' = $lblIndex
     'lblFileName' = $lblFileName
     'mnuOpen' = $mnuOpen
+    'mnuOpenRecent' = $mnuOpenRecent
     'mnuDiffFiles' = $mnuDiffFiles
     'mnuConcatenate' = $mnuConcatenate
     'mnuSplit' = $mnuSplit
@@ -708,6 +714,61 @@ $mnuTools.Add_DropDownOpening({
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
     $mnuFilterCurrentHl7.Enabled = ($fileType -eq 'hl7')
     $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml')
+})
+
+# Populate Open Recent submenu dynamically when opened
+$mnuOpenRecent.Add_DropDownOpening({
+    param($sender, $e)
+
+    # Clear existing items
+    $sender.DropDownItems.Clear()
+
+    $recentFiles = Get-RecentFiles
+
+    if ($recentFiles.Count -eq 0) {
+        $emptyItem = New-Object System.Windows.Forms.ToolStripMenuItem
+        $emptyItem.Text = "(No recent files)"
+        $emptyItem.Enabled = $false
+        [void]$sender.DropDownItems.Add($emptyItem)
+    }
+    else {
+        foreach ($file in $recentFiles) {
+            $menuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+            $filePath = $file.path
+            $fileType = $file.fileType
+
+            if (Test-Path $filePath) {
+                $menuItem.Text = $filePath
+                $menuItem.Tag = @{ Path = $filePath; FileType = $fileType }
+                $menuItem.Add_Click({
+                    param($clickSender, $clickArgs)
+                    $info = $clickSender.Tag
+                    if ($info.FileType -eq 'hl7') {
+                        Load-Hl7File -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
+                    }
+                    else {
+                        Load-XmlFile -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
+                    }
+                })
+            }
+            else {
+                $menuItem.Text = "$filePath (not found)"
+                $menuItem.Enabled = $false
+            }
+
+            [void]$sender.DropDownItems.Add($menuItem)
+        }
+    }
+
+    # Add separator and Clear option
+    [void]$sender.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+    $clearItem = New-Object System.Windows.Forms.ToolStripMenuItem
+    $clearItem.Text = "Clear Recent Files"
+    $clearItem.Add_Click({
+        Clear-RecentFiles
+    })
+    [void]$sender.DropDownItems.Add($clearItem)
 })
 
 # Wire up Deduplicate submenu item handlers

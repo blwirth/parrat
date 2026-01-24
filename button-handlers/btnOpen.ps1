@@ -81,6 +81,9 @@ function Load-XmlFile {
 
             Write-ParatLog -Level INFO -Message "Loaded $fileName with $($ScriptVars['Tumors'].Count) tumors" -Action "OPEN_FILE"
 
+            # Add to recent files
+            Add-RecentFile -FilePath $FilePath -FileType 'xml'
+
             # Build navigation table
             $table = New-Object System.Data.DataTable
             [void]$table.Columns.Add("Selected", [bool])
@@ -246,6 +249,9 @@ function Load-Hl7File {
         $Controls['lblFileName'].Text = "File: $fileName"
 
         Write-ParatLog -Level INFO -Message "Loaded $fileName with $($messages.Count) messages" -Action "OPEN_FILE"
+
+        # Add to recent files
+        Add-RecentFile -FilePath $FilePath -FileType 'hl7'
 
         # Build navigation table for HL7
         $table = New-Object System.Data.DataTable
