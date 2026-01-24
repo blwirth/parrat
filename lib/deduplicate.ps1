@@ -750,9 +750,17 @@ function Show-DeduplicationPreview {
     $previewForm.Controls.AddRange(@($lblSummary, $grid, $btnProceed, $btnCancel))
 
     $dialogResult = $previewForm.ShowDialog()
-    
+
     # Only proceed if user clicked OK
     if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
+        # Map DedupType to file suffix
+        $suffix = switch ($DedupType) {
+            "TrueMatches" { "-ddtr" }
+            "PrimaryKey"  { "-ddpk" }
+            "PathReport"  { "-ddpr" }
+            default       { "-dedup" }
+        }
+
         # User clicked proceed - show the full report
         Show-DeduplicationReport `
             -Report $Result.Report `
@@ -760,7 +768,8 @@ function Show-DeduplicationPreview {
             -OriginalCount $OriginalCount `
             -OriginalFilePath $OriginalFilePath `
             -XmlDoc $XmlDoc `
-            -Tumors $Tumors
+            -Tumors $Tumors `
+            -FileSuffix $suffix
     }
     # If Cancel or closed, just return (do nothing)
     # Explicitly return nothing to avoid any return value issues
@@ -774,7 +783,8 @@ function Show-DeduplicationReport {
         [int]$OriginalCount,
         [string]$OriginalFilePath,
         [System.Xml.XmlDocument]$XmlDoc,
-        [System.Xml.XmlNodeList]$Tumors
+        [System.Xml.XmlNodeList]$Tumors,
+        [string]$FileSuffix = "-dedup"
     )
 
     $dedupedCount = $IndicesToKeep.Count
@@ -852,7 +862,7 @@ function Show-DeduplicationReport {
         try {
             $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($OriginalFilePath)
             $directory = [System.IO.Path]::GetDirectoryName($OriginalFilePath)
-            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-dedup.xml")
+            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName$FileSuffix.xml")
 
             Write-DedupedXml -XmlDoc $XmlDoc -Tumors $Tumors -IndicesToKeep $IndicesToKeep -OutputPath $outputPath
 
@@ -878,7 +888,7 @@ function Show-DeduplicationReport {
         try {
             $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($OriginalFilePath)
             $directory = [System.IO.Path]::GetDirectoryName($OriginalFilePath)
-            $csvPath = [System.IO.Path]::Combine($directory, "$originalFileName-dedup-report.csv")
+            $csvPath = [System.IO.Path]::Combine($directory, "$originalFileName$FileSuffix-report.csv")
 
             $Report | Export-Csv -Path $csvPath -NoTypeInformation
 
