@@ -211,14 +211,19 @@ function Test-SiteLateralityHeuristics {
             $leftMatch = [regex]::Match($low, '\bleft\b')
             $rightMatch = [regex]::Match($low, '\bright\b')
 
-            $pLeft = if ($leftMatch.Success) { $leftMatch.Index } else { -1 }
-            $pRight = if ($rightMatch.Success) { $rightMatch.Index } else { -1 }
+            $hasLeft = $leftMatch.Success
+            $hasRight = $rightMatch.Success
 
-            if ($pLeft -ge 0 -and ($pRight -lt 0 -or $pLeft -lt $pRight)) {
+            if ($hasLeft -and $hasRight) {
+                # Both appear - laterality is ambiguous
+                $result.LateralityCode = "9"
+                $result.LateralityDescription = "Unknown (both left and right found)"
+            }
+            elseif ($hasLeft) {
                 $result.LateralityCode = "2"
                 $result.LateralityDescription = "Left"
             }
-            elseif ($pRight -ge 0) {
+            elseif ($hasRight) {
                 $result.LateralityCode = "1"
                 $result.LateralityDescription = "Right"
             }

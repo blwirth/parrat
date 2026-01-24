@@ -241,11 +241,15 @@ function Get-Laterality {
     $leftMatch = [regex]::Match($TextLow, '\bleft\b')
     $rightMatch = [regex]::Match($TextLow, '\bright\b')
 
-    $pLeft = if ($leftMatch.Success) { $leftMatch.Index } else { -1 }
-    $pRight = if ($rightMatch.Success) { $rightMatch.Index } else { -1 }
+    $hasLeft = $leftMatch.Success
+    $hasRight = $rightMatch.Success
 
-    if ($pLeft -lt 0 -and $pRight -lt 0) { return "" }
-    if ($pLeft -ge 0 -and ($pRight -lt 0 -or $pLeft -lt $pRight)) { return "2" }
+    if (-not $hasLeft -and -not $hasRight) { return "" }
+
+    # If both appear, laterality is ambiguous - assign unknown (9)
+    if ($hasLeft -and $hasRight) { return "9" }
+
+    if ($hasLeft) { return "2" }
     return "1"
 }
 
