@@ -60,11 +60,14 @@ function Get-BtnExportSelectedHl7Handler {
                     -OutputPath $saveFileDialog.FileName
 
                 if ($result.Success) {
+                    $outputFileName = [System.IO.Path]::GetFileName($saveFileDialog.FileName)
+                    Write-ParatLog -Level INFO -Message "Exported $($result.ExportedCount) message(s) to $outputFileName" -Action "EXPORT"
+
                     $message = "Successfully exported {0} message(s) to:`n{1}" -f $result.ExportedCount, $saveFileDialog.FileName
                     if ($result.Errors.Count -gt 0) {
                         $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
                     }
-                    
+
                     $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                         $message,
                         "Export Complete",
@@ -79,6 +82,7 @@ function Get-BtnExportSelectedHl7Handler {
                     $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
                 }
                 else {
+                    Write-ParatLog -Level WARN -Message "HL7 export completed with errors" -Action "EXPORT"
                     $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")
                     [System.Windows.Forms.MessageBox]::Show(
                         $errorMessage,
@@ -90,6 +94,7 @@ function Get-BtnExportSelectedHl7Handler {
                 }
             }
             catch {
+                Write-ParatError -Message "HL7 export failed" -Action "EXPORT" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Error during export: $($_.Exception.Message)",
                     "Export Error",

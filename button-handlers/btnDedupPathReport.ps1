@@ -18,12 +18,16 @@ function Get-BtnDedupPathReportHandler {
         try {
             $Controls['lblStatus'].Text = "Analyzing duplicates by pathReportNumber1..."
             $Controls['form'].Refresh()
-            
+
+            Write-ParatLog -Level INFO -Message "Starting deduplication (pathReportNumber1) for $($ScriptVars['Tumors'].Count) tumors" -Action "DEDUPLICATE"
+
             # Run dedup analysis by pathReportNumber1
             $result = Get-DuplicatesByPathReport -Tumors $ScriptVars['Tumors'] -NsMgr $ScriptVars['NsMgr']
-            
+
+            Write-ParatLog -Level INFO -Message "Deduplication analysis complete: $($result.DuplicateCount) duplicates found" -Action "DEDUPLICATE"
+
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
-            
+
             # Show preview modal before deduping
             Show-DeduplicationPreview `
                 -Result $result `
@@ -35,8 +39,9 @@ function Get-BtnDedupPathReportHandler {
                 -DedupType "PathReport"
         }
         catch {
+            Write-ParatError -Message "Deduplication (pathReportNumber1) failed" -Action "DEDUPLICATE" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show("Error during deduplication: $($_.Exception.Message)",
-                "Error", 
+                "Error",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )

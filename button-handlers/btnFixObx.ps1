@@ -19,14 +19,17 @@ function Get-BtnFixObx3Handler {
         try {
             $Controls['lblStatus'].Text = "Fixing OBX segments..."
             $Controls['form'].Refresh()
-            
+
+            Write-ParatLog -Level INFO -Message "Starting Fix OBX 3.1 for $($ScriptVars['Hl7Messages'].Count) messages" -Action "MODIFY_HL7"
+
             # Read the raw file content directly for maximum performance
             $rawContent = [System.IO.File]::ReadAllText($ScriptVars['CurrentFilePath'])
-            
+
             # Process using high-performance raw content function
             $result = Fix-ObxInRawContent -RawContent $rawContent
-            
+
             if ($result.FixedCount -eq 0) {
+                Write-ParatLog -Level INFO -Message "Fix OBX 3.1: no truncated segments found in $($result.TotalObxCount) OBX segments" -Action "MODIFY_HL7"
                 [System.Windows.Forms.MessageBox]::Show(
                     "No truncated OBX segments found. All $($result.TotalObxCount) OBX segments are properly formatted.",
                     "Fix OBX3.1",
@@ -36,30 +39,34 @@ function Get-BtnFixObx3Handler {
                 $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
                 return
             }
-            
+
             # Generate output path with -obx suffix
             $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
             $extension = [System.IO.Path]::GetExtension($ScriptVars['CurrentFilePath'])
             $directory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
             $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-obx$extension")
-            
+
             # Write the fixed content using .NET for speed
             [System.IO.File]::WriteAllText($outputPath, $result.ModifiedContent, [System.Text.Encoding]::ASCII)
-            
+
+            $outputFileName = [System.IO.Path]::GetFileName($outputPath)
+            Write-ParatLog -Level INFO -Message "Fix OBX 3.1: fixed $($result.FixedCount) of $($result.TotalObxCount) segments, saved to $outputFileName" -Action "MODIFY_HL7"
+
             $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
-            
+
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 "Fixed $($result.FixedCount) of $($result.TotalObxCount) OBX segments.`n`nSaved to:`n$outputPath`n`nOpen containing folder?",
                 "Fix OBX3.1 Complete",
                 [System.Windows.Forms.MessageBoxButtons]::YesNo,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
-            
+
             if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 Start-Process "explorer.exe" -ArgumentList "/select,`"$outputPath`""
             }
         }
         catch {
+            Write-ParatError -Message "Fix OBX 3.1 failed" -Action "MODIFY_HL7" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show(
                 "Error fixing OBX segments: $($_.Exception.Message)",
                 "Error",

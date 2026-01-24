@@ -77,11 +77,14 @@ function Get-BtnExportSelectedXmlHandler {
                     -OutputPath $saveFileDialog.FileName
 
                 if ($result.Success) {
+                    $outputFileName = [System.IO.Path]::GetFileName($saveFileDialog.FileName)
+                    Write-ParatLog -Level INFO -Message "Exported $($result.ExportedCount) tumor(s) to $outputFileName" -Action "EXPORT"
+
                     $message = "Successfully exported {0} tumor(s) to:`n{1}" -f $result.ExportedCount, $saveFileDialog.FileName
                     if ($result.Errors.Count -gt 0) {
                         $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
                     }
-                    
+
                     $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                         $message,
                         "Export Complete",
@@ -96,6 +99,7 @@ function Get-BtnExportSelectedXmlHandler {
                     $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
                 }
                 else {
+                    Write-ParatLog -Level WARN -Message "XML export completed with errors" -Action "EXPORT"
                     $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")
                     [System.Windows.Forms.MessageBox]::Show(
                         $errorMessage,
@@ -107,6 +111,7 @@ function Get-BtnExportSelectedXmlHandler {
                 }
             }
             catch {
+                Write-ParatError -Message "XML export failed" -Action "EXPORT" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Error during export: $($_.Exception.Message)",
                     "Export Error",

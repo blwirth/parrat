@@ -79,6 +79,8 @@ function Load-XmlFile {
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $ScriptVars['Tumors'].Count
             $Controls['lblFileName'].Text = "File: $fileName"
 
+            Write-ParatLog -Level INFO -Message "Loaded $fileName with $($ScriptVars['Tumors'].Count) tumors" -Action "OPEN_FILE"
+
             # Build navigation table
             $table = New-Object System.Data.DataTable
             [void]$table.Columns.Add("Selected", [bool])
@@ -179,6 +181,7 @@ function Load-XmlFile {
         }
     }
     catch {
+        Write-ParatError -Message "Failed to load XML file" -Action "OPEN_FILE" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show("Error loading XML: {0}" -f $_.Exception.Message, "Error")
     }
 }
@@ -241,7 +244,9 @@ function Load-Hl7File {
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count
         $Controls['lblFileName'].Text = "File: $fileName"
-        
+
+        Write-ParatLog -Level INFO -Message "Loaded $fileName with $($messages.Count) messages" -Action "OPEN_FILE"
+
         # Build navigation table for HL7
         $table = New-Object System.Data.DataTable
         [void]$table.Columns.Add("Selected", [bool])
@@ -318,6 +323,7 @@ function Load-Hl7File {
         Show-Hl7Message -Index 0 -Messages $messages -Controls $Controls
     }
     catch {
+        Write-ParatError -Message "Failed to load HL7 file" -Action "OPEN_FILE" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show("Error loading HL7: {0}" -f $_.Exception.Message, "Error")
     }
 }

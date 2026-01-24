@@ -58,6 +58,15 @@ function Get-BtnAssignUnifiedHandler {
             $Controls['lblStatus'].Text = "Analyzing records for unified assignment..."
             $Controls['form'].Refresh()
 
+            # Build options description for logging
+            $optionsList = @()
+            if ($options.AssignSite) { $optionsList += "Site" }
+            if ($options.AssignLaterality) { $optionsList += "Laterality" }
+            if ($options.AssignFacility) { $optionsList += "Facility" }
+            if ($options.AssignPid) { $optionsList += "PID" }
+            $optionsDesc = $optionsList -join ", "
+            Write-ParatLog -Level INFO -Message "Starting unified assignment analysis ($optionsDesc) for $($ScriptVars['Tumors'].Count) tumors" -Action "ASSIGN"
+
             # Measure execution time
             $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -89,6 +98,7 @@ function Get-BtnAssignUnifiedHandler {
             $changesFound = ($result.Report | Where-Object { $_.HasChanges }).Count
 
             if ($changesFound -eq 0) {
+                Write-ParatLog -Level INFO -Message "Unified assignment complete: no changes needed" -Action "ASSIGN"
                 [System.Windows.Forms.MessageBox]::Show(
                     "No records need updating based on the selected options.",
                     "Unified Assignment",
@@ -97,6 +107,7 @@ function Get-BtnAssignUnifiedHandler {
                 )
             }
             else {
+                Write-ParatLog -Level INFO -Message "Unified assignment analysis complete: $changesFound records with changes" -Action "ASSIGN"
                 # Show preview report
                 Show-UnifiedPreviewReport `
                     -Report $result.Report `
@@ -109,6 +120,7 @@ function Get-BtnAssignUnifiedHandler {
             }
         }
         catch {
+            Write-ParatError -Message "Unified assignment failed" -Action "ASSIGN" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show(
                 "Error during unified assignment: $($_.Exception.Message)",
                 "Error",

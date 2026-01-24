@@ -18,12 +18,16 @@ function Get-BtnDedupPrimaryKeyHandler {
         try {
             $Controls['lblStatus'].Text = "Analyzing duplicates by primary key..."
             $Controls['form'].Refresh()
-            
+
+            Write-ParatLog -Level INFO -Message "Starting deduplication (primary key) for $($ScriptVars['Tumors'].Count) tumors" -Action "DEDUPLICATE"
+
             # Run dedup analysis by primary key
             $result = Get-DuplicatesByPrimaryKey -Tumors $ScriptVars['Tumors'] -NsMgr $ScriptVars['NsMgr']
-            
+
+            Write-ParatLog -Level INFO -Message "Deduplication analysis complete: $($result.DuplicateCount) duplicates found" -Action "DEDUPLICATE"
+
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
-            
+
             # Show preview modal before deduping
             Show-DeduplicationPreview `
                 -Result $result `
@@ -35,8 +39,9 @@ function Get-BtnDedupPrimaryKeyHandler {
                 -DedupType "PrimaryKey"
         }
         catch {
+            Write-ParatError -Message "Deduplication (primary key) failed" -Action "DEDUPLICATE" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show("Error during deduplication: $($_.Exception.Message)",
-                "Error", 
+                "Error",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )

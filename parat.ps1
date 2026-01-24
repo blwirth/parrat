@@ -8,6 +8,9 @@ public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
 $consolePtr = [Console.Window]::GetConsoleWindow()
 [void][Console.Window]::ShowWindow($consolePtr, 0)  # 0 = SW_HIDE
 
+. "$PSScriptRoot\lib\logging.ps1"
+Initialize-ParatLogging
+
 . "$PSScriptRoot\lib\xml-helpers.ps1"
 . "$PSScriptRoot\lib\xml-viewer.ps1"
 . "$PSScriptRoot\lib\hl7-helpers.ps1"
@@ -215,13 +218,26 @@ $mnuNoahConfig = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuNoahConfig.Text = "NOAH Configuration"
 [void]$mnuSettings.DropDownItems.Add($mnuNoahConfig)
 
-$mnuAbout = New-Object System.Windows.Forms.ToolStripMenuItem
-$mnuAbout.Text = "About"
+$mnuHelp = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuHelp.Text = "Help"
 
 $mnuUserManual = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuUserManual.Text = "User Manual"
 $mnuUserManual.Add_Click({ })  # no-op for now
-[void]$mnuAbout.DropDownItems.Add($mnuUserManual)
+[void]$mnuHelp.DropDownItems.Add($mnuUserManual)
+
+[void]$mnuHelp.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+$mnuOpenLogs = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuOpenLogs.Text = "Open Logs Folder"
+$mnuOpenLogs.Add_Click({
+    $logDir = Join-Path $PSScriptRoot "logs"
+    if (-not (Test-Path $logDir)) {
+        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+    }
+    Start-Process "explorer.exe" -ArgumentList "`"$logDir`""
+})
+[void]$mnuHelp.DropDownItems.Add($mnuOpenLogs)
 
 [void]$menuStrip.Items.AddRange(@(
     $mnuFile,
@@ -230,7 +246,7 @@ $mnuUserManual.Add_Click({ })  # no-op for now
     $mnuExport,
     $mnuTools,
     $mnuSettings,
-    $mnuAbout
+    $mnuHelp
 ))
 
 # Status bar (StatusStrip)
@@ -758,5 +774,10 @@ $mnuSplit.Add_Click((Get-BtnSplitHandler))
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
+
+# Close logging on form close
+$form.Add_FormClosing({
+    Close-ParatLogging
+})
 
 [void]$form.ShowDialog()

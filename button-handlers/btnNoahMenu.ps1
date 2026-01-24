@@ -55,6 +55,8 @@ function Invoke-PostSelectedHL7 {
         $Controls['lblStatus'].Text = "NOAH reportability: running CLI..."
         $Controls['form'].Refresh()
 
+        Write-ParatLog -Level INFO -Message "Starting NOAH filter for message $($idx + 1)" -Action "NOAH_API"
+
         # Run CLI-based filter (no server needed)
         $result = Invoke-NoahReportabilityFilterForMessage `
             -MessageIndex $idx `
@@ -65,8 +67,15 @@ function Invoke-PostSelectedHL7 {
 
         $recordLabel = "Message"
         $recordCount = $ScriptVars['Hl7Messages'].Count
+
+        if ($result.Success) {
+            Write-ParatLog -Level INFO -Message "NOAH filter completed: $($result.Classification)" -Action "NOAH_API"
+        } else {
+            Write-ParatLog -Level WARN -Message "NOAH filter returned error" -Action "NOAH_API"
+        }
     }
     catch {
+        Write-ParatError -Message "NOAH filter failed" -Action "NOAH_API" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show(
             "Unexpected error: $($_.Exception.Message)",
             "NOAH Reportability - Error",
@@ -105,6 +114,8 @@ function Invoke-PostCustomPayload {
         $Controls['lblStatus'].Text = "NOAH reportability (custom): running CLI..."
         $Controls['form'].Refresh()
 
+        Write-ParatLog -Level INFO -Message "Starting NOAH filter for custom payload" -Action "NOAH_API"
+
         # Run CLI-based filter (no server needed)
         $result = Invoke-NoahReportabilityFilterForCustomPayload `
             -CustomText $customText `
@@ -115,8 +126,15 @@ function Invoke-PostCustomPayload {
         $recordLabel = "Custom Payload"
         $recordIndex = 0
         $recordCount = 1
+
+        if ($result.Success) {
+            Write-ParatLog -Level INFO -Message "NOAH filter (custom) completed: $($result.Classification)" -Action "NOAH_API"
+        } else {
+            Write-ParatLog -Level WARN -Message "NOAH filter (custom) returned error" -Action "NOAH_API"
+        }
     }
     catch {
+        Write-ParatError -Message "NOAH filter (custom) failed" -Action "NOAH_API" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show(
             "Unexpected error: $($_.Exception.Message)",
             "NOAH Reportability - Error",
@@ -227,6 +245,7 @@ function Invoke-NoahSettings {
     $saved = Show-NoahSettingsDialog -Config $config
 
     if ($saved) {
+        Write-ParatLog -Level INFO -Message "NOAH configuration updated" -Action "CONFIG_CHANGE"
         $Controls['lblStatus'].Text = "NOAH settings saved"
     }
 }
