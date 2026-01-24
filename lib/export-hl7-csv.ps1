@@ -1,14 +1,33 @@
-# export-all-hl7-csv.ps1
-# Export all HL7 messages to CSV format
+# export-hl7-csv.ps1
+# Export HL7 messages to CSV format (selected or all)
 
-function Export-AllHl7Csv {
+function Export-Hl7Csv {
+    <#
+    .SYNOPSIS
+    Export HL7 messages to CSV format.
+
+    .PARAMETER MessageIndices
+    Optional array of message indices to export. If not provided, exports all messages.
+
+    .PARAMETER Hl7Messages
+    Array of parsed HL7 message objects.
+
+    .PARAMETER OutputPath
+    The path to write the CSV file.
+    #>
     param(
+        [array]$MessageIndices,
         [array]$Hl7Messages,
         [string]$OutputPath
     )
 
-    if ($Hl7Messages.Count -eq 0) {
+    if ($null -eq $Hl7Messages -or $Hl7Messages.Count -eq 0) {
         return @{ Success = $false; Message = "No messages available for export."; ExportedCount = 0; Errors = @() }
+    }
+
+    # If no indices provided, export all messages
+    if ($null -eq $MessageIndices -or $MessageIndices.Count -eq 0) {
+        $MessageIndices = @(0..($Hl7Messages.Count - 1))
     }
 
     $errors = @()
@@ -16,7 +35,12 @@ function Export-AllHl7Csv {
 
     try {
         # Build CSV rows - one row per message
-        for ($messageIndex = 0; $messageIndex -lt $Hl7Messages.Count; $messageIndex++) {
+        foreach ($messageIndex in $MessageIndices) {
+            if ($messageIndex -lt 0 -or $messageIndex -ge $Hl7Messages.Count) {
+                $errors += "Invalid message index: $messageIndex"
+                continue
+            }
+
             $message = $Hl7Messages[$messageIndex]
 
             # Extract fields: last name, first name, date of birth, message date/time (MSH-7)
@@ -31,21 +55,21 @@ function Export-AllHl7Csv {
                 DateOfBirth = $dateOfBirth
                 MessageDateTime = $messageDateTime
             }
-            
+
             $rows += $row
         }
 
         # Write CSV file
         $csvContent = @()
-        
+
         # Header row
         $headerRow = "LastName,FirstName,DateOfBirth,MessageDateTime"
         $csvContent += $headerRow
-        
+
         # Data rows
         foreach ($row in $rows) {
             $csvRow = @()
-            
+
             # Add each field value
             $fields = @($row.LastName, $row.FirstName, $row.DateOfBirth, $row.MessageDateTime)
             foreach ($value in $fields) {
@@ -58,10 +82,10 @@ function Export-AllHl7Csv {
                 }
                 $csvRow += $value
             }
-            
+
             $csvContent += $csvRow -join ","
         }
-        
+
         # Write to file with UTF-8 encoding
         [System.IO.File]::WriteAllLines($OutputPath, $csvContent, [System.Text.Encoding]::UTF8)
 
@@ -80,4 +104,22 @@ function Export-AllHl7Csv {
     }
 }
 
+# Backward compatibility aliases
+function Export-SelectedHl7Csv {
+    param(
+        [array]$MessageIndices,
+        [array]$Hl7Messages,
+        [string]$OutputPath
+    )
 
+    return Export-Hl7Csv @PSBoundParameters
+}
+
+function Export-AllHl7Csv {
+    param(
+        [array]$Hl7Messages,
+        [string]$OutputPath
+    )
+
+    return Export-Hl7Csv -Hl7Messages $Hl7Messages -OutputPath $OutputPath
+}

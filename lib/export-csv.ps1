@@ -1,7 +1,29 @@
-# export-selected-csv.ps1
-# Export selected tumors to CSV format
+# export-csv.ps1
+# Export tumors to CSV format (selected or all)
 
-function Export-SelectedCsv {
+function Export-TumorsCsv {
+    <#
+    .SYNOPSIS
+    Export tumors to CSV format.
+
+    .PARAMETER TumorIndices
+    Optional array of tumor indices to export. If not provided, exports all tumors.
+
+    .PARAMETER XmlDoc
+    The XML document containing the tumors.
+
+    .PARAMETER NsMgr
+    The namespace manager for XPath queries.
+
+    .PARAMETER OutputPath
+    The path to write the CSV file.
+
+    .PARAMETER FieldList
+    Array of NAACCR field IDs to include in the export.
+
+    .PARAMETER CustomFields
+    Optional hashtable mapping custom field IDs to their parent elements.
+    #>
     param(
         [array]$TumorIndices,
         [System.Xml.XmlDocument]$XmlDoc,
@@ -11,8 +33,12 @@ function Export-SelectedCsv {
         [hashtable]$CustomFields = @{}
     )
 
-    if ($TumorIndices.Count -eq 0) {
-        return @{ Success = $false; Message = "No tumors selected for export."; ExportedCount = 0; Errors = @() }
+    # If no indices provided, export all tumors
+    if ($null -eq $TumorIndices -or $TumorIndices.Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
+            return @{ Success = $false; Message = "No tumors available for export."; ExportedCount = 0; Errors = @() }
+        }
+        $TumorIndices = @(0..($script:Tumors.Count - 1))
     }
 
     $errors = @()
@@ -36,13 +62,13 @@ function Export-SelectedCsv {
 
             # Build row data
             $row = @{}
-            
+
             foreach ($fieldId in $FieldList) {
                 $value = ""
-                
+
                 # Use dynamic parent element lookup from dictionary
                 $parentElement = Get-NaaccrParentElement -XmlId $fieldId -CustomFields $CustomFields
-                
+
                 if ($parentElement -eq "Patient") {
                     $node = $patient.SelectSingleNode("./n:Item[@naaccrId='$fieldId']", $NsMgr)
                     if ($null -ne $node) {
@@ -56,20 +82,20 @@ function Export-SelectedCsv {
                         $value = $node.InnerText
                     }
                 }
-                
+
                 $row[$fieldId] = $value
             }
-            
+
             $rows += $row
         }
 
         # Write CSV file
         $csvContent = @()
-        
+
         # Header row
         $headerRow = $FieldList -join ","
         $csvContent += $headerRow
-        
+
         # Data rows
         foreach ($row in $rows) {
             $csvRow = @()
@@ -86,7 +112,7 @@ function Export-SelectedCsv {
             }
             $csvContent += $csvRow -join ","
         }
-        
+
         # Write to file with UTF-8 encoding
         [System.IO.File]::WriteAllLines($OutputPath, $csvContent, [System.Text.Encoding]::UTF8)
 
@@ -103,4 +129,30 @@ function Export-SelectedCsv {
             Errors = @("Error during export: $($_.Exception.Message)")
         }
     }
+}
+
+# Backward compatibility aliases
+function Export-SelectedCsv {
+    param(
+        [array]$TumorIndices,
+        [System.Xml.XmlDocument]$XmlDoc,
+        [System.Xml.XmlNamespaceManager]$NsMgr,
+        [string]$OutputPath,
+        [array]$FieldList,
+        [hashtable]$CustomFields = @{}
+    )
+
+    return Export-TumorsCsv @PSBoundParameters
+}
+
+function Export-AllCsv {
+    param(
+        [System.Xml.XmlDocument]$XmlDoc,
+        [System.Xml.XmlNamespaceManager]$NsMgr,
+        [string]$OutputPath,
+        [array]$FieldList,
+        [hashtable]$CustomFields = @{}
+    )
+
+    return Export-TumorsCsv -XmlDoc $XmlDoc -NsMgr $NsMgr -OutputPath $OutputPath -FieldList $FieldList -CustomFields $CustomFields
 }
