@@ -37,6 +37,7 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 . "$PSScriptRoot\lib\noah-reportability.ps1"
 . "$PSScriptRoot\lib\noah-results-viewer.ps1"
 . "$PSScriptRoot\lib\split-file.ps1"
+. "$PSScriptRoot\lib\test-site-laterality.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
@@ -64,6 +65,7 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
 . "$PSScriptRoot\button-handlers\btnSplit.ps1"
 . "$PSScriptRoot\button-handlers\btnManageTables.ps1"
+. "$PSScriptRoot\button-handlers\btnTestSiteLaterality.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -177,8 +179,30 @@ $mnuExport = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuExport.Text = "Export"
 $mnuExport.Enabled = $false
 
-$mnuNoah = New-Object System.Windows.Forms.ToolStripMenuItem
-$mnuNoah.Text = "NOAH"
+# Tools menu (replaces NOAH menu)
+$mnuTools = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuTools.Text = "Tools"
+
+$mnuTestSiteLatCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuTestSiteLatCurrent.Text = "Test current record (Site/Lat)"
+$mnuTestSiteLatCurrent.Enabled = $false
+
+$mnuTestSiteLatCustom = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuTestSiteLatCustom.Text = "Test custom text (Site/Lat)"
+
+$mnuFilterCurrentHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuFilterCurrentHl7.Text = "Filter current HL7 (NOAH)"
+$mnuFilterCurrentHl7.Enabled = $false
+
+$mnuFilterCustomPayload = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuFilterCustomPayload.Text = "Filter custom payload (NOAH)"
+
+# Build Tools menu items
+[void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCurrent)
+[void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCustom)
+[void]$mnuTools.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+[void]$mnuTools.DropDownItems.Add($mnuFilterCurrentHl7)
+[void]$mnuTools.DropDownItems.Add($mnuFilterCustomPayload)
 
 $mnuSettings = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuSettings.Text = "Settings"
@@ -186,6 +210,10 @@ $mnuSettings.Text = "Settings"
 $mnuManageCodingTables = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuManageCodingTables.Text = "Manage Coding Tables"
 [void]$mnuSettings.DropDownItems.Add($mnuManageCodingTables)
+
+$mnuNoahConfig = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuNoahConfig.Text = "NOAH Configuration"
+[void]$mnuSettings.DropDownItems.Add($mnuNoahConfig)
 
 $mnuAbout = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuAbout.Text = "About"
@@ -200,7 +228,7 @@ $mnuUserManual.Add_Click({ })  # no-op for now
     $mnuView,
     $mnuEdit,
     $mnuExport,
-    $mnuNoah,
+    $mnuTools,
     $mnuSettings,
     $mnuAbout
 ))
@@ -384,8 +412,13 @@ $script:Controls = @{
     'mnuModifyHl7' = $mnuModifyHl7
     'mnuDeduplicate' = $mnuDeduplicate
     'mnuExport' = $mnuExport
-    'mnuNoah' = $mnuNoah
+    'mnuTools' = $mnuTools
+    'mnuTestSiteLatCurrent' = $mnuTestSiteLatCurrent
+    'mnuTestSiteLatCustom' = $mnuTestSiteLatCustom
+    'mnuFilterCurrentHl7' = $mnuFilterCurrentHl7
+    'mnuFilterCustomPayload' = $mnuFilterCustomPayload
     'mnuManageCodingTables' = $mnuManageCodingTables
+    'mnuNoahConfig' = $mnuNoahConfig
 }
 
 # Global controls reference for cross-file access
@@ -636,45 +669,29 @@ $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX 5"
 $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 [void]$mnuModifyHl7.DropDownItems.Add($menuItemRemoveEmptyObx5)
-# Set up NOAH dropdown menu (populated dynamically on DropDownOpening)
-$mnuNoah.Add_DropDownOpening({
-    param($toolStripButton, $e)
-    
-    # Clear existing items
-    $toolStripButton.DropDownItems.Clear()
-    
-    # Determine file type
+# Wire up Tools menu handlers
+$mnuTestSiteLatCurrent.Add_Click((Get-BtnTestSiteLatCurrentHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuTestSiteLatCustom.Add_Click((Get-BtnTestSiteLatCustomHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+
+$mnuFilterCurrentHl7.Add_Click({
+    Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
+})
+
+$mnuFilterCustomPayload.Add_Click({
+    Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
+})
+
+# Wire up NOAH Configuration in Settings menu
+$mnuNoahConfig.Add_Click({
+    Invoke-NoahSettings -Controls $script:Controls -ScriptVars $script:ScriptVars
+})
+
+# Enable menu items dynamically when Tools menu opens
+$mnuTools.Add_DropDownOpening({
     $fileType = $global:FileType
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
-    $isHl7 = ($fileType -eq 'hl7')
-    
-    # Filter current HL7 - only enabled if HL7 file is loaded
-    $menuItemFilterCurrent = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemFilterCurrent.Text = "Filter current HL7"
-    $menuItemFilterCurrent.Enabled = $isHl7
-    $menuItemFilterCurrent.Add_Click({
-        Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
-    })
-    [void]$toolStripButton.DropDownItems.Add($menuItemFilterCurrent)
-    
-    # Filter custom payload - always enabled
-    $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemCustom.Text = "Filter custom payload"
-    $menuItemCustom.Add_Click({
-        Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
-    })
-    [void]$toolStripButton.DropDownItems.Add($menuItemCustom)
-    
-    # Separator
-    [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-    
-    # Settings - always enabled
-    $menuItemSettings = New-Object System.Windows.Forms.ToolStripMenuItem
-    $menuItemSettings.Text = "Settings..."
-    $menuItemSettings.Add_Click({
-        Invoke-NoahSettings -Controls $script:Controls -ScriptVars $script:ScriptVars
-    })
-    [void]$toolStripButton.DropDownItems.Add($menuItemSettings)
+    $mnuFilterCurrentHl7.Enabled = ($fileType -eq 'hl7')
+    $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml')
 })
 
 # Wire up Deduplicate submenu item handlers
