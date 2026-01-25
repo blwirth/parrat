@@ -308,3 +308,138 @@ function Set-Hl7SyntaxHighlighting {
     $RichTextBox.Select(0, 0)
     $RichTextBox.ScrollToCaret()
 }
+
+function Set-Hl7PanelHighlighting {
+    param(
+        [System.Windows.Forms.RichTextBox]$RichTextBox,
+        [int]$StartOffset = 0
+    )
+
+    # Define colors
+    $colorSegment    = [System.Drawing.Color]::Blue
+    $colorSeparator  = [System.Drawing.Color]::FromArgb(128, 128, 128)  # Gray
+    $colorMsh        = [System.Drawing.Color]::FromArgb(128, 0, 128)    # Purple for MSH
+    $colorPid        = [System.Drawing.Color]::FromArgb(0, 128, 0)      # Green for PID
+    $colorObxId      = [System.Drawing.Color]::FromArgb(0, 128, 128)    # Teal for OBX identifier
+
+    $rtbText = $RichTextBox.Text
+    $textToProcess = $rtbText.Substring($StartOffset)
+
+    # Known HL7 segment names
+    $segmentNames = @(
+        'MSH', 'PID', 'PV1', 'PV2', 'ORC', 'OBR', 'OBX', 'NTE', 'NK1',
+        'IN1', 'IN2', 'GT1', 'AL1', 'DG1', 'PR1', 'ROL', 'EVN', 'MRG',
+        'ZPD', 'ZDS', 'SPM', 'TXA', 'PD1', 'DB1', 'DRG', 'FT1', 'ACC'
+    )
+
+    # Highlight segment names at the start of lines
+    foreach ($segName in $segmentNames) {
+        $pattern = "(?m)^$segName(?=\|)"
+        $regexMatches = [regex]::Matches($textToProcess, $pattern)
+        foreach ($match in $regexMatches) {
+            $RichTextBox.Select($StartOffset + $match.Index, $match.Length)
+            switch ($segName) {
+                'MSH' { $RichTextBox.SelectionColor = $colorMsh }
+                'PID' { $RichTextBox.SelectionColor = $colorPid }
+                default { $RichTextBox.SelectionColor = $colorSegment }
+            }
+            $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
+                $RichTextBox.Font.FontFamily,
+                $RichTextBox.Font.Size,
+                [System.Drawing.FontStyle]::Bold
+            )
+        }
+    }
+
+    # Highlight PID-5 (Patient Name)
+    $pidPattern = '(?m)^PID\|'
+    $pidMatches = [regex]::Matches($textToProcess, $pidPattern)
+    foreach ($pidMatch in $pidMatches) {
+        $lineEndIndex = $textToProcess.IndexOf("`n", $pidMatch.Index)
+        if ($lineEndIndex -lt 0) { $lineEndIndex = $textToProcess.Length }
+        $pidLine = $textToProcess.Substring($pidMatch.Index, $lineEndIndex - $pidMatch.Index)
+
+        $fields = $pidLine -split '\|'
+        if ($fields.Count -gt 5) {
+            $fieldStart = $pidMatch.Index
+            for ($i = 0; $i -lt 5; $i++) {
+                $fieldStart += $fields[$i].Length + 1
+            }
+            $field5Length = $fields[5].Length
+            if ($field5Length -gt 0) {
+                $RichTextBox.Select($StartOffset + $fieldStart, $field5Length)
+                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
+                    $RichTextBox.Font.FontFamily,
+                    $RichTextBox.Font.Size,
+                    [System.Drawing.FontStyle]::Bold
+                )
+            }
+        }
+    }
+
+    # Highlight OBX-3.1 and OBX-5
+    $obxPattern = '(?m)^OBX\|'
+    $obxMatches = [regex]::Matches($textToProcess, $obxPattern)
+    foreach ($obxMatch in $obxMatches) {
+        $lineEndIndex = $textToProcess.IndexOf("`n", $obxMatch.Index)
+        if ($lineEndIndex -lt 0) { $lineEndIndex = $textToProcess.Length }
+        $obxLine = $textToProcess.Substring($obxMatch.Index, $lineEndIndex - $obxMatch.Index)
+
+        $fields = $obxLine -split '\|'
+
+        # Highlight OBX-3.1
+        if ($fields.Count -gt 3 -and $fields[3].Length -gt 0) {
+            $fieldStart = $obxMatch.Index
+            for ($i = 0; $i -lt 3; $i++) {
+                $fieldStart += $fields[$i].Length + 1
+            }
+            $components = $fields[3] -split '\^'
+            $comp1Length = $components[0].Length
+            if ($comp1Length -gt 0) {
+                $RichTextBox.Select($StartOffset + $fieldStart, $comp1Length)
+                $RichTextBox.SelectionColor = $colorObxId
+                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
+                    $RichTextBox.Font.FontFamily,
+                    $RichTextBox.Font.Size,
+                    [System.Drawing.FontStyle]::Bold
+                )
+            }
+        }
+
+        # Bold OBX-5
+        if ($fields.Count -gt 5 -and $fields[5].Length -gt 0) {
+            $fieldStart = $obxMatch.Index
+            for ($i = 0; $i -lt 5; $i++) {
+                $fieldStart += $fields[$i].Length + 1
+            }
+            $comp1Length = $fields[5].Length
+            if ($comp1Length -gt 0) {
+                $RichTextBox.Select($StartOffset + $fieldStart, $comp1Length)
+                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
+                    $RichTextBox.Font.FontFamily,
+                    $RichTextBox.Font.Size,
+                    [System.Drawing.FontStyle]::Bold
+                )
+            }
+        }
+    }
+
+    # Highlight separators (|)
+    $sepPattern = '\|'
+    $regexMatches = [regex]::Matches($textToProcess, $sepPattern)
+    foreach ($match in $regexMatches) {
+        $RichTextBox.Select($StartOffset + $match.Index, $match.Length)
+        $RichTextBox.SelectionColor = $colorSeparator
+    }
+
+    # Highlight component separators (^)
+    $compPattern = '\^'
+    $regexMatches = [regex]::Matches($textToProcess, $compPattern)
+    foreach ($match in $regexMatches) {
+        $RichTextBox.Select($StartOffset + $match.Index, $match.Length)
+        $RichTextBox.SelectionColor = $colorSeparator
+    }
+
+    # Reset selection
+    $RichTextBox.Select(0, 0)
+}

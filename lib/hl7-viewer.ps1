@@ -155,6 +155,14 @@ function Show-Hl7Message {
         }
     }
 
+    # Apply syntax highlighting to RAW HL7 SEGMENTS section
+    $rtbText = $rtbItems.Text
+    $rawSectionMarker = "=== RAW HL7 SEGMENTS ==="
+    $rawSectionStart = $rtbText.IndexOf($rawSectionMarker)
+    if ($rawSectionStart -ge 0) {
+        Set-Hl7PanelHighlighting -RichTextBox $rtbItems -StartOffset ($rawSectionStart + $rawSectionMarker.Length)
+    }
+
     # Update navigation
     $dataTable = $gridNav.DataSource
     $selectedCount = if ($null -ne $dataTable) { @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count } else { 0 }
