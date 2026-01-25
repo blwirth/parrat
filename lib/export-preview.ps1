@@ -34,42 +34,34 @@ function Show-ExportPreview {
         [void]$selectedFields.Add($fieldId)
     }
 
-    # Create main form
+    # Create main form - simple layout without complex docking
     $previewForm = New-Object System.Windows.Forms.Form
     $previewForm.Text = $Title
-    $previewForm.Width = 1500
-    $previewForm.Height = 750
+    $previewForm.Width = 1400
+    $previewForm.Height = 700
     $previewForm.StartPosition = "CenterScreen"
     $previewForm.MinimumSize = New-Object System.Drawing.Size(1000, 500)
 
-    # Main split container - left (field selector) | right (preview)
-    $mainSplit = New-Object System.Windows.Forms.SplitContainer
-    $mainSplit.Dock = 'Fill'
-    $mainSplit.Orientation = 'Vertical'
-    $mainSplit.Panel1MinSize = 250
-    # Panel2MinSize and SplitterDistance set in Shown event to avoid size conflicts
-
-    # ===== LEFT PANEL: Field Selector =====
+    # ===== LEFT PANEL: Field Selector (fixed width) =====
     $leftPanel = New-Object System.Windows.Forms.Panel
-    $leftPanel.Dock = 'Fill'
-    $leftPanel.Padding = New-Object System.Windows.Forms.Padding(5)
+    $leftPanel.Location = New-Object System.Drawing.Point(10, 10)
+    $leftPanel.Size = New-Object System.Drawing.Size(350, 590)
+    $leftPanel.Anchor = 'Top,Left,Bottom'
 
     # Search box
     $lblSearch = New-Object System.Windows.Forms.Label
     $lblSearch.Text = "Search fields:"
-    $lblSearch.Location = New-Object System.Drawing.Point(5, 5)
+    $lblSearch.Location = New-Object System.Drawing.Point(0, 0)
     $lblSearch.AutoSize = $true
 
     $txtSearch = New-Object System.Windows.Forms.TextBox
-    $txtSearch.Location = New-Object System.Drawing.Point(5, 25)
-    $txtSearch.Width = 330
-    $txtSearch.Anchor = 'Top,Left,Right'
+    $txtSearch.Location = New-Object System.Drawing.Point(0, 20)
+    $txtSearch.Size = New-Object System.Drawing.Size(340, 23)
 
-    # Buttons panel for field actions - placed at top below search for visibility
+    # Buttons panel
     $pnlFieldButtons = New-Object System.Windows.Forms.Panel
-    $pnlFieldButtons.Location = New-Object System.Drawing.Point(5, 55)
-    $pnlFieldButtons.Size = New-Object System.Drawing.Size(330, 70)
-    $pnlFieldButtons.Anchor = 'Top,Left,Right'
+    $pnlFieldButtons.Location = New-Object System.Drawing.Point(0, 50)
+    $pnlFieldButtons.Size = New-Object System.Drawing.Size(340, 70)
 
     $btnLoadConfig = New-Object System.Windows.Forms.Button
     $btnLoadConfig.Text = "Load Config"
@@ -78,12 +70,12 @@ function Show-ExportPreview {
 
     $btnSaveConfig = New-Object System.Windows.Forms.Button
     $btnSaveConfig.Text = "Save Config"
-    $btnSaveConfig.Location = New-Object System.Drawing.Point(110, 0)
+    $btnSaveConfig.Location = New-Object System.Drawing.Point(115, 0)
     $btnSaveConfig.Width = 105
 
     $btnAddCustom = New-Object System.Windows.Forms.Button
     $btnAddCustom.Text = "+ Custom"
-    $btnAddCustom.Location = New-Object System.Drawing.Point(220, 0)
+    $btnAddCustom.Location = New-Object System.Drawing.Point(230, 0)
     $btnAddCustom.Width = 105
 
     $btnMoveUp = New-Object System.Windows.Forms.Button
@@ -93,92 +85,91 @@ function Show-ExportPreview {
 
     $btnMoveDown = New-Object System.Windows.Forms.Button
     $btnMoveDown.Text = "Move Down"
-    $btnMoveDown.Location = New-Object System.Drawing.Point(110, 35)
+    $btnMoveDown.Location = New-Object System.Drawing.Point(115, 35)
     $btnMoveDown.Width = 105
 
     $btnRefresh = New-Object System.Windows.Forms.Button
     $btnRefresh.Text = "Refresh"
-    $btnRefresh.Location = New-Object System.Drawing.Point(220, 35)
+    $btnRefresh.Location = New-Object System.Drawing.Point(230, 35)
     $btnRefresh.Width = 105
 
     $pnlFieldButtons.Controls.AddRange(@($btnLoadConfig, $btnSaveConfig, $btnAddCustom, $btnMoveUp, $btnMoveDown, $btnRefresh))
 
-    # Field list label and CheckedListBox - below buttons
+    # Field list
     $lblFields = New-Object System.Windows.Forms.Label
     $lblFields.Text = "Available Fields:"
-    $lblFields.Location = New-Object System.Drawing.Point(5, 130)
+    $lblFields.Location = New-Object System.Drawing.Point(0, 125)
     $lblFields.AutoSize = $true
 
     $lstFields = New-Object System.Windows.Forms.CheckedListBox
-    $lstFields.Location = New-Object System.Drawing.Point(5, 150)
-    $lstFields.Size = New-Object System.Drawing.Size(330, 460)
-    $lstFields.Anchor = 'Top,Left,Right,Bottom'
+    $lstFields.Location = New-Object System.Drawing.Point(0, 145)
+    $lstFields.Size = New-Object System.Drawing.Size(340, 440)
+    $lstFields.Anchor = 'Top,Left,Bottom'
     $lstFields.CheckOnClick = $true
 
     $leftPanel.Controls.AddRange(@($lblSearch, $txtSearch, $pnlFieldButtons, $lblFields, $lstFields))
 
     # ===== RIGHT PANEL: Preview =====
     $rightPanel = New-Object System.Windows.Forms.Panel
-    $rightPanel.Dock = 'Fill'
-    $rightPanel.Padding = New-Object System.Windows.Forms.Padding(5)
+    $rightPanel.Location = New-Object System.Drawing.Point(370, 10)
+    $rightPanel.Size = New-Object System.Drawing.Size(1000, 590)
+    $rightPanel.Anchor = 'Top,Left,Right,Bottom'
 
-    # Summary label
+    # Summary label at top of right panel
     $lblSummary = New-Object System.Windows.Forms.Label
-    $lblSummary.Location = New-Object System.Drawing.Point(5, 5)
-    $lblSummary.Size = New-Object System.Drawing.Size(1100, 30)
-    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $lblSummary.Location = New-Object System.Drawing.Point(0, 0)
+    $lblSummary.Size = New-Object System.Drawing.Size(1000, 25)
     $lblSummary.Anchor = 'Top,Left,Right'
+    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 
-    # DataGridView for preview
+    # Error label at bottom of right panel
+    $lblErrors = New-Object System.Windows.Forms.Label
+    $lblErrors.Location = New-Object System.Drawing.Point(0, 565)
+    $lblErrors.Size = New-Object System.Drawing.Size(1000, 20)
+    $lblErrors.Anchor = 'Bottom,Left,Right'
+    $lblErrors.ForeColor = [System.Drawing.Color]::Red
+
+    # DataGridView - simple absolute positioning with anchor
     $grid = New-Object System.Windows.Forms.DataGridView
-    $grid.Location = New-Object System.Drawing.Point(5, 40)
-    $grid.Size = New-Object System.Drawing.Size(1100, 560)
+    $grid.Location = New-Object System.Drawing.Point(0, 30)
+    $grid.Size = New-Object System.Drawing.Size(1000, 555)
     $grid.Anchor = 'Top,Left,Right,Bottom'
+    $grid.AutoSize = $false
+    $grid.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
     $grid.ReadOnly = $true
     $grid.AllowUserToAddRows = $false
     $grid.AllowUserToDeleteRows = $false
     $grid.RowHeadersVisible = $false
-    $grid.AutoSizeColumnsMode = "DisplayedCells"
+    $grid.AutoSizeColumnsMode = "None"
     $grid.SelectionMode = 'FullRowSelect'
     $grid.MultiSelect = $false
-    $grid.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
-
-    # Error label
-    $lblErrors = New-Object System.Windows.Forms.Label
-    $lblErrors.Location = New-Object System.Drawing.Point(5, 605)
-    $lblErrors.Size = New-Object System.Drawing.Size(1100, 25)
-    $lblErrors.ForeColor = [System.Drawing.Color]::Red
-    $lblErrors.Anchor = 'Bottom,Left,Right'
+    $grid.ColumnHeadersHeightSizeMode = [System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode]::AutoSize
 
     $rightPanel.Controls.AddRange(@($lblSummary, $grid, $lblErrors))
 
     # ===== BOTTOM PANEL: Action buttons =====
     $bottomPanel = New-Object System.Windows.Forms.Panel
-    $bottomPanel.Dock = 'Bottom'
-    $bottomPanel.Height = 50
-    $bottomPanel.Padding = New-Object System.Windows.Forms.Padding(10)
+    $bottomPanel.Location = New-Object System.Drawing.Point(10, 610)
+    $bottomPanel.Size = New-Object System.Drawing.Size(300, 40)
+    $bottomPanel.Anchor = 'Bottom,Left'
 
     $btnExport = New-Object System.Windows.Forms.Button
     $btnExport.Text = "Export"
     $btnExport.Width = 100
-    $btnExport.Location = New-Object System.Drawing.Point(10, 10)
-    $btnExport.Anchor = 'Bottom,Left'
+    $btnExport.Location = New-Object System.Drawing.Point(0, 5)
     $btnExport.DialogResult = [System.Windows.Forms.DialogResult]::OK
 
     $btnCancel = New-Object System.Windows.Forms.Button
     $btnCancel.Text = "Cancel"
     $btnCancel.Width = 100
-    $btnCancel.Location = New-Object System.Drawing.Point(120, 10)
-    $btnCancel.Anchor = 'Bottom,Left'
+    $btnCancel.Location = New-Object System.Drawing.Point(110, 5)
     $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 
     $bottomPanel.Controls.AddRange(@($btnExport, $btnCancel))
 
-    # Wire up split containers
-    $mainSplit.Panel1.Controls.Add($leftPanel)
-    $mainSplit.Panel2.Controls.Add($rightPanel)
-
-    $previewForm.Controls.Add($mainSplit)
+    # Add panels to form (no complex docking, just absolute positions with anchors)
+    $previewForm.Controls.Add($leftPanel)
+    $previewForm.Controls.Add($rightPanel)
     $previewForm.Controls.Add($bottomPanel)
     $previewForm.CancelButton = $btnCancel
     $previewForm.AcceptButton = $btnExport
@@ -361,6 +352,19 @@ function Show-ExportPreview {
         }
 
         $grid.DataSource = $table
+
+        # Auto-fit columns to content, with min/max constraints
+        foreach ($col in $grid.Columns) {
+            $col.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::AllCells
+        }
+        # After auto-sizing, lock widths so horizontal scroll works
+        $grid.AutoResizeColumns([System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::AllCells)
+        foreach ($col in $grid.Columns) {
+            $currentWidth = $col.Width
+            $col.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::None
+            $col.MinimumWidth = 50
+            $col.Width = [Math]::Max([Math]::Min($currentWidth, 300), 50)  # Clamp between 50-300
+        }
     }
 
     # ===== EVENT HANDLERS =====
@@ -630,10 +634,8 @@ function Show-ExportPreview {
         & $updatePreview
     })
 
-    # Form shown handler - set splitter distance after form is visible
+    # Form shown handler - populate data after form is visible
     $previewForm.Add_Shown({
-        $mainSplit.Panel2MinSize = 400
-        $mainSplit.SplitterDistance = 350
         & $populateFieldList
         & $updatePreview
     })
