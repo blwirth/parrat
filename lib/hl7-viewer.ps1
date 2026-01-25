@@ -230,7 +230,8 @@ function Show-RawHl7ForMessage {
     $rtb.WordWrap = $false
     $rtb.ScrollBars = "Both"
 
-    $rtb.Text = $rawContent
+    # Apply syntax highlighting
+    Set-Hl7SyntaxHighlighting -RichTextBox $rtb -Hl7Text $rawContent
 
     $hl7Form.Controls.Add($rtb)
     [void]$hl7Form.ShowDialog()

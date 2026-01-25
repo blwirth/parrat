@@ -86,7 +86,8 @@ function Show-RawXmlForTumor {
     $rtb.WordWrap = $false
     $rtb.ScrollBars = "Both"
 
-    $rtb.Text = $finalXml
+    # Apply syntax highlighting
+    Set-XmlSyntaxHighlighting -RichTextBox $rtb -XmlText $finalXml
 
     $xmlForm.Controls.Add($rtb)
     [void]$xmlForm.ShowDialog()
