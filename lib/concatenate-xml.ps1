@@ -3,6 +3,123 @@
 
 . "$PSScriptRoot\xml-helpers.ps1"
 
+function Get-DuplicatePatientIds {
+    param(
+        [array]$HeaderInfos
+    )
+
+    $patientIdCounts = @{}
+
+    foreach ($item in $HeaderInfos) {
+        $xmlDoc = $item.Info.XmlDoc
+        $nsMgr = $item.Info.NsMgr
+        $root = $xmlDoc.DocumentElement
+
+        $patients = $root.SelectNodes("./n:Patient", $nsMgr)
+        foreach ($patient in $patients) {
+            $pidNode = $patient.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $nsMgr)
+            if ($pidNode -and -not [string]::IsNullOrWhiteSpace($pidNode.InnerText)) {
+                $patientIdValue = $pidNode.InnerText.Trim()
+                if ($patientIdCounts.ContainsKey($patientIdValue)) {
+                    $patientIdCounts[$patientIdValue]++
+                } else {
+                    $patientIdCounts[$patientIdValue] = 1
+                }
+            }
+        }
+    }
+
+    # Return only duplicates (count > 1)
+    $duplicates = @{}
+    foreach ($key in $patientIdCounts.Keys) {
+        if ($patientIdCounts[$key] -gt 1) {
+            $duplicates[$key] = $patientIdCounts[$key]
+        }
+    }
+
+    return $duplicates
+}
+
+function Show-DuplicatePatientIdWarning {
+    param(
+        [hashtable]$Duplicates
+    )
+
+    $warningForm = New-Object System.Windows.Forms.Form
+    $warningForm.Text = "Duplicate Patient IDs Detected"
+    $warningForm.Width = 500
+    $warningForm.Height = 350
+    $warningForm.StartPosition = "CenterScreen"
+    $warningForm.FormBorderStyle = 'FixedDialog'
+    $warningForm.MaximizeBox = $false
+    $warningForm.MinimizeBox = $false
+
+    $lblWarning = New-Object System.Windows.Forms.Label
+    $lblWarning.Location = New-Object System.Drawing.Point(10, 10)
+    $lblWarning.Size = New-Object System.Drawing.Size(470, 40)
+    $lblWarning.Text = "Warning: The following patient IDs appear in multiple files. This may cause issues in downstream systems."
+    $lblWarning.ForeColor = [System.Drawing.Color]::DarkRed
+
+    # List duplicates in a textbox
+    $txtDuplicates = New-Object System.Windows.Forms.TextBox
+    $txtDuplicates.Location = New-Object System.Drawing.Point(10, 55)
+    $txtDuplicates.Size = New-Object System.Drawing.Size(465, 150)
+    $txtDuplicates.Multiline = $true
+    $txtDuplicates.ScrollBars = "Vertical"
+    $txtDuplicates.ReadOnly = $true
+    $txtDuplicates.Font = New-Object System.Drawing.Font("Consolas", 9)
+
+    $duplicateText = ""
+    foreach ($key in $Duplicates.Keys | Sort-Object) {
+        $duplicateText += "Patient ID '$key' appears $($Duplicates[$key]) times`r`n"
+    }
+    $txtDuplicates.Text = $duplicateText.TrimEnd()
+
+    # Result variable
+    $script:duplicateDialogResult = "Cancel"
+
+    # Reassign button (recommended)
+    $btnReassign = New-Object System.Windows.Forms.Button
+    $btnReassign.Text = "Reassign All Patient IDs (Start at 1)"
+    $btnReassign.Width = 220
+    $btnReassign.Height = 30
+    $btnReassign.Location = New-Object System.Drawing.Point(10, 220)
+    $btnReassign.Add_Click({
+        $script:duplicateDialogResult = "Reassign"
+        $warningForm.Close()
+    })
+
+    # Keep existing button (red/warning)
+    $btnKeep = New-Object System.Windows.Forms.Button
+    $btnKeep.Text = "Concatenate Anyway (Keep IDs)"
+    $btnKeep.Width = 220
+    $btnKeep.Height = 30
+    $btnKeep.Location = New-Object System.Drawing.Point(10, 260)
+    $btnKeep.ForeColor = [System.Drawing.Color]::DarkRed
+    $btnKeep.Add_Click({
+        $script:duplicateDialogResult = "Keep"
+        $warningForm.Close()
+    })
+
+    # Cancel button
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Width = 100
+    $btnCancel.Height = 30
+    $btnCancel.Location = New-Object System.Drawing.Point(375, 260)
+    $btnCancel.Add_Click({
+        $script:duplicateDialogResult = "Cancel"
+        $warningForm.Close()
+    })
+
+    $warningForm.Controls.AddRange(@($lblWarning, $txtDuplicates, $btnReassign, $btnKeep, $btnCancel))
+    $warningForm.CancelButton = $btnCancel
+
+    [void]$warningForm.ShowDialog()
+
+    return $script:duplicateDialogResult
+}
+
 function Get-XmlHeaderInfo {
     param(
         [string]$FilePath
@@ -235,10 +352,18 @@ function Show-ConcatenationPreview {
     foreach ($item in $validation.HeaderInfos) {
         [void]$script:xmlFileInfos.Add($item)
     }
-    
+
     # Store reference info for header validation when adding new files
     $script:xmlRefInfo = $validation.ReferenceInfo
-    
+
+    # Store Controls and ScriptVars for access in event handlers
+    $script:concatControls = $Controls
+    $script:concatScriptVars = $ScriptVars
+
+    # Store output path for loading after form closes
+    $script:concatOutputPath = $null
+    $script:concatShouldOpen = $false
+
     # Create preview form
     $previewForm = New-Object System.Windows.Forms.Form
     $previewForm.Text = "Concatenate XML Files - Preview"
@@ -568,8 +693,24 @@ function Show-ConcatenationPreview {
                 $totalTumors += $item.Info.TumorCount
             }
 
+            # Check for duplicate patient IDs
+            $duplicates = Get-DuplicatePatientIds -HeaderInfos $script:xmlFileInfos
+            $reassignIds = $false
+
+            if ($duplicates.Count -gt 0) {
+                $dialogResult = Show-DuplicatePatientIdWarning -Duplicates $duplicates
+
+                if ($dialogResult -eq "Cancel") {
+                    return
+                }
+                elseif ($dialogResult -eq "Reassign") {
+                    $reassignIds = $true
+                }
+                # else "Keep" - continue with existing IDs
+            }
+
             # Concatenate XMLs
-            Write-ConcatenatedXml -HeaderInfos $script:xmlFileInfos -ReferenceInfo $script:xmlRefInfo -OutputPath $outputPath
+            Write-ConcatenatedXml -HeaderInfos $script:xmlFileInfos -ReferenceInfo $script:xmlRefInfo -OutputPath $outputPath -ReassignPatientIds:$reassignIds
 
             # Ask user if they want to open the newly created file
             $openResult = [System.Windows.Forms.MessageBox]::Show(
@@ -579,14 +720,13 @@ function Show-ConcatenationPreview {
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
 
-            $previewForm.Close()
-
+            # Store for loading after form closes
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
-                # Load the newly created file
-                if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
-                }
+                $script:concatOutputPath = $outputPath
+                $script:concatShouldOpen = $true
             }
+
+            $previewForm.Close()
         }
         catch {
             [System.Windows.Forms.MessageBox]::Show(
@@ -607,11 +747,22 @@ function Show-ConcatenationPreview {
     $previewForm.Controls.AddRange(@($lblSummary, $gridFiles, $pnlFileButtons, $btnConcatenate, $btnClose))
     
     [void]$previewForm.ShowDialog()
-    
+
+    # Load file after form closes if user requested
+    if ($script:concatShouldOpen -and $script:concatOutputPath) {
+        if ($script:concatControls -ne $null -and $script:concatScriptVars -ne $null) {
+            Load-XmlFile -FilePath $script:concatOutputPath -Controls $script:concatControls -ScriptVars $script:concatScriptVars
+        }
+    }
+
     # Cleanup script-scoped variables
     $script:xmlFileInfos = $null
     $script:xmlRefInfo = $null
     $script:UpdateXmlPreviewUI = $null
+    $script:concatControls = $null
+    $script:concatScriptVars = $null
+    $script:concatOutputPath = $null
+    $script:concatShouldOpen = $false
 }
 
 function Write-ConcatenatedXml {
@@ -619,17 +770,18 @@ function Write-ConcatenatedXml {
         [array]$HeaderInfos,
         [hashtable]$ReferenceInfo,
         [string]$OutputPath,
-        [switch]$ShowProgress
+        [switch]$ShowProgress,
+        [switch]$ReassignPatientIds
     )
-    
+
     # Create new XML document
     $newDoc = New-Object System.Xml.XmlDocument
     $newDoc.XmlResolver = $null
-    
+
     # Add XML declaration
     $newDecl = $newDoc.CreateXmlDeclaration($ReferenceInfo.XmlVersion, "UTF-8", $null)
     [void]$newDoc.AppendChild($newDecl)
-    
+
     # Create NaaccrData root element
     $newRoot = $newDoc.CreateElement("NaaccrData", $ReferenceInfo.Xmlns)
     $newRoot.SetAttribute("baseDictionaryUri", $ReferenceInfo.BaseDictionaryUri)
@@ -637,29 +789,64 @@ function Write-ConcatenatedXml {
     $newRoot.SetAttribute("timeGenerated", (Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffK"))
     $newRoot.SetAttribute("specificationVersion", "1.7")
     [void]$newDoc.AppendChild($newRoot)
-    
+
     $totalFiles = $HeaderInfos.Count
     $currentFile = 0
-    
+
     # Concatenate all Patient elements from all files
     foreach ($item in $HeaderInfos) {
         $currentFile++
-        
+
         if ($ShowProgress -and ($currentFile % 50 -eq 0 -or $currentFile -eq $totalFiles)) {
             Write-Progress -Activity "Concatenating XML files" -Status "Processing file $currentFile of $totalFiles" -PercentComplete (($currentFile / $totalFiles) * 100)
         }
-        
+
         $xmlDoc = $item.Info.XmlDoc
         $nsMgr = $item.Info.NsMgr
         $root = $xmlDoc.DocumentElement
-        
+
         # Get all Patient nodes from this file
         $patients = $root.SelectNodes("./n:Patient", $nsMgr)
-        
+
         foreach ($patient in $patients) {
             # Import the patient node (deep copy)
             $importedPatient = $newDoc.ImportNode($patient, $true)
             [void]$newRoot.AppendChild($importedPatient)
+        }
+    }
+
+    # Reassign patient IDs if requested
+    if ($ReassignPatientIds) {
+        $xmlns = $ReferenceInfo.Xmlns
+        $newNsMgr = New-Object System.Xml.XmlNamespaceManager($newDoc.NameTable)
+        $newNsMgr.AddNamespace("n", $xmlns)
+
+        $allPatients = $newRoot.SelectNodes("./n:Patient", $newNsMgr)
+        $patientId = 1
+
+        foreach ($patient in $allPatients) {
+            # Find existing patientIdNumber Item
+            $pidNode = $patient.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $newNsMgr)
+
+            if ($pidNode) {
+                # Update existing node
+                $pidNode.InnerText = $patientId.ToString().PadLeft(8, '0')
+            }
+            else {
+                # Create new patientIdNumber Item as first child
+                $newItem = $newDoc.CreateElement("Item", $xmlns)
+                $newItem.SetAttribute("naaccrId", "patientIdNumber")
+                $newItem.InnerText = $patientId.ToString().PadLeft(8, '0')
+
+                if ($patient.HasChildNodes) {
+                    [void]$patient.InsertBefore($newItem, $patient.FirstChild)
+                }
+                else {
+                    [void]$patient.AppendChild($newItem)
+                }
+            }
+
+            $patientId++
         }
     }
     

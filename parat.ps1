@@ -152,7 +152,7 @@ $menuItemConcatenateHl7.Add_Click({ Start-ConcatenateHl7 })
 
 $menuItemConcatenateXml = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemConcatenateXml.Text = "Concatenate XML"
-$menuItemConcatenateXml.Add_Click({ Start-ConcatenateXml })
+$menuItemConcatenateXml.Add_Click({ Start-ConcatenateXml -Controls $script:Controls -ScriptVars $script:ScriptVars })
 [void]$mnuConcatenate.DropDownItems.Add($menuItemConcatenateXml)
 
 $menuItemConcatenateTxt = New-Object System.Windows.Forms.ToolStripMenuItem
