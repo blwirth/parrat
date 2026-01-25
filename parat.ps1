@@ -99,7 +99,6 @@ $mnuOpenFolder.Text = "Open Containing Folder"
 $mnuOpenFolder.Enabled = $false
 $mnuOpenFolder.Add_Click({
     if ($script:CurrentFilePath -and (Test-Path $script:CurrentFilePath)) {
-        $folder = Split-Path -Parent $script:CurrentFilePath
         Start-Process explorer.exe -ArgumentList "/select,`"$script:CurrentFilePath`""
     }
 })
