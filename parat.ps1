@@ -94,6 +94,17 @@ $mnuOpenRecent = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuOpenRecent.Text = "Open Recent"
 [void]$mnuFile.DropDownItems.Add($mnuOpenRecent)
 
+$mnuOpenFolder = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuOpenFolder.Text = "Open Containing Folder"
+$mnuOpenFolder.Enabled = $false
+$mnuOpenFolder.Add_Click({
+    if ($script:CurrentFilePath -and (Test-Path $script:CurrentFilePath)) {
+        $folder = Split-Path -Parent $script:CurrentFilePath
+        Start-Process explorer.exe -ArgumentList "/select,`"$script:CurrentFilePath`""
+    }
+})
+[void]$mnuFile.DropDownItems.Add($mnuOpenFolder)
+
 [void]$mnuFile.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
 $mnuDiffFiles = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -438,6 +449,7 @@ $script:Controls = @{
     'lblFileName' = $lblFileName
     'mnuOpen' = $mnuOpen
     'mnuOpenRecent' = $mnuOpenRecent
+    'mnuOpenFolder' = $mnuOpenFolder
     'mnuDiffFiles' = $mnuDiffFiles
     'mnuConcatenate' = $mnuConcatenate
     'mnuSplit' = $mnuSplit
@@ -484,6 +496,7 @@ function Update-ButtonStatesForFileType {
     if ($Controls['mnuDiffRecords'])  { $Controls['mnuDiffRecords'].Enabled = $hasFile }
     if ($Controls['mnuDeduplicate'])  { $Controls['mnuDeduplicate'].Enabled = $hasFile }
     if ($Controls['mnuExport'])       { $Controls['mnuExport'].Enabled = $hasFile }
+    if ($Controls['mnuOpenFolder'])   { $Controls['mnuOpenFolder'].Enabled = $hasFile }
     
     # XML-specific buttons should be enabled only for XML files
     $isXmlFile = ($FileType -eq 'xml')
