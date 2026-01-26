@@ -534,12 +534,10 @@ function Convert-PathologyTextToHL7 {
         [switch]$PreviewOnly
     )
     
-    # Validate input file exists
     if (-not (Test-Path $InputPath)) {
         throw "Input file not found: $InputPath"
     }
     
-    # Get facility configuration
     $facilityConfig = $script:FacilityConfig[$FacilityName]
     if (-not $facilityConfig) {
         throw "Unknown facility: $FacilityName"
@@ -548,12 +546,9 @@ function Convert-PathologyTextToHL7 {
     # Storage for parsed cases
     $cases = [System.Collections.ArrayList]::new()
     
-    # Branch based on facility type
     if ($FacilityName -eq 'SJH') {
-        # SJH-specific parsing logic
         $cases = Get-SJHCases -InputPath $InputPath
     } else {
-        # Standard facility parsing logic (Parkland, Portsmouth, Frisbie)
         $cases = Get-StandardCases -InputPath $InputPath -FacilityName $FacilityName
     }
     
@@ -566,11 +561,9 @@ function Convert-PathologyTextToHL7 {
         }
     }
     
-    # Generate HL7 output
     $hl7Lines = [System.Collections.ArrayList]::new()
     
     foreach ($case in $cases) {
-        # Convert dates to HL7 format
         # For SJH, BirthDate is already in HL7 format (YYYY9999)
         if ($FacilityName -eq 'SJH') {
             $birthDateHL7 = $case.PatientData.BirthDate
@@ -584,7 +577,6 @@ function Convert-PathologyTextToHL7 {
             $specimenDateHL7 = Convert-DateToHL7 $case.SpecimenDate
         }
         
-        # Build segments
         $mshSegment = New-MSHSegment -CaseNumber $case.CaseNumber -CLIA $facilityConfig.CLIA
         $pidSegment = New-PIDSegment -PatientData $case.PatientData -BirthDateHL7 $birthDateHL7
         $obrSegment = New-OBRSegment -PathReportID $case.PathReportID -SpecimenDateHL7 $specimenDateHL7
@@ -593,25 +585,14 @@ function Convert-PathologyTextToHL7 {
         [void]$hl7Lines.Add($pidSegment)
         [void]$hl7Lines.Add($obrSegment)
         
-        # Add text lines as OBX segments
-        # For SJH: drop the first OBX (patient info line) and renumber remaining from 1
-        if ($FacilityName -eq 'SJH') {
-            if ($case.TextLines.Count -gt 1) {
-                for ($i = 1; $i -lt $case.TextLines.Count; $i++) {
-                    $obxSegment = New-OBXSegment -LineNumber ($i) -TextLine $case.TextLines[$i]
-                    [void]$hl7Lines.Add($obxSegment)
-                }
-            }
-        } else {
-            # Standard facilities: include all OBX segments
-            for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
-                $obxSegment = New-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
-                [void]$hl7Lines.Add($obxSegment)
-            }
+        # Was previously removing obx 1 but some pathology reports convert to text       
+        # non-uniformly and obx 1 then contains final dx info) 
+        for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
+            $obxSegment = New-OBXSegment -LineNumber ($i + 1) -TextLine $case.TextLines[$i]
+            [void]$hl7Lines.Add($obxSegment)
         }
     }
     
-    # Write output file
     if ($OutputPath) {
         $outputDir = Split-Path $OutputPath -Parent
         if ($outputDir -and -not (Test-Path $outputDir)) {

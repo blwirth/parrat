@@ -1,20 +1,17 @@
 function Get-BtnConvertTxtHandler {
     return {
         try {
-            # Create and show the HL7 converter dialog
             $converterForm = New-Object System.Windows.Forms.Form
             $converterForm.Text = "Convert Pathology Text to HL7"
             $converterForm.Size = New-Object System.Drawing.Size(1200, 800)
             $converterForm.StartPosition = "CenterScreen"
             $converterForm.MinimumSize = New-Object System.Drawing.Size(1000, 600)
 
-            # Top panel for file selection and configuration
             $topPanel = New-Object System.Windows.Forms.Panel
             $topPanel.Dock = [System.Windows.Forms.DockStyle]::Top
             $topPanel.Height = 120
             $topPanel.Padding = New-Object System.Windows.Forms.Padding(10)
 
-            # Input file selection
             $lblInput = New-Object System.Windows.Forms.Label
             $lblInput.Text = "Input File (Level_1):"
             $lblInput.Location = New-Object System.Drawing.Point(10, 15)
@@ -37,7 +34,6 @@ function Get-BtnConvertTxtHandler {
                                       [System.Windows.Forms.AnchorStyles]::Right
             $topPanel.Controls.Add($btnBrowseInput)
 
-            # Facility selection
             $lblFacility = New-Object System.Windows.Forms.Label
             $lblFacility.Text = "Facility:"
             $lblFacility.Location = New-Object System.Drawing.Point(10, 70)
@@ -55,7 +51,6 @@ function Get-BtnConvertTxtHandler {
             $cmbFacility.SelectedIndex = 0
             $topPanel.Controls.Add($cmbFacility)
 
-            # Convert button (initially disabled)
             $btnConvert = New-Object System.Windows.Forms.Button
             $btnConvert.Text = "Convert to HL7"
             $btnConvert.Location = New-Object System.Drawing.Point(250, 66)
@@ -64,7 +59,6 @@ function Get-BtnConvertTxtHandler {
             $btnConvert.Enabled = $false
             $topPanel.Controls.Add($btnConvert)
 
-            # Status label
             $lblConverterStatus = New-Object System.Windows.Forms.Label
             $lblConverterStatus.Location = New-Object System.Drawing.Point(410, 72)
             $lblConverterStatus.Width = 400
@@ -74,13 +68,11 @@ function Get-BtnConvertTxtHandler {
             $lblConverterStatus.Text = "Select input file to begin"
             $topPanel.Controls.Add($lblConverterStatus)
 
-            # Split container for preview
             $splitContainer = New-Object System.Windows.Forms.SplitContainer
             $splitContainer.Dock = [System.Windows.Forms.DockStyle]::Fill
             $splitContainer.Orientation = [System.Windows.Forms.Orientation]::Vertical
             $splitContainer.SplitterDistance = 500
 
-            # Left panel - Case list with label docked at top
             $lblCases = New-Object System.Windows.Forms.Label
             $lblCases.Text = "Parsed Cases:"
             $lblCases.Dock = [System.Windows.Forms.DockStyle]::Top
@@ -97,19 +89,17 @@ function Get-BtnConvertTxtHandler {
             $dgvCases.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::AllCells
 
             $splitContainer.Panel1.Controls.Add($dgvCases)
-            $splitContainer.Panel1.Controls.Add($lblCases)  # label on top
+            $splitContainer.Panel1.Controls.Add($lblCases)
 
-            # Right panel - Case details (split into three sections)
             $rightSplitContainer = New-Object System.Windows.Forms.SplitContainer
             $rightSplitContainer.Dock = [System.Windows.Forms.DockStyle]::Fill
             $rightSplitContainer.Orientation = [System.Windows.Forms.Orientation]::Horizontal
-            # Calculate 1/3 of available height dynamically
             $rightSplitContainer.Add_Resize({
                 $totalHeight = $rightSplitContainer.Height - $rightSplitContainer.SplitterWidth
+                # Calculate 1/3 of available height dynamically
                 $rightSplitContainer.SplitterDistance = [Math]::Max(50, [int]($totalHeight / 3))
             })
 
-            # Top of right - Patient/Case details
             $lblDetails = New-Object System.Windows.Forms.Label
             $lblDetails.Text = "Case Details:"
             $lblDetails.Dock = [System.Windows.Forms.DockStyle]::Top
@@ -126,17 +116,14 @@ function Get-BtnConvertTxtHandler {
             $rightSplitContainer.Panel1.Controls.Add($txtDetails)
             $rightSplitContainer.Panel1.Controls.Add($lblDetails)
 
-            # Bottom of right - split again for Original Text and HL7
             $bottomSplitContainer = New-Object System.Windows.Forms.SplitContainer
             $bottomSplitContainer.Dock = [System.Windows.Forms.DockStyle]::Fill
             $bottomSplitContainer.Orientation = [System.Windows.Forms.Orientation]::Horizontal
-            # Make the bottom two panels equal (1/2 of remaining 2/3)
             $bottomSplitContainer.Add_Resize({
                 $availableHeight = $bottomSplitContainer.Height - $bottomSplitContainer.SplitterWidth
                 $bottomSplitContainer.SplitterDistance = [Math]::Max(50, [int]($availableHeight / 2))
             })
 
-            # Original text panel
             $lblOriginalText = New-Object System.Windows.Forms.Label
             $lblOriginalText.Text = "Original Text:"
             $lblOriginalText.Dock = [System.Windows.Forms.DockStyle]::Top
@@ -154,7 +141,6 @@ function Get-BtnConvertTxtHandler {
             $bottomSplitContainer.Panel1.Controls.Add($txtOriginalText)
             $bottomSplitContainer.Panel1.Controls.Add($lblOriginalText)
 
-            # HL7 preview panel
             $lblHL7 = New-Object System.Windows.Forms.Label
             $lblHL7.Text = "HL7 Output Preview:"
             $lblHL7.Dock = [System.Windows.Forms.DockStyle]::Top
@@ -175,18 +161,14 @@ function Get-BtnConvertTxtHandler {
             $rightSplitContainer.Panel2.Controls.Add($bottomSplitContainer)
             $splitContainer.Panel2.Controls.Add($rightSplitContainer)
 
-            # Add fill panel first, top panel last so it sits above
             $converterForm.Controls.Add($splitContainer)
             $converterForm.Controls.Add($topPanel)
 
-            # Dynamic layout for input textbox and Browse button
             $layoutInputRow = {
                 $rightMargin = 10
 
-                # Place Browse button flush to the right margin
                 $btnBrowseInput.Left = $topPanel.ClientSize.Width - $btnBrowseInput.Width - $rightMargin
 
-                # Textbox fills from left padding to just before the button
                 $txtInput.Left  = 10
                 $txtInput.Width = [Math]::Max(50, $btnBrowseInput.Left - $txtInput.Left - 10)
             }
@@ -194,10 +176,8 @@ function Get-BtnConvertTxtHandler {
             $converterForm.Add_Shown($layoutInputRow)
             $converterForm.Add_Resize($layoutInputRow)
 
-            # Variable to store preview data
             $previewData = $null
             
-            # Function to load and preview file
             $loadAndPreview = {
                 param([string]$InputPath, [string]$FacilityName)
                 
@@ -216,7 +196,6 @@ function Get-BtnConvertTxtHandler {
                     $converterForm.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
                     [System.Windows.Forms.Application]::DoEvents()
                     
-                    # Run preview conversion
                     $script:previewData = Convert-PathologyTextToHL7 -InputPath $InputPath -FacilityName $FacilityName -PreviewOnly
                     
                     # Populate cases grid
@@ -267,7 +246,6 @@ function Get-BtnConvertTxtHandler {
                 }
             }
             
-            # Event: Browse input file
             $btnBrowseInput.Add_Click({
                 $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
                 $openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
@@ -359,29 +337,21 @@ Facility: $($cmbFacility.SelectedItem)
                     $hl7Lines += "PID|1||$($case.PatientData.MedicalRecordNumber)^^^^MR^~^^^^SS||$($case.PatientData.NameLast)^$($case.PatientData.NameFirst)^$($case.PatientData.NameMiddle)||$birthDateHL7|$($case.PatientData.Sex)|||Unknown^^Unknown^ZZ^99999|||"
                     $hl7Lines += "OBR|1||$($case.PathReportID)||||$specimenDateHL7||||||||||||||||||F||||||||"
                     
-                    # SJH: drop first OBX and renumber; Standard: include all OBX
-                    if ($isSJH -and $case.TextLines.Count -gt 1) {
-                        for ($i = 1; $i -lt $case.TextLines.Count; $i++) {
-                            $hl7Lines += "OBX|$($i)|TX|||$($case.TextLines[$i])"
-                        }
-                    } else {
-                        for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
-                            $hl7Lines += "OBX|$($i + 1)|TX|||$($case.TextLines[$i])"
-                        }
+                    # Add all text lines as OBX segments
+                    for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
+                        $hl7Lines += "OBX|$($i + 1)|TX|||$($case.TextLines[$i])"
                     }
                     
                     $txtHL7.Text = $hl7Lines -join "`r`n"
                 }
             })
             
-            # Event: Convert button
             $btnConvert.Add_Click({
                 if ($null -eq $script:previewData) {
                     [System.Windows.Forms.MessageBox]::Show("No file loaded. Please select a file first.", "No Data", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
                     return
                 }
                 
-                # Ask for output file location
                 $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
                 $saveFileDialog.Filter = "HL7 files (*.hl7)|*.hl7|All files (*.*)|*.*"
                 $saveFileDialog.Title = "Save HL7 Output File"
