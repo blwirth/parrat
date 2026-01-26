@@ -181,7 +181,7 @@ Only NAACCR XML files contain these variables. As a result, only these records c
 
 To preview how the heuristics assign primary site and laterality without modifying any files, select *Test current record (Site/Lat)* or *Test custom text (Site/Lat)* from the *Tools* menu.
 
-* *Test current record*: Uses the pathology text from the currently selected tumor.
+* *Test current record*: Uses the pathology text from the currently selected record. For XML files, this extracts text from tumor fields. For HL7 files, this extracts text from OBX-5 values.
 * *Test custom text*: Opens a dialog where custom text can be entered for testing.
 
 Results include:
@@ -192,7 +192,22 @@ Results include:
 * The assigned laterality code and description
 * Whether the site requires laterality
 
-Results can be copied to the clipboard using the *Copy* button.
+The results dialog displays the source text with syntax highlighting:
+
+* *Green*: The phrase that triggered the site match
+* *Blue*: Laterality keywords ("left" or "right")
+
+For HL7 files, the source text panel displays each OBX segment with its identifier (e.g., `OBX|1|TX|GD^Gross Description^...`). Segments matching the configured skip codes are displayed in gray with a `[SKIPPED]` label, indicating they were excluded from analysis.
+
+Results can be copied to the clipboard using the *Copy Results* button.
+
+===== Configuring OBX Skip Codes
+
+When testing site and laterality on HL7 files, certain OBX segments can be excluded from analysis based on their OBX-3.1 identifier. This is useful for filtering out non-diagnostic sections such as gross descriptions or clinical history that may contain misleading anatomical terms.
+
+To configure skip codes, select *OBX Skip Codes...* from the *Settings* menu.
+
+From this dialog, codes can be added, edited, or removed. Changes are saved to `/config/obx-skip-config.json`.
 
 === Assigning Facility
 

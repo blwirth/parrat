@@ -50,7 +50,7 @@ function Show-UnifiedAssignDialog {
 
         # Count patient-level fields (once per patient)
         $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
-        if ($patient -ne $null -and -not $processedPatients.ContainsKey($patient)) {
+        if ($null -ne $patient -and -not $processedPatients.ContainsKey($patient)) {
             $processedPatients[$patient] = $true
             $currentPid = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "patientIdNumber"
 
@@ -416,7 +416,7 @@ function Get-UnifiedAssignments {
         # Get patient name for display
         $nameLast = ""
         $nameFirst = ""
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nameLast = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameLast"
             $nameFirst = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameFirst"
         }
@@ -572,7 +572,7 @@ function Get-UnifiedAssignments {
         }
 
         # --- Patient ID Assignment ---
-        if ($Options.AssignPid -and $patient -ne $null -and -not $processedPatients.ContainsKey($patient)) {
+        if ($Options.AssignPid -and $null -ne $patient -and -not $processedPatients.ContainsKey($patient)) {
             $processedPatients[$patient] = $true
 
             $currentPid = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "patientIdNumber"
@@ -609,7 +609,7 @@ function Get-UnifiedAssignments {
                 $entry.HasChanges = $true
             }
         }
-        elseif ($Options.AssignPid -and $patient -ne $null -and $processedPatients.ContainsKey($patient)) {
+        elseif ($Options.AssignPid -and $null -ne $patient -and $processedPatients.ContainsKey($patient)) {
             # Patient already processed - get current PID for display
             $currentPid = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "patientIdNumber"
             $entry.CurrentPid = if ([string]::IsNullOrWhiteSpace($currentPid)) { "(none)" } else { $currentPid }
@@ -837,10 +837,10 @@ function Get-FileSuffix {
     $suffixParts = @()
 
     # Check if each option produced any changes
-    $hasSiteChanges = ($Report | Where-Object { $_.ProposedSite }) -ne $null
-    $hasLatChanges = ($Report | Where-Object { $_.ProposedLaterality }) -ne $null
-    $hasFacChanges = ($Report | Where-Object { $_.ProposedFacility }) -ne $null
-    $hasPidChanges = ($Report | Where-Object { $_.ProposedPid }) -ne $null
+    $hasSiteChanges = $null -ne ($Report | Where-Object { $_.ProposedSite })
+    $hasLatChanges = $null -ne ($Report | Where-Object { $_.ProposedLaterality })
+    $hasFacChanges = $null -ne ($Report | Where-Object { $_.ProposedFacility })
+    $hasPidChanges = $null -ne ($Report | Where-Object { $_.ProposedPid })
 
     if ($Options.AssignSite -and $hasSiteChanges) { $suffixParts += "psite" }
     if ($Options.AssignLaterality -and $hasLatChanges) { $suffixParts += "lat" }
@@ -977,7 +977,7 @@ function Show-UnifiedPreviewReport {
     # Hide HasChanges column
     $hideHasChangesColumn = {
         try {
-            if ($grid.Columns["HasChanges"] -ne $null) {
+            if ($null -ne $grid.Columns["HasChanges"]) {
                 $grid.Columns["HasChanges"].Visible = $false
             }
         }
@@ -1056,7 +1056,7 @@ function Show-UnifiedPreviewReport {
 
         foreach ($textId in $textFieldIds) {
             $node = $tumor.SelectSingleNode("./n:Item[@naaccrId='$textId']", $nsMgr)
-            if ($node -ne $null) {
+            if ($null -ne $node) {
                 $rtbPreview.SelectionFont = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
                 $rtbPreview.AppendText("=== $textId ===`r`n")
                 $rtbPreview.SelectionFont = New-Object System.Drawing.Font("Consolas", 9)
@@ -1100,8 +1100,8 @@ function Show-UnifiedPreviewReport {
                 $reportForm.Close()
 
                 # Load the newly created file
-                if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                if ($null -ne $Controls -and $null -ne $ScriptVars) {
+                    Import-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
                 }
             }
         }

@@ -751,7 +751,7 @@ function Show-ConcatenationPreview {
     # Load file after form closes if user requested
     if ($script:concatShouldOpen -and $script:concatOutputPath) {
         if ($script:concatControls -ne $null -and $script:concatScriptVars -ne $null) {
-            Load-XmlFile -FilePath $script:concatOutputPath -Controls $script:concatControls -ScriptVars $script:concatScriptVars
+            Import-XmlFile -FilePath $script:concatOutputPath -Controls $script:concatControls -ScriptVars $script:concatScriptVars
         }
     }
 
@@ -1144,7 +1144,7 @@ function Start-FastConcatenateXml {
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
                 if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Load-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                    Import-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
                 }
             }
         }

@@ -1,0 +1,13 @@
+﻿{
+    "skipCodes":  [
+                      "Gross Description",
+                      "Microscopic Description",
+                      "Clinical History"
+                  ],
+    "version":  1,
+    "skipCodeDescriptions":  {
+                                 "Gross Description":  "Gross Description",
+                                 "Clinical History":  "Clinical History",
+                                 "Microscopic Description":  "Microscopic Description"
+                             }
+}

@@ -39,6 +39,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\lib\noah-results-viewer.ps1"
 . "$PSScriptRoot\lib\split-file.ps1"
 . "$PSScriptRoot\lib\test-site-laterality.ps1"
+. "$PSScriptRoot\lib\obx-skip-config.ps1"
 . "$PSScriptRoot\lib\recent-files.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
@@ -246,6 +247,10 @@ $mnuManageCodingTables.Text = "Manage Coding Tables"
 $mnuNoahConfig = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuNoahConfig.Text = "NOAH Configuration"
 [void]$mnuSettings.DropDownItems.Add($mnuNoahConfig)
+
+$mnuObxSkipCodes = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuObxSkipCodes.Text = "OBX Skip Codes..."
+[void]$mnuSettings.DropDownItems.Add($mnuObxSkipCodes)
 
 $mnuHelp = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuHelp.Text = "Help"
@@ -466,6 +471,7 @@ $script:Controls = @{
     'mnuFilterCustomPayload' = $mnuFilterCustomPayload
     'mnuManageCodingTables' = $mnuManageCodingTables
     'mnuNoahConfig' = $mnuNoahConfig
+    'mnuObxSkipCodes' = $mnuObxSkipCodes
 }
 
 # Global controls reference for cross-file access
@@ -567,6 +573,7 @@ function Show-Tumor {
     }
 
     # Right column: patient-level items, then tumor-level items (excluding text field IDs)
+    # Todo: revisit this
     Add-LineToRichTextBox $rtbItems ("Tumor {0} of {1}" -f ($Index + 1), $script:Tumors.Count) $true
     Add-LineToRichTextBox $rtbItems ""
 
@@ -672,7 +679,7 @@ $gridNav.Add_CurrentCellDirtyStateChanged({
 
 # Update selected count when checkbox is toggled
 $gridNav.Add_CellValueChanged({
-    param($sender, $e)
+    param($gridSender, $e)
 
     # Only handle changes to the "Selected" column (column 0)
     if ($e.ColumnIndex -ne 0) { return }
@@ -729,9 +736,12 @@ $mnuFilterCustomPayload.Add_Click({
     Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
 })
 
-# Wire up NOAH Configuration in Settings menu
 $mnuNoahConfig.Add_Click({
     Invoke-NoahSettings -Controls $script:Controls -ScriptVars $script:ScriptVars
+})
+
+$mnuObxSkipCodes.Add_Click({
+    Show-ObxSkipConfigDialog
 })
 
 # Enable menu items dynamically when Tools menu opens
@@ -739,15 +749,16 @@ $mnuTools.Add_DropDownOpening({
     $fileType = $global:FileType
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
     $mnuFilterCurrentHl7.Enabled = ($fileType -eq 'hl7')
-    $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml')
+    # Site/Lat testing works with both XML and HL7 files
+    $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml' -or $fileType -eq 'hl7')
 })
 
 # Populate Open Recent submenu dynamically when opened
 $mnuOpenRecent.Add_DropDownOpening({
-    param($sender, $e)
+    param($menuSender, $e)
 
     # Clear existing items
-    $sender.DropDownItems.Clear()
+    $menuSender.DropDownItems.Clear()
 
     $recentFiles = Get-RecentFiles
 
@@ -755,7 +766,7 @@ $mnuOpenRecent.Add_DropDownOpening({
         $emptyItem = New-Object System.Windows.Forms.ToolStripMenuItem
         $emptyItem.Text = "(No recent files)"
         $emptyItem.Enabled = $false
-        [void]$sender.DropDownItems.Add($emptyItem)
+        [void]$menuSender.DropDownItems.Add($emptyItem)
     }
     else {
         foreach ($file in $recentFiles) {
@@ -770,10 +781,10 @@ $mnuOpenRecent.Add_DropDownOpening({
                     param($clickSender, $clickArgs)
                     $info = $clickSender.Tag
                     if ($info.FileType -eq 'hl7') {
-                        Load-Hl7File -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
+                        Import-Hl7File -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
                     }
                     else {
-                        Load-XmlFile -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
+                        Import-XmlFile -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
                     }
                 })
             }
@@ -782,46 +793,39 @@ $mnuOpenRecent.Add_DropDownOpening({
                 $menuItem.Enabled = $false
             }
 
-            [void]$sender.DropDownItems.Add($menuItem)
+            [void]$menuSender.DropDownItems.Add($menuItem)
         }
     }
 
-    # Add separator and Clear option
-    [void]$sender.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    [void]$menuSender.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
     $clearItem = New-Object System.Windows.Forms.ToolStripMenuItem
     $clearItem.Text = "Clear Recent Files"
     $clearItem.Add_Click({
         Clear-RecentFiles
     })
-    [void]$sender.DropDownItems.Add($clearItem)
+    [void]$menuSender.DropDownItems.Add($clearItem)
 })
 
-# Wire up Deduplicate submenu item handlers
 $menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
-# Set up Export dropdown menu (populated dynamically on DropDownOpening)
 $mnuExport.Add_DropDownOpening({
     param($toolStripButton, $e)
     
-    # Clear existing items
     $toolStripButton.DropDownItems.Clear()
     
-    # Determine file type
     $fileType = $script:FileType
     $isXml = ($fileType -eq 'xml')
     $isHl7 = ($fileType -eq 'hl7')
     
-    # Export Selected as XML (XML only)
     $menuItemXml = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemXml.Text = "Export Selected as XML"
     $menuItemXml.Enabled = $isXml
     $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
     [void]$toolStripButton.DropDownItems.Add($menuItemXml)
     
-    # Export Selected as HL7 (HL7 only)
     $menuItemHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemHl7.Text = "Export Selected as HL7"
     $menuItemHl7.Enabled = $isHl7
@@ -841,7 +845,6 @@ $mnuExport.Add_DropDownOpening({
     }
     [void]$toolStripButton.DropDownItems.Add($menuItemAllCsv)
     
-    # Export Selected as CSV (context-aware)
     $menuItemSelectedCsv = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemSelectedCsv.Text = "Export Selected as CSV"
     $menuItemSelectedCsv.Enabled = ($isXml -or $isHl7)
@@ -853,10 +856,8 @@ $mnuExport.Add_DropDownOpening({
     [void]$toolStripButton.DropDownItems.Add($menuItemSelectedCsv)
 })
 
-# Set up Manage Coding Tables dropdown menu (populated dynamically on DropDownOpening)
 $mnuManageCodingTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
-# Wire up Split button
 $mnuSplit.Add_Click((Get-BtnSplitHandler))
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))

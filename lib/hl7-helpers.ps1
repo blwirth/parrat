@@ -35,7 +35,7 @@ function Get-Hl7Component {
     return ""
 }
 
-function Parse-Hl7Messages {
+function ConvertFrom-Hl7Content {
     param(
         [string]$Content
     )
@@ -48,7 +48,6 @@ function Parse-Hl7Messages {
     $Content = $Content -replace "`r", "`n"
     
     # Split content into individual messages by finding MSH segments
-    # Each message starts with "MSH|"
     $messageTexts = New-Object System.Collections.ArrayList
     $currentMessageLines = New-Object System.Collections.ArrayList
     
@@ -67,7 +66,6 @@ function Parse-Hl7Messages {
             [void]$currentMessageLines.Add($trimmedLine)
         }
         else {
-            # Continue current message
             if ($currentMessageLines.Count -gt 0) {
                 [void]$currentMessageLines.Add($trimmedLine)
             }
@@ -79,7 +77,6 @@ function Parse-Hl7Messages {
         [void]$messageTexts.Add(($currentMessageLines -join "`n"))
     }
     
-    # Parse each message
     for ($i = 0; $i -lt $messageTexts.Count; $i++) {
         $msg = $messageTexts[$i]
         
@@ -101,14 +98,13 @@ function Parse-Hl7Messages {
             [void]$allSegments.Add($trimmedLine)
         }
         
-        # Extract common fields
         $mshLine = if ($segments.ContainsKey("MSH")) { $segments["MSH"][0] } else { "" }
         $pidLine = if ($segments.ContainsKey("PID")) { $segments["PID"][0] } else { "" }
         $obrLine = if ($segments.ContainsKey("OBR")) { $segments["OBR"][0] } else { "" }
         
-        $parsedPid = Parse-PidSegment -PidSegment $pidLine
-        $parsedMsh = Parse-MshSegment -MshSegment $mshLine
-        $parsedObr = Parse-ObrSegment -ObrSegment $obrLine
+        $parsedPid = ConvertFrom-PidSegment -PidSegment $pidLine
+        $parsedMsh = ConvertFrom-MshSegment -MshSegment $mshLine
+        $parsedObr = ConvertFrom-ObrSegment -ObrSegment $obrLine
         
         [void]$messages.Add([PSCustomObject]@{
             Index = $i
@@ -133,11 +129,12 @@ function Parse-Hl7Messages {
     return $messages
 }
 
-function Parse-MshSegment {
+function ConvertFrom-MshSegment {
     param(
         [string]$MshSegment
     )
     
+    # Todo: check this against different HL7 version specifications
     # MSH fields (0-indexed after split by |):
     # 0: MSH
     # 1: ^~\& (encoding characters)
@@ -161,11 +158,12 @@ function Parse-MshSegment {
     }
 }
 
-function Parse-PidSegment {
+function ConvertFrom-PidSegment {
     param(
         [string]$PidSegment
     )
     
+    # Todo: check this against different HL7 version specifications
     # PID fields (0-indexed after split by |):
     # 0: PID
     # 1: Set ID
@@ -184,7 +182,6 @@ function Parse-PidSegment {
     $dateOfBirth = if ($fields.Count -gt 7) { $fields[7] } else { "" }
     $sex = if ($fields.Count -gt 8) { $fields[8] } else { "" }
     
-    # Parse name components (last^first^middle)
     $nameComponents = $patientNameField -split '\^'
     $lastName = if ($nameComponents.Count -gt 0) { $nameComponents[0] } else { "" }
     $firstName = if ($nameComponents.Count -gt 1) { $nameComponents[1] } else { "" }
@@ -206,11 +203,12 @@ function Parse-PidSegment {
     }
 }
 
-function Parse-ObrSegment {
+function ConvertFrom-ObrSegment {
     param(
         [string]$ObrSegment
     )
     
+    # Todo: check this against different HL7 version specifications
     # OBR fields (0-indexed after split by |):
     # 0: OBR
     # 1: Set ID
@@ -228,7 +226,6 @@ function Parse-ObrSegment {
     $orderDateTime = if ($fields.Count -gt 7) { $fields[7] } else { "" }
     $orderingProviderField = if ($fields.Count -gt 16) { $fields[16] } else { "" }
     
-    # Parse ordering provider (id^last^first)
     $providerComponents = $orderingProviderField -split '\^'
     $providerId = if ($providerComponents.Count -gt 0) { $providerComponents[0] } else { "" }
     $providerLast = if ($providerComponents.Count -gt 1) { $providerComponents[1] } else { "" }
@@ -245,11 +242,12 @@ function Parse-ObrSegment {
     }
 }
 
-function Parse-ObxSegments {
+function ConvertFrom-ObxSegments {
     param(
         [array]$ObxSegments
     )
     
+    # Todo: check this against different HL7 version specifications
     # OBX fields (0-indexed after split by |):
     # 0: OBX
     # 1: Set ID
@@ -320,7 +318,7 @@ function Format-Hl7DateTime {
     return $Hl7DateTime
 }
 
-function Extract-ObxTextContent {
+function Get-ObxTextContent {
     param(
         [array]$ObxSegments
     )
@@ -357,5 +355,111 @@ function Extract-ObxTextContent {
     
     # Join lines with newline
     return ($textLines -join "`r`n")
+}
+
+function Get-Obx3Component1 {
+    <#
+    .SYNOPSIS
+    Extract the first component of OBX-3 (Observation Identifier)
+
+    .PARAMETER ObxSegment
+    The raw OBX segment string
+
+    .OUTPUTS
+    The first component of OBX-3 (before the ^ character)
+    #>
+    param(
+        [string]$ObxSegment
+    )
+
+    if ([string]::IsNullOrWhiteSpace($ObxSegment)) {
+        return ""
+    }
+
+    # OBX fields (0-indexed after split by |):
+    # 0: OBX
+    # 1: Set ID
+    # 2: Value Type
+    # 3: Observation Identifier (format: code^text^coding system)
+    $fields = $ObxSegment -split '\|'
+
+    if ($fields.Count -lt 4) {
+        return ""
+    }
+
+    $obx3 = $fields[3]
+    if ([string]::IsNullOrWhiteSpace($obx3)) {
+        return ""
+    }
+
+    # Get first component (before ^)
+    $components = $obx3 -split '\^'
+    return $components[0].Trim()
+}
+
+function Select-ObxSegments {
+    <#
+    .SYNOPSIS
+    Filter out OBX segments whose OBX-3.1 code matches the skip list
+
+    .PARAMETER ObxSegments
+    Array of raw OBX segment strings
+
+    .PARAMETER SkipCodes
+    Array of OBX-3.1 codes to skip (exclude)
+
+    .OUTPUTS
+    Filtered array of OBX segments
+    #>
+    param(
+        [array]$ObxSegments,
+        [array]$SkipCodes
+    )
+
+    if (-not $ObxSegments -or $ObxSegments.Count -eq 0) {
+        return @()
+    }
+
+    if (-not $SkipCodes -or $SkipCodes.Count -eq 0) {
+        return $ObxSegments
+    }
+
+    # Convert skip codes to uppercase for case-insensitive matching
+    $skipCodesUpper = @($SkipCodes | ForEach-Object { $_.ToUpper() })
+
+    $filtered = @()
+    foreach ($obx in $ObxSegments) {
+        $obx3Code = Get-Obx3Component1 -ObxSegment $obx
+        $obx3CodeUpper = $obx3Code.ToUpper()
+
+        if ($skipCodesUpper -notcontains $obx3CodeUpper) {
+            $filtered += $obx
+        }
+    }
+
+    return $filtered
+}
+
+function Get-FilteredObxTextContent {
+    <#
+    .SYNOPSIS
+    Extract and combine OBX-5 text content after filtering by skip codes
+
+    .PARAMETER ObxSegments
+    Array of raw OBX segment strings
+
+    .PARAMETER SkipCodes
+    Array of OBX-3.1 codes to skip (exclude)
+
+    .OUTPUTS
+    Combined text from filtered OBX-5 values
+    #>
+    param(
+        [array]$ObxSegments,
+        [array]$SkipCodes
+    )
+
+    $filteredSegments = Select-ObxSegments -ObxSegments $ObxSegments -SkipCodes $SkipCodes
+    return Get-ObxTextContent -ObxSegments $filteredSegments
 }
 

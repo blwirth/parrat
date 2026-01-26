@@ -62,7 +62,7 @@ function Show-Hl7Message {
 
     # Extract and display clean OBX text
     if ($message.Segments.ContainsKey("OBX")) {
-        $cleanText = Extract-ObxTextContent -ObxSegments $message.Segments["OBX"]
+        $cleanText = Get-ObxTextContent -ObxSegments $message.Segments["OBX"]
         if (-not [string]::IsNullOrWhiteSpace($cleanText)) {
             $lines = $cleanText -split "(`r`n|`n|`r)"
             foreach ($line in $lines) {

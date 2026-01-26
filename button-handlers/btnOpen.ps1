@@ -13,18 +13,16 @@ function Get-BtnOpenHandler {
             $extension = [System.IO.Path]::GetExtension($ofd.FileName).ToLower()
             
             if ($extension -eq ".hl7") {
-                # Load HL7 file
-                Load-Hl7File -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
+                Import-Hl7File -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
             }
             else {
-                # Default to XML loading
-                Load-XmlFile -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
+                Import-XmlFile -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
             }
         }
     }
 }
 
-function Load-XmlFile {
+function Import-XmlFile {
     param(
         [string]$FilePath,
         [hashtable]$Controls,
@@ -47,7 +45,6 @@ function Load-XmlFile {
         $ScriptVars['Hl7Messages'] = @()
         $script:Hl7Messages = @()
         
-        # Update button states for XML file type
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'xml'
 
         $nsUri = $xml.DocumentElement.NamespaceURI
@@ -81,7 +78,6 @@ function Load-XmlFile {
 
             Write-ParatLog -Level INFO -Message "Loaded $fileName with $($ScriptVars['Tumors'].Count) tumors" -Action "OPEN_FILE"
 
-            # Add to recent files
             Add-RecentFile -FilePath $FilePath -FileType 'xml'
 
             # Build navigation table
@@ -116,7 +112,7 @@ function Load-XmlFile {
                 $tumor = $ScriptVars['Tumors'][$i]
                 $patient = $tumor.ParentNode
                 # Navigate up to Patient if not direct parent
-                while ($patient -ne $null -and $patient.LocalName -ne "Patient") {
+                while ($null -ne $patient -and $patient.LocalName -ne "Patient") {
                     $patient = $patient.ParentNode
                 }
 
@@ -189,7 +185,7 @@ function Load-XmlFile {
     }
 }
 
-function Load-Hl7File {
+function Import-Hl7File {
     param(
         [string]$FilePath,
         [hashtable]$Controls,
@@ -204,7 +200,7 @@ function Load-Hl7File {
             return
         }
         
-        $messages = Parse-Hl7Messages -Content $content
+        $messages = ConvertFrom-Hl7Content -Content $content
         
         if ($messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 messages found in this file.", "No Messages")
@@ -241,7 +237,6 @@ function Load-Hl7File {
         $ScriptVars['NsMgr'] = $null
         $script:NsMgr = $null
         
-        # Update button states for HL7 file type
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'hl7'
         
         $fileName = [System.IO.Path]::GetFileName($FilePath)
@@ -250,7 +245,6 @@ function Load-Hl7File {
 
         Write-ParatLog -Level INFO -Message "Loaded $fileName with $($messages.Count) messages" -Action "OPEN_FILE"
 
-        # Add to recent files
         Add-RecentFile -FilePath $FilePath -FileType 'hl7'
 
         # Build navigation table for HL7

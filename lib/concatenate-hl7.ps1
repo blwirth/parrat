@@ -469,7 +469,7 @@ function Show-Hl7ConcatenationPreview {
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
                 if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Load-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                    Import-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
                 }
             }
         }
@@ -763,7 +763,7 @@ function Start-FastConcatenateHl7 {
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
                 if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Load-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                    Import-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
                 }
             }
         }
