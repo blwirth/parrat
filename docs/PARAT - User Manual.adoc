@@ -26,13 +26,46 @@ These utilities require the working file to be loaded into the application.
 
 To select a file to view, click *Open…* and navigate the native file explorer. Supported file formats currently include HL7 and XML. Pipe-delimited files are not supported. Only one file can be viewed at a time.
 
-Once loaded, the left panel lists the records. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel.
+Once loaded, the left panel lists the records. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel. The status bar at the bottom displays the current record number, total record count, and the number of selected records (for example, "Tumor 1 of 25 (3 selected)").
+
+==== Recently Opened Files
+
+The application maintains a list of recently opened files for quick access. Select *Open Recent* from the *File* menu to view and reopen previously loaded files. Up to ten files are stored in this list.
+
+To clear the history, select *Clear Recent Files* from the same menu.
+
+==== Open Containing Folder
+
+To open the folder containing the currently loaded file in Windows Explorer, select *Open Containing Folder* from the *File* menu. The file is automatically highlighted in Explorer.
+
+==== Syntax Highlighting
+
+When viewing HL7 files, the application applies syntax highlighting for improved readability:
+
+* Segment names (MSH, PID, OBX, etc.) are color-coded
+* Field separators (`|`) and component separators (`^`) are displayed in gray
+* Patient names (PID-5) are bolded
+* Observation identifiers (OBX-3.1) are highlighted in teal
+* Observation values (OBX-5.1) are bolded
+
+This highlighting is applied in both the main viewer and when viewing raw records.
 
 === Comparing Records
 
 To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff*.
 
-This feature currently supports XML and HL7 records. Only two records may be compared. A warning is shown if fewer than two or more than two records are selected.
+This feature supports XML and HL7 records. Only two records may be compared. A warning is shown if fewer than two or more than two records are selected.
+
+==== XML Comparison
+
+When comparing NAACCR XML records, the application performs a semantic comparison by NAACCR item. Each field is displayed with its value in both records, and rows are color-coded:
+
+* *White*: Values are identical in both records
+* *Light yellow*: Values differ between records
+* *Light blue*: Field exists only in the first record
+* *Light green*: Field exists only in the second record
+
+The comparison includes both patient-level and tumor-level items.
 
 === Showing the Original Record
 
@@ -107,7 +140,13 @@ If none of the above rules apply, the first record in the duplicate group is ret
 
 Before deduplication, a summary is displayed. This summary can be saved in `.csv` format.
 
-The deduplicated file is saved to the same location as the original file, with the suffix `-dedup` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+The deduplicated file is saved to the same location as the original file, with a suffix indicating the deduplication method used:
+
+* `-ddtr`: True matches
+* `-ddpk`: Primary key
+* `-ddpr`: pathReportNumber1
+
+After deduplication completes, a dialog prompts whether to open the newly created file.
 
 [NOTE]
 ====
@@ -131,12 +170,29 @@ Existing primary site and laterality values are not overwritten.
 
 A summary of the changes to be applied is displayed and may be saved in `.csv` format.
 
-The new file is saved to the same location as the original file, with the suffix `-psite` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+The new file is saved to the same location as the original file, with the suffix `-psite` appended to the original filename. After the operation completes, a dialog prompts whether to open the newly created file.
 
 [NOTE]
 ====
 Only NAACCR XML files contain these variables. As a result, only these records can be assigned primary site and laterality.
 ====
+
+==== Testing Site and Laterality Assignments
+
+To preview how the heuristics assign primary site and laterality without modifying any files, select *Test current record (Site/Lat)* or *Test custom text (Site/Lat)* from the *Tools* menu.
+
+* *Test current record*: Uses the pathology text from the currently selected tumor.
+* *Test custom text*: Opens a dialog where custom text can be entered for testing.
+
+Results include:
+
+* The assigned site code and description
+* The match type (hard-coded pattern, melanoma dictionary, or standard dictionary)
+* The phrase that triggered the match
+* The assigned laterality code and description
+* Whether the site requires laterality
+
+Results can be copied to the clipboard using the *Copy* button.
 
 === Assigning Facility
 
@@ -155,7 +211,7 @@ Optionally, existing facility codes may be overwritten by selecting the appropri
 
 The facility code is assigned to every record in the file.
 
-The new file is saved to the same location as the original file, with the suffix `-facility` appended to the original filename. To view and continue working with this file, it must be loaded into the software manually; it does not open automatically.
+The new file is saved to the same location as the original file, with the suffix `-facility` appended to the original filename. After the operation completes, a dialog prompts whether to open the newly created file.
 
 [NOTE]
 ====
@@ -289,15 +345,28 @@ These utilities do not require a working file to be loaded.
 
 Files can be concatenated by selecting *Concatenate…*. Only files of the same format may be concatenated.
 
-* *Concatenate XML*
-+
-Only files with identical headers or versions (for example NAACCR v250) should be concatenated. To concatenate files of differing versions, first convert them using NorthCon.
+* *Concatenate XML*: Only files with identical headers or versions (for example NAACCR v250) should be concatenated. To concatenate files of differing versions, first convert them using NorthCon.
 
 * *Concatenate HL7*
-+
-HL7 version conversion is not supported. The header from the first file is used.
 
-A confirmation screen displays the total number of files, tumors, and record type. After confirmation, you are prompted to select the output directory and name the concatenated file.
+A confirmation screen displays the total number of files, tumors, and record type.
+
+==== Duplicate Patient ID Warning 
+
+When concatenating XML files, the application checks for duplicate patient IDs across all selected files. If duplicates are found, a warning dialog displays the affected patient IDs and their occurrence counts. Three options are available:
+
+* *Reassign All Patient IDs (Start at 1)*: Automatically renumbers all patient IDs sequentially starting from 1.
+* *Concatenate Anyway (Keep IDs)*: Proceeds with concatenation while retaining the original (duplicate) patient IDs.
+
+[WARNING]
+====
+Keeping duplicate patient IDs can cause multiplicative matching in Match*Pro.
+====
+
+* *Cancel*: Aborts the concatenation.
+
+
+After confirmation, you are prompted to select the output directory and name the concatenated file. A dialog then prompts whether to open the newly created file.
 
 === Converting Text Files to HL7
 
@@ -306,6 +375,7 @@ This utility converts ePath reports initially received as PDFs into HL7.
 The PDF must first be converted to plain text (`.txt`) using Adobe Acrobat.
 
 To convert a text file:
+
 . Select *Convert TXT*
 . Browse to the input file
 . Select the correct facility from the dropdown
@@ -349,11 +419,24 @@ These tables are stored as JSON or NDJSON files in `/data/dictionaries` and may 
 Certain heuristics can only be modified within the program files.
 ====
 
+=== Logging
+
+The application maintains daily log files to assist with troubleshooting. Logs are stored in the `/logs` folder with filenames in the format `parat_YYYYMMDD.log`.
+
+Log entries include timestamps, severity levels, action categories, and messages. Sensitive information such as Social Security numbers and medical record numbers is automatically sanitized.
+
+To open the logs folder, select *Open Logs Folder* from the *Help* menu.
+
+=== Restarting the Application
+
+To restart the application without manually closing and reopening it, select *Restart Application* from the *File* menu. This closes the current instance and launches a new one.
+
 === Splitting Files
 
 Large files can be split for manageability.
 
 To split a file:
+
 . Select *Split…*
 . Choose the file using the native file browser
 . Select the number of output files
