@@ -1,39 +1,76 @@
-function Get-NaaccrItemMap {
+function Get-DiffLines {
     param(
-        [int]$Index
+        [string[]]$LinesA,
+        [string[]]$LinesB
     )
 
-    if (-not $script:Tumors -or $script:Tumors.Count -eq 0) {
-        throw "Get-NaaccrItemMap: script:Tumors is null or empty."
-    }
-    if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) {
-        throw "Get-NaaccrItemMap: Index $Index is out of range (0..$($script:Tumors.Count - 1))."
-    }
+    if ($null -eq $LinesA) { $LinesA = @() }
+    if ($null -eq $LinesB) { $LinesB = @() }
 
-    $tumor   = $script:Tumors[$Index]
-    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
+    [int]$lenA = @($LinesA).Count
+    [int]$lenB = @($LinesB).Count
 
-    $map = @{}
+    # LCS dynamic programming matrix
+    $lcs = New-Object 'int[,]' ($lenA + 1), ($lenB + 1)
 
-    # Patient items
-    if ($patient -ne $null) {
-        $pItems = $patient.SelectNodes("./n:Item", $script:NsMgr)
-        foreach ($item in $pItems) {
-            $id  = $item.GetAttribute("naaccrId")
-            $val = $item.InnerText
-            $map["P|$id"] = $val
+    for ([int]$i = 1; $i -le $lenA; $i++) {
+        for ([int]$j = 1; $j -le $lenB; $j++) {
+            [int]$iMinus1 = $i - 1
+            [int]$jMinus1 = $j - 1
+
+            if ($LinesA[$iMinus1] -eq $LinesB[$jMinus1]) {
+                $lcs[$i, $j] = $lcs[$iMinus1, $jMinus1] + 1
+            }
+            else {
+                $val1 = $lcs[$iMinus1, $j]
+                $val2 = $lcs[$i, $jMinus1]
+                $lcs[$i, $j] = [Math]::Max($val1, $val2)
+            }
         }
     }
 
-    # Tumor items
-    $tItems = $tumor.SelectNodes("./n:Item", $script:NsMgr)
-    foreach ($item in $tItems) {
-        $id  = $item.GetAttribute("naaccrId")
-        $val = $item.InnerText
-        $map["T|$id"] = $val
+    $diffLines = New-Object System.Collections.ArrayList
+    [int]$i = $lenA
+    [int]$j = $lenB
+
+    while ($i -gt 0 -or $j -gt 0) {
+        [int]$iMinus1 = $i - 1
+        [int]$jMinus1 = $j - 1
+
+        if ($i -gt 0 -and $j -gt 0 -and $LinesA[$iMinus1] -eq $LinesB[$jMinus1]) {
+            [void]$diffLines.Insert(0, @{
+                LineNumA = $i
+                LineNumB = $j
+                Status = 'Unchanged'
+                ContentA = $LinesA[$iMinus1]
+                ContentB = $LinesB[$jMinus1]
+            })
+            $i--
+            $j--
+        }
+        elseif ($j -gt 0 -and ($i -eq 0 -or $lcs[$i, $jMinus1] -ge $lcs[$iMinus1, $j])) {
+            [void]$diffLines.Insert(0, @{
+                LineNumA = $null
+                LineNumB = $j
+                Status = 'Added'
+                ContentA = ''
+                ContentB = $LinesB[$jMinus1]
+            })
+            $j--
+        }
+        elseif ($i -gt 0) {
+            [void]$diffLines.Insert(0, @{
+                LineNumA = $i
+                LineNumB = $null
+                Status = 'Deleted'
+                ContentA = $LinesA[$iMinus1]
+                ContentB = ''
+            })
+            $i--
+        }
     }
 
-    return $map
+    return $diffLines
 }
 
 function Get-TumorLabel {
@@ -72,6 +109,33 @@ function Get-TumorLabel {
     return "Idx {0} - {1}, {2} - Dx {3} - Path Number {4}" -f ($Index + 1), $nameLast, $nameFirst, $dxDate, $pathReportNumber1
 }
 
+function Get-FormattedTumorXml {
+    param(
+        [int]$Index
+    )
+
+    $tumor = $script:Tumors[$Index]
+    $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
+
+    $settings = New-Object System.Xml.XmlWriterSettings
+    $settings.Indent = $true
+    $settings.IndentChars = "  "
+    $settings.NewLineChars = "`n"
+    $settings.OmitXmlDeclaration = $true
+
+    $sw = New-Object System.IO.StringWriter
+    $xw = [System.Xml.XmlWriter]::Create($sw, $settings)
+    $patient.WriteTo($xw)
+    $xw.Flush()
+    $xw.Close()
+
+    $formatted = $sw.ToString()
+    $sw.Close()
+
+    $lines = @($formatted -split "`n" | ForEach-Object { $_.TrimEnd("`r", " ") })
+    return $lines
+}
+
 function Show-NaaccrTumorDiff {
     param(
         [int]$IndexA,
@@ -89,146 +153,103 @@ function Show-NaaccrTumorDiff {
         return
     }
 
-    $mapA = Get-NaaccrItemMap -Index $IndexA
-    $mapB = Get-NaaccrItemMap -Index $IndexB
-
-    # Combined key set
-    $keys = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($k in $mapA.Keys) { [void]$keys.Add($k) }
-    foreach ($k in $mapB.Keys) { [void]$keys.Add($k) }
-
-    # Build DataTable for diff
-    $table = New-Object System.Data.DataTable
-    [void]$table.Columns.Add("Scope",    [string])
-    [void]$table.Columns.Add("naaccrId", [string])
-    [void]$table.Columns.Add("ValueA",   [string])
-    [void]$table.Columns.Add("ValueB",   [string])
-    [void]$table.Columns.Add("Status",   [string])
-
-    foreach ($k in $keys) {
-        $parts     = $k.Split('|', 2)
-        $scopeCode = $parts[0]
-        $id        = $parts[1]
-
-        $scope = if ($scopeCode -eq "P") { "Patient" } else { "Tumor" }
-
-        $hasA = $mapA.ContainsKey($k)
-        $hasB = $mapB.ContainsKey($k)
-
-        $valA = if ($hasA) { $mapA[$k] } else { "" }
-        $valB = if ($hasB) { $mapB[$k] } else { "" }
-
-        if (-not $hasA -and -not $hasB) { continue }
-
-        if     ($hasA -and $hasB -and $valA -eq $valB) { $status = "Same" }
-        elseif ($hasA -and $hasB)                      { $status = "Different" }
-        elseif ($hasA)                                 { $status = "Only A" }
-        else                                           { $status = "Only B" }
-
-        $row = $table.NewRow()
-        $row["Scope"]    = $scope
-        $row["naaccrId"] = $id
-        $row["ValueA"]   = $valA
-        $row["ValueB"]   = $valB
-        $row["Status"]   = $status
-        [void]$table.Rows.Add($row)
-    }
-
     $labelA = Get-TumorLabel -Index $IndexA
     $labelB = Get-TumorLabel -Index $IndexB
 
+    $linesA = Get-FormattedTumorXml -Index $IndexA
+    $linesB = Get-FormattedTumorXml -Index $IndexB
+    $diffLines = Get-DiffLines -LinesA $linesA -LinesB $linesB
+
+    $addedCount = ($diffLines | Where-Object { $_.Status -eq 'Added' }).Count
+    $deletedCount = ($diffLines | Where-Object { $_.Status -eq 'Deleted' }).Count
+    $unchangedCount = ($diffLines | Where-Object { $_.Status -eq 'Unchanged' }).Count
+
     $diffForm = New-Object System.Windows.Forms.Form
-    $diffForm.Text          = "Diff: $labelA  VS  $labelB"
-    $diffForm.Width         = 1600
-    $diffForm.Height        = 800
+    $diffForm.Text = "Diff: Record A vs Record B"
+    $diffForm.Width = 1400
+    $diffForm.Height = 900
     $diffForm.StartPosition = "CenterScreen"
 
-    $gridDiff = New-Object System.Windows.Forms.DataGridView
-    $gridDiff.Dock                  = 'Fill'
-    $gridDiff.ReadOnly              = $true
-    $gridDiff.AutoSizeColumnsMode   = "Fill"
-    $gridDiff.RowHeadersVisible     = $false
-    $gridDiff.AllowUserToAddRows    = $false
-    $gridDiff.AllowUserToDeleteRows = $false
-    $gridDiff.DataSource            = $table
+    $lblSummary = New-Object System.Windows.Forms.Label
+    $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
+    $lblSummary.Size = New-Object System.Drawing.Size(1360, 50)
+    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $summaryText = "A: $labelA`nB: $labelB`n"
+    $summaryText += "Changes: +$addedCount added, -$deletedCount removed, $unchangedCount unchanged"
+    $lblSummary.Text = $summaryText
 
-    $gridDiff.add_RowPrePaint({
-        param($sender, $e)
-        $row    = $sender.Rows[$e.RowIndex]
-        $status = [string]$row.Cells["Status"].Value
-        switch ($status) {
-            "Same"      { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::White }
-            "Different" { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightYellow }
-            "Only A"    { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightBlue }
-            "Only B"    { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightGreen }
+    $rtbDiff = New-Object System.Windows.Forms.RichTextBox
+    $rtbDiff.Location = New-Object System.Drawing.Point(10, 65)
+    $rtbDiff.Size = New-Object System.Drawing.Size(1360, 750)
+    $rtbDiff.Anchor = 'Top,Left,Right,Bottom'
+    $rtbDiff.Font = New-Object System.Drawing.Font("Consolas", 10)
+    $rtbDiff.ReadOnly = $true
+    $rtbDiff.WordWrap = $false
+    $rtbDiff.ScrollBars = 'Both'
+
+    $lineNumA = 0
+    $lineNumB = 0
+
+    foreach ($line in $diffLines) {
+        $prefix = ""
+        $color = [System.Drawing.Color]::Black
+        $bgColor = [System.Drawing.Color]::White
+        $lineNumText = ""
+
+        switch ($line.Status) {
+            'Unchanged' {
+                $lineNumA++
+                $lineNumB++
+                $prefix = "  "
+                $color = [System.Drawing.Color]::Black
+                $bgColor = [System.Drawing.Color]::White
+                $lineNumText = "{0,4} {1,4}  " -f $lineNumA, $lineNumB
+            }
+            'Added' {
+                $lineNumB++
+                $prefix = "+ "
+                $color = [System.Drawing.Color]::DarkGreen
+                $bgColor = [System.Drawing.Color]::FromArgb(220, 255, 220)
+                $lineNumText = "     {0,4}  " -f $lineNumB
+            }
+            'Deleted' {
+                $lineNumA++
+                $prefix = "- "
+                $color = [System.Drawing.Color]::DarkRed
+                $bgColor = [System.Drawing.Color]::FromArgb(255, 220, 220)
+                $lineNumText = "{0,4}      " -f $lineNumA
+            }
         }
-    })
 
-    $diffForm.Controls.Add($gridDiff)
+        $content = if ($line.Status -eq 'Added') { $line.ContentB } else { $line.ContentA }
+        $text = "$lineNumText$prefix$content`n"
+
+        $rtbDiff.SelectionStart = $rtbDiff.TextLength
+        $rtbDiff.SelectionLength = 0
+        $rtbDiff.SelectionColor = $color
+        $rtbDiff.SelectionBackColor = $bgColor
+        $rtbDiff.AppendText($text)
+    }
+
+    $rtbDiff.SelectionStart = 0
+    $rtbDiff.ScrollToCaret()
+
+    $lblLegend = New-Object System.Windows.Forms.Label
+    $lblLegend.Location = New-Object System.Drawing.Point(10, 825)
+    $lblLegend.Size = New-Object System.Drawing.Size(700, 20)
+    $lblLegend.Text = "Legend:  + Added (in B only)  |  - Removed (in A only)  |  (no prefix) Unchanged  |  Line numbers: A  B"
+    $lblLegend.ForeColor = [System.Drawing.Color]::Gray
+    $lblLegend.Anchor = 'Bottom,Left'
+
+    $btnClose = New-Object System.Windows.Forms.Button
+    $btnClose.Text = "Close"
+    $btnClose.Location = New-Object System.Drawing.Point(1280, 825)
+    $btnClose.Size = New-Object System.Drawing.Size(90, 28)
+    $btnClose.Anchor = 'Bottom,Right'
+    $btnClose.Add_Click({ $diffForm.Close() })
+
+    $diffForm.Controls.AddRange(@($lblSummary, $rtbDiff, $lblLegend, $btnClose))
     [void]$diffForm.ShowDialog()
-}
-
-# ============================================================================
-# HL7 Diff Functions
-# ============================================================================
-
-function Get-Hl7FieldMap {
-    param(
-        [int]$Index
-    )
-
-    if (-not $script:Hl7Messages -or $script:Hl7Messages.Count -eq 0) {
-        throw "Get-Hl7FieldMap: script:Hl7Messages is null or empty."
-    }
-    if ($Index -lt 0 -or $Index -ge $script:Hl7Messages.Count) {
-        throw "Get-Hl7FieldMap: Index $Index is out of range (0..$($script:Hl7Messages.Count - 1))."
-    }
-
-    $message = $script:Hl7Messages[$Index]
-    $map = @{}
-
-    # Iterate through all segment types in the message
-    foreach ($segType in $message.Segments.Keys) {
-        $segments = $message.Segments[$segType]
-        $instanceNum = 1
-
-        foreach ($segment in $segments) {
-            # Split segment into fields by pipe delimiter
-            $fields = $segment -split '\|'
-            
-            # For MSH segment, field numbering is special:
-            # MSH-1 is the field separator (|) itself
-            # MSH-2 is the encoding characters (^~\&)
-            # So fields[0] = "MSH", fields[1] = "^~\&" (which is MSH-2)
-            
-            $fieldOffset = 0
-            if ($segType -eq "MSH") {
-                # MSH segment: fields[0]="MSH", fields[1]=encoding chars (MSH-2)
-                # So fields[1] corresponds to MSH-2, fields[2] to MSH-3, etc.
-                $fieldOffset = 1
-            }
-
-            for ($i = 1; $i -lt $fields.Count; $i++) {
-                $fieldValue = $fields[$i]
-                
-                # Skip empty fields to reduce noise
-                if ([string]::IsNullOrWhiteSpace($fieldValue)) {
-                    continue
-                }
-
-                # Calculate field number
-                $fieldNum = $i + $fieldOffset
-
-                # Key format: SegmentType[Instance].FieldNumber
-                $key = "{0}[{1}].{2}" -f $segType, $instanceNum, $fieldNum
-                $map[$key] = $fieldValue
-            }
-
-            $instanceNum++
-        }
-    }
-
-    return $map
 }
 
 function Get-Hl7MessageLabel {
@@ -252,6 +273,37 @@ function Get-Hl7MessageLabel {
     return "Idx {0} - {1} ({2}) - ID: {3}" -f ($Index + 1), $patientName, $messageType, $patientId
 }
 
+function Get-Hl7MessageLines {
+    param(
+        [int]$Index
+    )
+
+    $message = $script:Hl7Messages[$Index]
+    $lines = New-Object System.Collections.ArrayList
+
+    # Standard HL7 segment order
+    $segmentOrder = @('MSH', 'PID', 'PV1', 'ORC', 'OBR', 'OBX', 'NTE', 'ZPD')
+
+    foreach ($segType in $segmentOrder) {
+        if ($message.Segments.ContainsKey($segType)) {
+            foreach ($segment in $message.Segments[$segType]) {
+                [void]$lines.Add($segment)
+            }
+        }
+    }
+
+    # Add any remaining segment types not in the standard order
+    foreach ($segType in $message.Segments.Keys) {
+        if ($segType -notin $segmentOrder) {
+            foreach ($segment in $message.Segments[$segType]) {
+                [void]$lines.Add($segment)
+            }
+        }
+    }
+
+    return @($lines)
+}
+
 function Show-Hl7MessageDiff {
     param(
         [int]$IndexA,
@@ -269,104 +321,101 @@ function Show-Hl7MessageDiff {
         return
     }
 
-    $mapA = Get-Hl7FieldMap -Index $IndexA
-    $mapB = Get-Hl7FieldMap -Index $IndexB
-
-    # Combined key set
-    $keys = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($k in $mapA.Keys) { [void]$keys.Add($k) }
-    foreach ($k in $mapB.Keys) { [void]$keys.Add($k) }
-
-    # Build DataTable for diff
-    $table = New-Object System.Data.DataTable
-    [void]$table.Columns.Add("Segment",  [string])
-    [void]$table.Columns.Add("Field#",   [string])
-    [void]$table.Columns.Add("ValueA",   [string])
-    [void]$table.Columns.Add("ValueB",   [string])
-    [void]$table.Columns.Add("Status",   [string])
-
-    # Sort keys for consistent display (by segment type, then instance, then field number)
-    $sortedKeys = $keys | Sort-Object {
-        # Parse key format: SegmentType[Instance].FieldNumber
-        if ($_ -match '^([A-Z]{2,3})\[(\d+)\]\.(\d+)$') {
-            $segType = $matches[1]
-            $instance = [int]$matches[2]
-            $fieldNum = [int]$matches[3]
-            # Return sortable tuple: segment name, instance, field number
-            return "{0}_{1:D4}_{2:D4}" -f $segType, $instance, $fieldNum
-        }
-        return $_
-    }
-
-    foreach ($k in $sortedKeys) {
-        # Parse the key to extract segment and field info
-        $segment = $k
-        $fieldNum = ""
-        
-        if ($k -match '^([A-Z]{2,3}\[\d+\])\.(\d+)$') {
-            $segment = $matches[1]
-            $fieldNum = $matches[2]
-        }
-
-        $hasA = $mapA.ContainsKey($k)
-        $hasB = $mapB.ContainsKey($k)
-
-        $valA = if ($hasA) { $mapA[$k] } else { "" }
-        $valB = if ($hasB) { $mapB[$k] } else { "" }
-
-        if (-not $hasA -and -not $hasB) { continue }
-
-        if     ($hasA -and $hasB -and $valA -eq $valB) { $status = "Same" }
-        elseif ($hasA -and $hasB)                      { $status = "Different" }
-        elseif ($hasA)                                 { $status = "Only A" }
-        else                                           { $status = "Only B" }
-
-        $row = $table.NewRow()
-        $row["Segment"]  = $segment
-        $row["Field#"]   = $fieldNum
-        $row["ValueA"]   = $valA
-        $row["ValueB"]   = $valB
-        $row["Status"]   = $status
-        [void]$table.Rows.Add($row)
-    }
-
     $labelA = Get-Hl7MessageLabel -Index $IndexA
     $labelB = Get-Hl7MessageLabel -Index $IndexB
 
+    $linesA = Get-Hl7MessageLines -Index $IndexA
+    $linesB = Get-Hl7MessageLines -Index $IndexB
+    $diffLines = Get-DiffLines -LinesA $linesA -LinesB $linesB
+
+    $addedCount = ($diffLines | Where-Object { $_.Status -eq 'Added' }).Count
+    $deletedCount = ($diffLines | Where-Object { $_.Status -eq 'Deleted' }).Count
+    $unchangedCount = ($diffLines | Where-Object { $_.Status -eq 'Unchanged' }).Count
+
     $diffForm = New-Object System.Windows.Forms.Form
-    $diffForm.Text          = "HL7 Diff: $labelA  VS  $labelB"
-    $diffForm.Width         = 1600
-    $diffForm.Height        = 800
+    $diffForm.Text = "HL7 Diff: Record A vs Record B"
+    $diffForm.Width = 1400
+    $diffForm.Height = 900
     $diffForm.StartPosition = "CenterScreen"
 
-    $gridDiff = New-Object System.Windows.Forms.DataGridView
-    $gridDiff.Dock                  = 'Fill'
-    $gridDiff.ReadOnly              = $true
-    $gridDiff.RowHeadersVisible     = $false
-    $gridDiff.AllowUserToAddRows    = $false
-    $gridDiff.AllowUserToDeleteRows = $false
-    $gridDiff.DataSource            = $table
+    $lblSummary = New-Object System.Windows.Forms.Label
+    $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
+    $lblSummary.Size = New-Object System.Drawing.Size(1360, 50)
+    $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $summaryText = "A: $labelA`nB: $labelB`n"
+    $summaryText += "Changes: +$addedCount added, -$deletedCount removed, $unchangedCount unchanged"
+    $lblSummary.Text = $summaryText
 
-    # Set column widths - all columns are manually resizable
-    # Columns: 0=Segment, 1=Field#, 2=ValueA, 3=ValueB, 4=Status
-    $gridDiff.Columns[0].Width = 120
-    $gridDiff.Columns[1].Width = 60
-    $gridDiff.Columns[2].Width = 500
-    $gridDiff.Columns[3].Width = 500
-    $gridDiff.Columns[4].Width = 80
+    $rtbDiff = New-Object System.Windows.Forms.RichTextBox
+    $rtbDiff.Location = New-Object System.Drawing.Point(10, 65)
+    $rtbDiff.Size = New-Object System.Drawing.Size(1360, 750)
+    $rtbDiff.Anchor = 'Top,Left,Right,Bottom'
+    $rtbDiff.Font = New-Object System.Drawing.Font("Consolas", 10)
+    $rtbDiff.ReadOnly = $true
+    $rtbDiff.WordWrap = $false
+    $rtbDiff.ScrollBars = 'Both'
 
-    $gridDiff.add_RowPrePaint({
-        param($sender, $e)
-        $row    = $sender.Rows[$e.RowIndex]
-        $status = [string]$row.Cells["Status"].Value
-        switch ($status) {
-            "Same"      { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::White }
-            "Different" { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightYellow }
-            "Only A"    { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightBlue }
-            "Only B"    { $row.DefaultCellStyle.BackColor = [System.Drawing.Color]::LightGreen }
+    $lineNumA = 0
+    $lineNumB = 0
+
+    foreach ($line in $diffLines) {
+        $prefix = ""
+        $color = [System.Drawing.Color]::Black
+        $bgColor = [System.Drawing.Color]::White
+        $lineNumText = ""
+
+        switch ($line.Status) {
+            'Unchanged' {
+                $lineNumA++
+                $lineNumB++
+                $prefix = "  "
+                $color = [System.Drawing.Color]::Black
+                $bgColor = [System.Drawing.Color]::White
+                $lineNumText = "{0,4} {1,4}  " -f $lineNumA, $lineNumB
+            }
+            'Added' {
+                $lineNumB++
+                $prefix = "+ "
+                $color = [System.Drawing.Color]::DarkGreen
+                $bgColor = [System.Drawing.Color]::FromArgb(220, 255, 220)
+                $lineNumText = "     {0,4}  " -f $lineNumB
+            }
+            'Deleted' {
+                $lineNumA++
+                $prefix = "- "
+                $color = [System.Drawing.Color]::DarkRed
+                $bgColor = [System.Drawing.Color]::FromArgb(255, 220, 220)
+                $lineNumText = "{0,4}      " -f $lineNumA
+            }
         }
-    })
 
-    $diffForm.Controls.Add($gridDiff)
+        $content = if ($line.Status -eq 'Added') { $line.ContentB } else { $line.ContentA }
+        $text = "$lineNumText$prefix$content`n"
+
+        $rtbDiff.SelectionStart = $rtbDiff.TextLength
+        $rtbDiff.SelectionLength = 0
+        $rtbDiff.SelectionColor = $color
+        $rtbDiff.SelectionBackColor = $bgColor
+        $rtbDiff.AppendText($text)
+    }
+
+    $rtbDiff.SelectionStart = 0
+    $rtbDiff.ScrollToCaret()
+
+    $lblLegend = New-Object System.Windows.Forms.Label
+    $lblLegend.Location = New-Object System.Drawing.Point(10, 825)
+    $lblLegend.Size = New-Object System.Drawing.Size(700, 20)
+    $lblLegend.Text = "Legend:  + Added (in B only)  |  - Removed (in A only)  |  (no prefix) Unchanged  |  Line numbers: A  B"
+    $lblLegend.ForeColor = [System.Drawing.Color]::Gray
+    $lblLegend.Anchor = 'Bottom,Left'
+
+    $btnClose = New-Object System.Windows.Forms.Button
+    $btnClose.Text = "Close"
+    $btnClose.Location = New-Object System.Drawing.Point(1280, 825)
+    $btnClose.Size = New-Object System.Drawing.Size(90, 28)
+    $btnClose.Anchor = 'Bottom,Right'
+    $btnClose.Add_Click({ $diffForm.Close() })
+
+    $diffForm.Controls.AddRange(@($lblSummary, $rtbDiff, $lblLegend, $btnClose))
     [void]$diffForm.ShowDialog()
 }

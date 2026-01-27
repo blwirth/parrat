@@ -58,14 +58,15 @@ This feature supports XML and HL7 records. Only two records may be compared. A w
 
 ==== XML Comparison
 
-When comparing NAACCR XML records, the application performs a semantic comparison by NAACCR item. Each field is displayed with its value in both records, and rows are color-coded:
+When comparing NAACCR XML records, the application displays a line-by-line diff of the formatted XML. Lines are color-coded and prefixed with indicators:
 
-* *White*: Values are identical in both records
-* *Light yellow*: Values differ between records
-* *Light blue*: Field exists only in the first record
-* *Light green*: Field exists only in the second record
+* `+` (green background): Line exists only in the second record
+* `-` (red background): Line exists only in the first record
+* No prefix (white background): Line is identical in both records
 
-The comparison includes both patient-level and tumor-level items.
+==== HL7 Comparison
+
+When comparing HL7 records, the application displays a line-by-line diff of the message segments using the same format as XML comparison.
 
 === Showing the Original Record
 
