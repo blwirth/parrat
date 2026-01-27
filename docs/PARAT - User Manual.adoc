@@ -456,4 +456,33 @@ To split a file:
 . Choose the file using the native file browser
 . Select the number of output files
 
-Files are split by last name to preserve effective deduplication. Output files are automatically named using last name ranges (for example `A–M`, `N–Z`) and saved to the same directory as the original file.
+Files are split by last name to preserve effective deduplication. Output files are automatically named using last name ranges (for example `A-M`, `N-Z`) and saved to the same directory as the original file.
+
+=== Diffing Files
+
+To compare two NAACCR files against each other, select *Diff Files…* from the *File* menu.
+
+A setup dialog prompts for file selection and comparison options. After selecting the first file, the second file is restricted to the same type (both XML or both HL7).
+
+==== HL7 File Comparison
+
+Two comparison methods are available for HL7 files:
+
+* *By Position*: Compares message 1 in File A against message 1 in File B, message 2 against message 2, and so on. Use this method when files contain the same messages in the same order.
+
+* *By Message Control ID*: Matches messages by their MSH-10 identifier. Use this method when files may contain the same messages in different orders or when one file contains a subset of the other.
+
+Results are displayed in a table showing each message's patient ID, patient name, and message type from both files.
+
+==== XML File Comparison
+
+Two comparison methods are available for NAACCR XML files:
+
+* *By Patient*: Compares patient 1 in File A against patient 1 in File B, patient 2 against patient 2, and so on. Double-click any row to view a detailed line-by-line diff of that patient's XML.
+
+* *Line-by-Line*: Displays a traditional unified diff view of the entire file, similar to version control tools. Added lines are shown in green with a `+` prefix, removed lines in red with a `-` prefix.
++
+[NOTE]
+====
+Line-by-line comparison may be slower for large files.
+====
