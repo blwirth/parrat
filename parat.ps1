@@ -82,12 +82,10 @@ $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 $form.KeyPreview = $true
 
-# Menubar (MenuStrip)
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
 $menuStrip.Dock = 'Top'
 $form.MainMenuStrip = $menuStrip
 
-# ---- Menus ----
 $mnuFile = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuFile.Text = "File"
 
@@ -148,7 +146,6 @@ $mnuRestart.Add_Click({
 })
 [void]$mnuFile.DropDownItems.Add($mnuRestart)
 
-# File -> Concatenate submenu items
 $menuItemConcatenateHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemConcatenateHl7.Text = "Concatenate HL7"
 $menuItemConcatenateHl7.Add_Click({ Start-ConcatenateHl7 })
@@ -199,7 +196,6 @@ $mnuDeduplicate.Text = "Deduplicate..."
 $mnuDeduplicate.Enabled = $false
 [void]$mnuEdit.DropDownItems.Add($mnuDeduplicate)
 
-# Edit -> Deduplicate submenu items
 $menuItemTrueMatches = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemTrueMatches.Text = "Dedup true matches"
 [void]$mnuDeduplicate.DropDownItems.Add($menuItemTrueMatches)
@@ -216,7 +212,6 @@ $mnuExport = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuExport.Text = "Export"
 $mnuExport.Enabled = $false
 
-# Tools menu (replaces NOAH menu)
 $mnuTools = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuTools.Text = "Tools"
 
@@ -234,7 +229,6 @@ $mnuFilterCurrentHl7.Enabled = $false
 $mnuFilterCustomPayload = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuFilterCustomPayload.Text = "Filter custom payload (NOAH)"
 
-# Build Tools menu items
 [void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCurrent)
 [void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCustom)
 [void]$mnuTools.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
@@ -287,7 +281,6 @@ $mnuOpenLogs.Add_Click({
     $mnuHelp
 ))
 
-# Status bar (StatusStrip)
 $statusStrip = New-Object System.Windows.Forms.StatusStrip
 $statusStrip.Dock = 'Bottom'
 
@@ -301,9 +294,6 @@ $lblFileName.Text = ""
 $lblFileName.BorderSides = 'Left'
 [void]$statusStrip.Items.Add($lblFileName)
 
-# --- Main resizable area (panel + split containers) ---
-
-# Panel to host the split containers, leaving room for ToolStrip and bottom nav
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Dock = 'Fill'
 $mainPanel.Padding = New-Object System.Windows.Forms.Padding(10, 10, 10, 10)
@@ -316,7 +306,6 @@ $splitOuter.IsSplitterFixed = $false
 $splitOuter.Panel1MinSize = 200
 # Panel2MinSize set in Shown event after form has dimensions
 
-# Inner split container: middle (path text) | right (other items)
 $splitInner = New-Object System.Windows.Forms.SplitContainer
 $splitInner.Dock = 'Fill'
 $splitInner.Orientation = 'Vertical'
@@ -334,7 +323,6 @@ $form.Add_Shown({
     $splitInner.SplitterDistance = [int]($splitInner.Width * 0.55)
 })
 
-# Navigation grid (left column)
 $gridNav = New-Object System.Windows.Forms.DataGridView
 $gridNav.Dock = 'Fill'
 $gridNav.AllowUserToAddRows = $false
@@ -362,7 +350,6 @@ $gridNav.AutoSizeColumnsMode = 'AllCells'
 
 # Note: Column configuration will be done after data is loaded
 
-# Middle column: pathology text fields
 $rtbPath = New-Object System.Windows.Forms.RichTextBox
 $rtbPath.Multiline = $true
 $rtbPath.ScrollBars = "Both"
@@ -371,7 +358,6 @@ $rtbPath.ReadOnly = $true
 $rtbPath.Font = New-Object System.Drawing.Font("Consolas", 10)
 $rtbPath.Dock = 'Fill'
 
-# Right column: other patient/tumor items
 $rtbItems = New-Object System.Windows.Forms.RichTextBox
 $rtbItems.Multiline = $true
 $rtbItems.ScrollBars = "Both"
@@ -380,7 +366,6 @@ $rtbItems.ReadOnly = $true
 $rtbItems.Font = New-Object System.Drawing.Font("Consolas", 9)
 $rtbItems.Dock = 'Fill'
 
-# Search panel (above navigation grid)
 $pnlSearch = New-Object System.Windows.Forms.Panel
 $pnlSearch.Dock = 'Top'
 $pnlSearch.Height = 30
@@ -409,7 +394,6 @@ $pnlSearch.Controls.Add($txtSearch)
 $pnlSearch.Controls.Add($lblSearchCount)
 $pnlSearch.Controls.Add($btnClearSearch)
 
-# Wire up split containers
 $splitOuter.Panel1.Controls.Add($gridNav)
 $splitOuter.Panel1.Controls.Add($pnlSearch)
 $splitInner.Panel1.Controls.Add($rtbPath)
@@ -418,7 +402,6 @@ $splitOuter.Panel2.Controls.Add($splitInner)
 
 $mainPanel.Controls.Add($splitOuter)
 
-# Bottom nav panel
 $bottomPanel = New-Object System.Windows.Forms.Panel
 $bottomPanel.Dock = 'Bottom'
 $bottomPanel.Height = 50
@@ -448,7 +431,6 @@ $lblIndex.Anchor = 'Left,Bottom'
 
 $bottomPanel.Controls.AddRange(@($btnPrev, $btnNext, $lblIndex))
 
-# Add everything to the form
 $form.Controls.AddRange(@(
     $mainPanel,
 $bottomPanel,
@@ -533,7 +515,6 @@ function Update-ButtonStatesForFileType {
         [string]$FileType
     )
     
-    # Enable menu items that require a file (any file type)
     $hasFile = ($null -ne $FileType -and $FileType -ne '')
     
     if ($Controls['mnuRawRecord'])    { $Controls['mnuRawRecord'].Enabled = $hasFile }
@@ -542,12 +523,10 @@ function Update-ButtonStatesForFileType {
     if ($Controls['mnuExport'])       { $Controls['mnuExport'].Enabled = $hasFile }
     if ($Controls['mnuOpenFolder'])   { $Controls['mnuOpenFolder'].Enabled = $hasFile }
     
-    # XML-specific buttons should be enabled only for XML files
     $isXmlFile = ($FileType -eq 'xml')
     
     if ($Controls['mnuAssign']) { $Controls['mnuAssign'].Enabled = $isXmlFile }
     
-    # HL7-specific buttons should be enabled only for HL7 files
     $isHl7File = ($FileType -eq 'hl7')
     
     if ($Controls['mnuModifyHl7']) { $Controls['mnuModifyHl7'].Enabled = $isHl7File }
@@ -585,10 +564,8 @@ function Show-Tumor {
         }
     }
 
-    # Determine patient node
     $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
 
-    # Middle column: pathology text fields from the tumor
     $tumorItemsAll = $tumor.SelectNodes("./n:Item", $script:NsMgr)
 
     foreach ($textId in $script:TextFieldIds) {
@@ -611,8 +588,6 @@ function Show-Tumor {
         }
     }
 
-    # Right column: patient-level items, then tumor-level items (excluding text field IDs)
-    # Todo: revisit this
     Add-LineToRichTextBox $rtbItems ("Tumor {0} of {1}" -f ($Index + 1), $script:Tumors.Count) $true
     Add-LineToRichTextBox $rtbItems ""
 
@@ -655,7 +630,8 @@ function Show-Tumor {
     $btnPrev.Enabled = ($Index -gt 0)
     $btnNext.Enabled = ($Index -lt ($script:Tumors.Count - 1))
 
-    # Highlight search matches in both panels
+    Set-XmlPanelHighlighting -RichTextBox $rtbItems
+
     $searchText = $script:Controls['txtSearch'].Text
     Invoke-SearchHighlight -RichTextBox $rtbPath -SearchText $searchText
     Invoke-SearchHighlight -RichTextBox $rtbItems -SearchText $searchText
@@ -749,16 +725,13 @@ $gridNav.Add_CellValueChanged({
     }
 })
 
-# Wire up button handlers
 $mnuRawRecord.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $mnuDiffRecords.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $mnuDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
 $mnuConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 
-# Wire up unified Assign handler (replaces previous submenu)
 $mnuAssign.Add_Click((Get-BtnAssignUnifiedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
-# Set up Modify HL7 dropdown menu
 $menuItemFixObx31 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemFixObx31.Text = "Fix OBX 3.1"
 $menuItemFixObx31.Add_Click((Get-BtnFixObx3Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
@@ -768,7 +741,7 @@ $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX 5"
 $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 [void]$mnuModifyHl7.DropDownItems.Add($menuItemRemoveEmptyObx5)
-# Wire up Tools menu handlers
+
 $mnuTestSiteLatCurrent.Add_Click((Get-BtnTestSiteLatCurrentHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $mnuTestSiteLatCustom.Add_Click((Get-BtnTestSiteLatCustomHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 
@@ -788,7 +761,6 @@ $mnuObxSkipCodes.Add_Click({
     Show-ObxSkipConfigDialog
 })
 
-# Enable menu items dynamically when Tools menu opens
 $mnuTools.Add_DropDownOpening({
     $fileType = $global:FileType
     if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
@@ -797,11 +769,9 @@ $mnuTools.Add_DropDownOpening({
     $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml' -or $fileType -eq 'hl7')
 })
 
-# Populate Open Recent submenu dynamically when opened
 $mnuOpenRecent.Add_DropDownOpening({
     param($menuSender, $e)
 
-    # Clear existing items
     $menuSender.DropDownItems.Clear()
 
     $recentFiles = Get-RecentFiles
@@ -907,7 +877,6 @@ $mnuSplit.Add_Click((Get-BtnSplitHandler))
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
 
-# Wire up search handlers
 $txtSearch.Add_TextChanged((Get-SearchTextChangedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $btnClearSearch.Add_Click((Get-SearchClearHandler -Controls $script:Controls))
 
@@ -915,7 +884,6 @@ $btnClearSearch.Add_Click((Get-SearchClearHandler -Controls $script:Controls))
 $form.Add_KeyDown({
     param($keySender, $keyArgs)
 
-    # Ctrl+F: focus search box
     if ($keyArgs.Control -and $keyArgs.KeyCode -eq [System.Windows.Forms.Keys]::F) {
         if ($script:Controls['pnlSearch'].Visible) {
             $script:Controls['txtSearch'].Focus()
@@ -924,7 +892,7 @@ $form.Add_KeyDown({
             $keyArgs.SuppressKeyPress = $true
         }
     }
-    # Escape: clear search when search box is focused
+
     elseif ($keyArgs.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
         if ($script:Controls['txtSearch'].Focused) {
             $script:Controls['txtSearch'].Text = ""

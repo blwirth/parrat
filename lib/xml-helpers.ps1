@@ -12,11 +12,27 @@ $script:BoldIds = @(
 )
 
 $script:TextFieldIds = @(
-    "textDxProcLabTests",
-    "textDxProcPath",
     "textDxProcPe",
+    "textDxProcXRayScan",
+    "textDxProcScopes",
+    "textDxProcLabTests",
+    "textDxProcOp",
+    "textDxProcPath",
+    "textPrimarySiteTitle",
     "textHistologyTitle",
-	"textPrimarySiteTitle"
+    "textStaging",
+    "rxTextSurgery",
+    "rxTextRadiation",
+    "rxTextRadiationOther",
+    "rxTextChemo",
+    "rxTextHormone",
+    "rxTextBrm",
+    "rxTextOther",
+    "textRemarks",
+    "textPlaceOfDiagnosis",
+    "textUsualOccupation",
+    "textUsualIndustry",
+    "ehrReporting"
 )
 
 function Add-LineToRichTextBox {
@@ -77,7 +93,6 @@ function Set-XmlSyntaxHighlighting {
     $colorNaaccrId = [System.Drawing.Color]::Blue
     $colorValue = [System.Drawing.Color]::FromArgb(0, 128, 128)  # Teal
 
-    # Set the text first
     $RichTextBox.Text = $XmlText
     $RichTextBox.SelectAll()
     $RichTextBox.SelectionColor = [System.Drawing.Color]::Black
@@ -86,7 +101,6 @@ function Set-XmlSyntaxHighlighting {
     # Use the RichTextBox.Text for indexing (it normalizes line endings)
     $rtbText = $RichTextBox.Text
 
-    # Find naaccrId="value" and highlight just the value
     $prefix = 'naaccrId="'
     $prefixLen = $prefix.Length
 
@@ -108,7 +122,6 @@ function Set-XmlSyntaxHighlighting {
         $startIndex = $valueEnd + 1
     }
 
-    # Teal Item values: find </Item> and work backwards to the > that starts the content
     $closingTag = '</Item>'
 
     $startIndex = 0
@@ -138,13 +151,37 @@ function Set-XmlSyntaxHighlighting {
     $RichTextBox.ScrollToCaret()
 }
 
+function Set-XmlPanelHighlighting {
+    param(
+        [System.Windows.Forms.RichTextBox]$RichTextBox
+    )
+
+    $colorNaaccrId = [System.Drawing.Color]::Blue
+
+    # Use RichTextBox.Text for indexing (it normalizes line endings)
+    $rtbText = $RichTextBox.Text
+
+    # Match lines of the form "naaccrId: value" — the id is everything before the first ": "
+    # Skip section headers (lines starting with "===") and the tumor count header
+    $pattern = '(?m)^([A-Za-z][A-Za-z0-9]*): '
+    $regexMatches = [regex]::Matches($rtbText, $pattern)
+    foreach ($match in $regexMatches) {
+        $idGroup = $match.Groups[1]
+        $RichTextBox.Select($idGroup.Index, $idGroup.Length)
+        $RichTextBox.SelectionColor = $colorNaaccrId
+    }
+
+    # Reset selection
+    $RichTextBox.Select(0, 0)
+    $RichTextBox.ScrollToCaret()
+}
+
 function Set-Hl7SyntaxHighlighting {
     param(
         [System.Windows.Forms.RichTextBox]$RichTextBox,
         [string]$Hl7Text
     )
 
-    # Define colors
     $colorSegment    = [System.Drawing.Color]::Blue
     $colorSeparator  = [System.Drawing.Color]::FromArgb(128, 128, 128)  # Gray
     $colorText       = [System.Drawing.Color]::Black
@@ -152,7 +189,6 @@ function Set-Hl7SyntaxHighlighting {
     $colorPid        = [System.Drawing.Color]::FromArgb(0, 128, 0)      # Green for PID
     $colorObxId      = [System.Drawing.Color]::FromArgb(0, 128, 128)    # Teal for OBX identifier
 
-    # Set the text first
     $RichTextBox.Text = $Hl7Text
     $RichTextBox.SelectAll()
     $RichTextBox.SelectionColor = $colorText
@@ -162,19 +198,18 @@ function Set-Hl7SyntaxHighlighting {
     $Hl7Text = $RichTextBox.Text
 
     # Known HL7 segment names
+    # TODO: check this against different HL7 version specifications
     $segmentNames = @(
         'MSH', 'PID', 'PV1', 'PV2', 'ORC', 'OBR', 'OBX', 'NTE', 'NK1',
         'IN1', 'IN2', 'GT1', 'AL1', 'DG1', 'PR1', 'ROL', 'EVN', 'MRG',
         'ZPD', 'ZDS', 'SPM', 'TXA', 'PD1', 'DB1', 'DRG', 'FT1', 'ACC'
     )
 
-    # Highlight segment names at the start of lines
     foreach ($segName in $segmentNames) {
         $pattern = "(?m)^$segName(?=\|)"
         $regexMatches = [regex]::Matches($Hl7Text, $pattern)
         foreach ($match in $regexMatches) {
             $RichTextBox.Select($match.Index, $match.Length)
-            # Use different colors for different segment types
             switch ($segName) {
                 'MSH' { $RichTextBox.SelectionColor = $colorMsh }
                 'PID' { $RichTextBox.SelectionColor = $colorPid }
