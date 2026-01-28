@@ -42,6 +42,7 @@ function Test-SiteLateralityHeuristics {
     # Site Assignment Tiers:
     # 1. Priority patterns (from PriorityPatterns.jsonl)
     $patternMatched = $false
+    $matchedPattern = $null
     foreach ($pattern in $priorityPatterns) {
         $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low -TopoMap $topoMap
         if ($testResult.Matched) {
@@ -60,6 +61,7 @@ function Test-SiteLateralityHeuristics {
             $result.MatchType = "priority-pattern"
             $result.MatchedPhrase = $testResult.MatchedTerm
             $result.PatternPriority = [string]$pattern.Priority
+            $matchedPattern = $pattern
             $patternMatched = $true
             break
         }
@@ -144,7 +146,12 @@ function Test-SiteLateralityHeuristics {
     if ($result.SiteCode) {
         $result.SiteRequiresLaterality = $lateralityCodes.ContainsKey($result.SiteCode)
 
-        if ($result.SiteRequiresLaterality) {
+        # Check if pattern has ForceLaterality set
+        if ($matchedPattern -and $matchedPattern.ForceLaterality) {
+            $result.LateralityCode = $matchedPattern.ForceLaterality
+            $result.LateralityDescription = "Unknown (forced by pattern)"
+        }
+        elseif ($result.SiteRequiresLaterality) {
             $leftMatch = [regex]::Match($low, '\bleft\b')
             $rightMatch = [regex]::Match($low, '\bright\b')
 

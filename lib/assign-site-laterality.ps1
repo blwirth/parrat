@@ -655,6 +655,7 @@ function Get-MissingFields {
         $low = $textCombined.ToLower()
 
         # Assign primary site if missing
+        $matchedPattern = $null
         if (-not $hasSite) {
             # 1. Check priority patterns first (sorted by Priority, then file order)
             $patternMatched = $false
@@ -674,6 +675,7 @@ function Get-MissingFields {
                         continue
                     }
                     $patternMatched = $true
+                    $matchedPattern = $pattern
                     break
                 }
             }
@@ -698,8 +700,12 @@ function Get-MissingFields {
 
         # Assign laterality if missing and site requires it
         if (-not $hasLat -and $siteToCheck) {
+            # Check if pattern has ForceLaterality set
+            if ($matchedPattern -and $matchedPattern.ForceLaterality) {
+                $proposedLat = $matchedPattern.ForceLaterality
+            }
             # Check if this site is in the laterality table
-            if ($lateralityCodes.ContainsKey($siteToCheck)) {
+            elseif ($lateralityCodes.ContainsKey($siteToCheck)) {
                 # Site can take laterality codes 1, 2, 5, or 9
                 $detectedLat = Get-Laterality $low
                 if ($detectedLat) {

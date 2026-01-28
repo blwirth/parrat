@@ -23,7 +23,10 @@ function Read-PriorityPatternsFile {
 
         try {
             $pattern = $line | ConvertFrom-Json
-            $patterns += $pattern
+            # Only add valid patterns (must have a Code)
+            if (-not [string]::IsNullOrWhiteSpace($pattern.Code)) {
+                $patterns += $pattern
+            }
         }
         catch {
             Write-Warning "Failed to parse priority pattern line: $line - $($_.Exception.Message)"
@@ -159,10 +162,17 @@ function Show-PatternEditDialog {
     $chkEnabled.Checked = if ($Pattern) { $Pattern.Enabled -ne $false } else { $true }
     $chkEnabled.AutoSize = $true
 
+    # Force Laterality checkbox
+    $chkForceLat = New-Object System.Windows.Forms.CheckBox
+    $chkForceLat.Text = "Force Laterality = 9 (Unknown)"
+    $chkForceLat.Location = New-Object System.Drawing.Point(15, 50)
+    $chkForceLat.Checked = if ($Pattern -and $Pattern.ForceLaterality) { $true } else { $false }
+    $chkForceLat.AutoSize = $true
+
     # Logic
     $grpLogic = New-Object System.Windows.Forms.GroupBox
     $grpLogic.Text = "Top-Level Logic"
-    $grpLogic.Location = New-Object System.Drawing.Point(15, 50)
+    $grpLogic.Location = New-Object System.Drawing.Point(15, 75)
     $grpLogic.Size = New-Object System.Drawing.Size(555, 50)
 
     $rdoOr = New-Object System.Windows.Forms.RadioButton
@@ -182,13 +192,13 @@ function Show-PatternEditDialog {
     # Terms label
     $lblTerms = New-Object System.Windows.Forms.Label
     $lblTerms.Text = "Expression Terms:"
-    $lblTerms.Location = New-Object System.Drawing.Point(15, 110)
+    $lblTerms.Location = New-Object System.Drawing.Point(15, 135)
     $lblTerms.AutoSize = $true
 
     # Terms listbox
     $lstTerms = New-Object System.Windows.Forms.ListBox
-    $lstTerms.Location = New-Object System.Drawing.Point(15, 130)
-    $lstTerms.Size = New-Object System.Drawing.Size(450, 220)
+    $lstTerms.Location = New-Object System.Drawing.Point(15, 155)
+    $lstTerms.Size = New-Object System.Drawing.Size(450, 200)
     $lstTerms.SelectionMode = "One"
 
     # Load existing terms
@@ -219,7 +229,7 @@ function Show-PatternEditDialog {
 
     # Term buttons panel
     $pnlTermButtons = New-Object System.Windows.Forms.Panel
-    $pnlTermButtons.Location = New-Object System.Drawing.Point(475, 130)
+    $pnlTermButtons.Location = New-Object System.Drawing.Point(475, 155)
     $pnlTermButtons.Size = New-Object System.Drawing.Size(95, 220)
 
     $btnAddTerm = New-Object System.Windows.Forms.Button
@@ -620,7 +630,7 @@ function Show-PatternEditDialog {
     $btnCancel.Width = 80
     $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 
-    $dialog.Controls.AddRange(@($lblCode, $txtCode, $lblPriority, $numPriority, $chkEnabled, $grpLogic, $lblTerms, $lstTerms, $pnlTermButtons, $btnOk, $btnCancel))
+    $dialog.Controls.AddRange(@($lblCode, $txtCode, $lblPriority, $numPriority, $chkEnabled, $chkForceLat, $grpLogic, $lblTerms, $lstTerms, $pnlTermButtons, $btnOk, $btnCancel))
     $dialog.AcceptButton = $btnOk
     $dialog.CancelButton = $btnCancel
 
@@ -640,6 +650,7 @@ function Show-PatternEditDialog {
             Expression = $script:ExpressionItems
             Logic = if ($rdoAnd.Checked) { "AND" } else { "OR" }
             Enabled = $chkEnabled.Checked
+            ForceLaterality = if ($chkForceLat.Checked) { "9" } else { $null }
             IsOverride = $false
         }
     }
@@ -734,16 +745,22 @@ function Show-PriorityPatternsEditor {
     [void]$script:GridTable.Columns.Add("Priority", [string])
     [void]$script:GridTable.Columns.Add("Code", [string])
     [void]$script:GridTable.Columns.Add("Expression", [string])
+    [void]$script:GridTable.Columns.Add("Lat=9", [string])
     [void]$script:GridTable.Columns.Add("Enabled", [string])
 
-    # Load initial data
+    # Load initial data (skip empty/invalid patterns)
     foreach ($pattern in $script:CurrentPatterns) {
+        # Skip patterns without a Code (unless it's {topo})
+        if ([string]::IsNullOrWhiteSpace($pattern.Code)) { continue }
+
         $preview = Get-ExpressionPreview -Expression $pattern.Expression -Logic $pattern.Logic
-        $enabledText = if ($pattern.Enabled -eq $false) { "No" } else { "Yes" }
+        $enabledText = if ($pattern.Enabled -eq $false) { "" } else { "true" }
+        $forceLat = if ($pattern.ForceLaterality) { "true" } else { "" }
         $row = $script:GridTable.NewRow()
         $row["Priority"] = [string]$pattern.Priority
         $row["Code"] = $pattern.Code
         $row["Expression"] = $preview
+        $row["Lat=9"] = $forceLat
         $row["Enabled"] = $enabledText
         [void]$script:GridTable.Rows.Add($row)
     }
@@ -755,21 +772,29 @@ function Show-PriorityPatternsEditor {
     if ($grid.Columns["Priority"]) { $grid.Columns["Priority"].Width = 40 }
     if ($grid.Columns["Code"]) { $grid.Columns["Code"].Width = 60 }
     if ($grid.Columns["Expression"]) { $grid.Columns["Expression"].AutoSizeMode = 'Fill' }
+    if ($grid.Columns["Lat=9"]) { $grid.Columns["Lat=9"].Width = 45 }
     if ($grid.Columns["Enabled"]) { $grid.Columns["Enabled"].Width = 50 }
 
     $refreshGrid = {
         $script:GridTable.Rows.Clear()
+        $validCount = 0
         foreach ($pattern in $script:CurrentPatterns) {
+            # Skip patterns without a Code (unless it's {topo})
+            if ([string]::IsNullOrWhiteSpace($pattern.Code)) { continue }
+
             $preview = Get-ExpressionPreview -Expression $pattern.Expression -Logic $pattern.Logic
-            $enabledText = if ($pattern.Enabled -eq $false) { "No" } else { "Yes" }
+            $enabledText = if ($pattern.Enabled -eq $false) { "" } else { "true" }
+            $forceLat = if ($pattern.ForceLaterality) { "true" } else { "" }
             $row = $script:GridTable.NewRow()
             $row["Priority"] = [string]$pattern.Priority
             $row["Code"] = $pattern.Code
             $row["Expression"] = $preview
+            $row["Lat=9"] = $forceLat
             $row["Enabled"] = $enabledText
             [void]$script:GridTable.Rows.Add($row)
+            $validCount++
         }
-        $lblCount.Text = "Rows: $($script:CurrentPatterns.Count)"
+        $lblCount.Text = "Rows: $validCount"
     }
 
     # Double-click to edit
