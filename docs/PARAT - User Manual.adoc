@@ -451,11 +451,12 @@ To open the Priority Patterns editor, select *Manage Coding Tables…* > *Priori
 
 Each pattern includes:
 
-* *Site Code*: The ICD-O-3 topography code to assign (e.g., `C509` for Breast, NOS).
+* *Site Code*: The ICD-O-3 topography code to assign (e.g., `C509` for Breast, NOS). Use `{topo}` for dynamic lookup from the topography dictionary.
 * *Priority*: Numeric ranking where 1 is highest. Patterns with lower priority numbers are evaluated first.
 * *Expression*: One or more terms or groups that trigger the pattern.
 * *Logic*: Either OR (any term matches) or AND (all terms must match).
 * *Enabled*: Toggle to activate or deactivate a pattern without deleting it.
+* *Force Laterality = 9*: When enabled, forces laterality to 9 (Unknown) when this pattern matches. Use this for patterns where the laterality in the text refers to a biopsy site rather than the primary tumor (e.g., "left lung biopsy showing metastatic breast carcinoma" should not assign left laterality to the breast primary).
 
 ===== Expression Types
 
@@ -486,7 +487,14 @@ Expressions can contain:
 |1
 |mlh1, pms2, msh2, msh6
 |OR
+
+|{topo}
+|1
+|{topo}: consistent with {topo} origin, {topo}: metastatic {topo} primary
+|OR
 |===
+
+The last example uses dynamic topography lookup with Force Laterality = 9 enabled. When text contains "consistent with lung origin", the pattern matches "lung" against the topography dictionary and assigns the corresponding lung site code, while forcing laterality to unknown.
 
 ===== Evaluation Order
 
