@@ -41,6 +41,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\lib\test-site-laterality.ps1"
 . "$PSScriptRoot\lib\obx-skip-config.ps1"
 . "$PSScriptRoot\lib\recent-files.ps1"
+. "$PSScriptRoot\lib\search.ps1"
 
 . "$PSScriptRoot\button-handlers\btnOpen.ps1"
 . "$PSScriptRoot\button-handlers\btnShowRaw.ps1"
@@ -69,6 +70,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\button-handlers\btnManageTables.ps1"
 . "$PSScriptRoot\button-handlers\btnManagePriorityPatterns.ps1"
 . "$PSScriptRoot\button-handlers\btnTestSiteLaterality.ps1"
+. "$PSScriptRoot\button-handlers\btnSearch.ps1"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -78,6 +80,7 @@ $form = $form[0]  # ensure scalar type, not array
 $form.Text   = "PARAT"
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
+$form.KeyPreview = $true
 
 # Menubar (MenuStrip)
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
@@ -377,8 +380,38 @@ $rtbItems.ReadOnly = $true
 $rtbItems.Font = New-Object System.Drawing.Font("Consolas", 9)
 $rtbItems.Dock = 'Fill'
 
+# Search panel (above navigation grid)
+$pnlSearch = New-Object System.Windows.Forms.Panel
+$pnlSearch.Dock = 'Top'
+$pnlSearch.Height = 30
+$pnlSearch.Visible = $false
+
+$txtSearch = New-Object System.Windows.Forms.TextBox
+$txtSearch.Dock = 'Fill'
+$txtSearch.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+
+$lblSearchCount = New-Object System.Windows.Forms.Label
+$lblSearchCount.Dock = 'Right'
+$lblSearchCount.Width = 70
+$lblSearchCount.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$lblSearchCount.ForeColor = [System.Drawing.Color]::Gray
+$lblSearchCount.Text = ""
+
+$btnClearSearch = New-Object System.Windows.Forms.Button
+$btnClearSearch.Dock = 'Right'
+$btnClearSearch.Width = 25
+$btnClearSearch.FlatStyle = 'Flat'
+$btnClearSearch.FlatAppearance.BorderSize = 0
+$btnClearSearch.Text = [char]0x2715
+$btnClearSearch.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+
+$pnlSearch.Controls.Add($txtSearch)
+$pnlSearch.Controls.Add($lblSearchCount)
+$pnlSearch.Controls.Add($btnClearSearch)
+
 # Wire up split containers
 $splitOuter.Panel1.Controls.Add($gridNav)
+$splitOuter.Panel1.Controls.Add($pnlSearch)
 $splitInner.Panel1.Controls.Add($rtbPath)
 $splitInner.Panel2.Controls.Add($rtbItems)
 $splitOuter.Panel2.Controls.Add($splitInner)
@@ -434,6 +467,7 @@ $script:FileType        = $null    # 'xml' or 'hl7'
 $script:Hl7Messages     = @()
 $script:IsLoadingData   = $false   # Flag to prevent event recursion during data loading
 $script:IsShowingTumor  = $false   # Flag to prevent Show-Tumor re-entry
+$script:SearchIndex     = @()
 
 # Global state (for cross-file access)
 $global:Hl7Messages     = @()
@@ -473,6 +507,10 @@ $script:Controls = @{
     'mnuManageCodingTables' = $mnuManageCodingTables
     'mnuNoahConfig' = $mnuNoahConfig
     'mnuObxSkipCodes' = $mnuObxSkipCodes
+    'txtSearch'       = $txtSearch
+    'lblSearchCount'  = $lblSearchCount
+    'btnClearSearch'   = $btnClearSearch
+    'pnlSearch'       = $pnlSearch
 }
 
 # Global controls reference for cross-file access
@@ -616,7 +654,12 @@ function Show-Tumor {
     $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($Index + 1), $script:Tumors.Count, $selectedCount
     $btnPrev.Enabled = ($Index -gt 0)
     $btnNext.Enabled = ($Index -lt ($script:Tumors.Count - 1))
-    
+
+    # Highlight search matches in both panels
+    $searchText = $script:Controls['txtSearch'].Text
+    Invoke-SearchHighlight -RichTextBox $rtbPath -SearchText $searchText
+    Invoke-SearchHighlight -RichTextBox $rtbItems -SearchText $searchText
+
     # Clear re-entry guard
     $script:IsShowingTumor = $false
 }
@@ -863,6 +906,33 @@ $mnuSplit.Add_Click((Get-BtnSplitHandler))
 
 $btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
 $btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
+
+# Wire up search handlers
+$txtSearch.Add_TextChanged((Get-SearchTextChangedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$btnClearSearch.Add_Click((Get-SearchClearHandler -Controls $script:Controls))
+
+# Keyboard shortcuts
+$form.Add_KeyDown({
+    param($keySender, $keyArgs)
+
+    # Ctrl+F: focus search box
+    if ($keyArgs.Control -and $keyArgs.KeyCode -eq [System.Windows.Forms.Keys]::F) {
+        if ($script:Controls['pnlSearch'].Visible) {
+            $script:Controls['txtSearch'].Focus()
+            $script:Controls['txtSearch'].SelectAll()
+            $keyArgs.Handled = $true
+            $keyArgs.SuppressKeyPress = $true
+        }
+    }
+    # Escape: clear search when search box is focused
+    elseif ($keyArgs.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
+        if ($script:Controls['txtSearch'].Focused) {
+            $script:Controls['txtSearch'].Text = ""
+            $keyArgs.Handled = $true
+            $keyArgs.SuppressKeyPress = $true
+        }
+    }
+})
 
 # Close logging on form close
 $form.Add_FormClosing({

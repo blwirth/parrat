@@ -50,6 +50,19 @@ When viewing HL7 files, the application applies syntax highlighting for improved
 
 This highlighting is applied in both the main viewer and when viewing raw records.
 
+=== Searching Records
+
+To search within a loaded file, use the search bar above the navigation grid or press `Ctrl+F`. The navigation grid filters in real time as you type.
+
+Searches are case-insensitive and match against all fields in each record:
+
+* *XML files*: all patient and tumor item values, including pathology text fields
+* *HL7 files*: patient demographics, message metadata, and OBX pathology text
+
+The match count displays to the right of the search bar (e.g., "42 / 150"). Clicking a result navigates to that record.
+
+To clear the search, click the clear button (*✕*) or press `Escape` while the search bar is focused. Checkbox selections are preserved when filtering.
+
 === Comparing Records
 
 To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff*.

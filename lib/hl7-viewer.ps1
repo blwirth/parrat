@@ -163,6 +163,14 @@ function Show-Hl7Message {
         Set-Hl7PanelHighlighting -RichTextBox $rtbItems -StartOffset ($rawSectionStart + $rawSectionMarker.Length)
     }
 
+    # Highlight search matches in both panels
+    $txtSearch = $Controls['txtSearch']
+    if ($null -ne $txtSearch) {
+        $searchText = $txtSearch.Text
+        Invoke-SearchHighlight -RichTextBox $rtbPath -SearchText $searchText
+        Invoke-SearchHighlight -RichTextBox $rtbItems -SearchText $searchText
+    }
+
     # Update navigation
     $dataTable = $gridNav.DataSource
     $selectedCount = if ($null -ne $dataTable) { @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count } else { 0 }

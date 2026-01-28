@@ -70,6 +70,7 @@ function Import-XmlFile {
             $Controls['btnPrev'].Enabled = $false
             $Controls['btnNext'].Enabled = $false
             $Controls['lblIndex'].Text = ""
+            $Controls['pnlSearch'].Visible = $false
         }
         else {
             $fileName = [System.IO.Path]::GetFileName($FilePath)
@@ -177,6 +178,11 @@ function Import-XmlFile {
             $global:IsLoadingData = $false
             
             Show-Tumor -Index 0
+
+            $script:SearchIndex = Build-SearchIndex -FileType 'xml' -ScriptVars $ScriptVars
+            $Controls['pnlSearch'].Visible = $true
+            $Controls['txtSearch'].Text = ""
+            $Controls['lblSearchCount'].Text = ""
         }
     }
     catch {
@@ -213,6 +219,7 @@ function Import-Hl7File {
             $Controls['btnPrev'].Enabled = $false
             $Controls['btnNext'].Enabled = $false
             $Controls['lblIndex'].Text = ""
+            $Controls['pnlSearch'].Visible = $false
             return
         }
         
@@ -321,6 +328,11 @@ function Import-Hl7File {
             $Controls['gridNav'].CurrentCell = $Controls['gridNav'].Rows[0].Cells[0]
         }
         Show-Hl7Message -Index 0 -Messages $messages -Controls $Controls
+
+        $script:SearchIndex = Build-SearchIndex -FileType 'hl7' -ScriptVars $ScriptVars
+        $Controls['pnlSearch'].Visible = $true
+        $Controls['txtSearch'].Text = ""
+        $Controls['lblSearchCount'].Text = ""
     }
     catch {
         Write-ParatError -Message "Failed to load HL7 file" -Action "OPEN_FILE" -ErrorRecord $_
