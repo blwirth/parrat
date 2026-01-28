@@ -589,6 +589,17 @@ function Get-BtnManageTablesHandler {
             Show-CodingTableEditor -FilePath $script:SkinTopoFilePath -TableType 'topography' -Title "Skin Topography"
         })
         [void]$toolStripButton.DropDownItems.Add($menuItemSkinTopo)
+
+        # Separator
+        [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+        # Priority Patterns
+        $menuItemPriorityPatterns = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemPriorityPatterns.Text = "Priority Patterns"
+        $menuItemPriorityPatterns.Add_Click({
+            Show-PriorityPatternsEditor
+        })
+        [void]$toolStripButton.DropDownItems.Add($menuItemPriorityPatterns)
     }
 }
 

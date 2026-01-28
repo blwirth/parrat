@@ -160,10 +160,16 @@ To assign primary site and laterality to records missing this data, select *Assi
 
 This function uses the JSONL files located in `/data/dictionaries`. For information on editing these files within the client, see <<Managing Coding Tables>>.
 
-Several heuristics are applied to assign the most accurate primary site. In general:
+Several heuristics are applied to assign the most accurate primary site:
+
+. *Priority Patterns*: User-configurable patterns with AND/OR logic are evaluated first. See <<Managing Priority Patterns>> for details on customizing these patterns.
+. *Melanoma Dictionary*: If "melanoma" appears in the text, the melanoma-specific topography dictionary is used.
+. *Standard Dictionary*: General topography dictionary lookup using earliest phrase match.
+
+In general:
 
 * Breast primaries are coded to `C509`, rather than a more specific breast subsite.
-* Lymph node site `C779` is generally not assigned when another primary site is listed on the report, except for cases containing hard-coded hematologic and lymphoid malignancy phrases.
+* Lymph node site `C779` is generally not assigned when another primary site is listed on the report, except for cases containing hematologic and lymphoid malignancy phrases.
 
 This functionality is currently simple and does not accurately handle metastatic reports. For example, a liver biopsy showing metastatic lung cancer will likely be coded to the liver.
 
@@ -188,7 +194,8 @@ To preview how the heuristics assign primary site and laterality without modifyi
 Results include:
 
 * The assigned site code and description
-* The match type (hard-coded pattern, melanoma dictionary, or standard dictionary)
+* The match type (priority pattern, melanoma dictionary, or standard dictionary)
+* For priority pattern matches: the pattern priority
 * The phrase that triggered the match
 * The assigned laterality code and description
 * Whether the site requires laterality
@@ -428,12 +435,80 @@ A newline-delimited list of primary site codes and triggering phrases.
 +
 A newline-delimited list of skin-specific anatomical terms used when the primary site is `C44x`.
 
+* *Priority Patterns*
++
+Advanced patterns that take precedence over dictionary lookups. See <<Managing Priority Patterns>> for details.
+
 These tables are stored as JSON or NDJSON files in `/data/dictionaries` and may also be edited directly using a text editor.
 
-[NOTE]
-====
-Certain heuristics can only be modified within the program files.
-====
+==== Managing Priority Patterns
+
+Priority patterns allow customization of site coding heuristics with support for complex matching logic. These patterns are evaluated before standard dictionary lookups, enabling precise control over how specific pathology phrases are coded.
+
+To open the Priority Patterns editor, select *Manage Coding Tables…* > *Priority Patterns*.
+
+===== Pattern Properties
+
+Each pattern includes:
+
+* *Site Code*: The ICD-O-3 topography code to assign (e.g., `C509` for Breast, NOS).
+* *Priority*: Numeric ranking where 1 is highest. Patterns with lower priority numbers are evaluated first.
+* *Expression*: One or more terms or groups that trigger the pattern.
+* *Logic*: Either OR (any term matches) or AND (all terms must match).
+* *Enabled*: Toggle to activate or deactivate a pattern without deleting it.
+
+===== Expression Types
+
+Expressions can contain:
+
+* *Simple terms*: Single phrases that trigger a match (e.g., `invasive ductal carcinoma`).
+* *AND groups*: Multiple terms that must all be present (e.g., both `egfr` AND `pd-l1` must appear).
+* *OR groups*: Multiple terms where any one triggers a match.
+
+===== Example Patterns
+
+[cols="1,1,3,1"]
+|===
+|Code |Priority |Expression |Logic
+
+|C509
+|1
+|invasive ductal carcinoma, estrogen receptor, progesterone receptor
+|OR
+
+|C349
+|1
+|nsclc, non-small cell carcinoma, (egfr AND pd-l1), (egfr AND alk)
+|OR
+
+|C189
+|1
+|mlh1, pms2, msh2, msh6
+|OR
+|===
+
+===== Evaluation Order
+
+Site assignment follows this priority:
+
+. Priority patterns (sorted by Priority value, then file order)
+. Melanoma dictionary (if "melanoma" appears in text)
+. Standard topography dictionary
+
+===== Adding and Editing Patterns
+
+* *Add*: Creates a new pattern. A dialog opens to configure all pattern properties.
+* *Delete*: Removes the selected pattern.
+* *Move Up/Down*: Adjusts file order within the same priority level.
+* *Double-click*: Opens the selected pattern for editing.
+
+When adding terms to an expression:
+
+* *Add Term*: Adds a single search phrase.
+* *Add AND*: Adds a group where all terms must match. Enter comma-separated terms.
+* *Add OR*: Adds a group where any term triggers a match. Enter comma-separated terms.
+
+Changes are saved to `/data/dictionaries/PriorityPatterns.jsonl`.
 
 === Logging
 

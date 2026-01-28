@@ -1,0 +1,11 @@
+{"Code":"C509","Priority":1,"Expression":[{"type":"term","value":"invasive ductal carcinoma"},{"type":"term","value":"estrogen receptor"},{"type":"term","value":"progesterone receptor"},{"type":"term","value":"ductal carcinoma in-situ"},{"type":"term","value":"metastatic mammary carcinoma"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C649","Priority":1,"Expression":[{"type":"term","value":"renal cell carcinoma"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C619","Priority":1,"Expression":[{"type":"term","value":"prostatectomy"},{"type":"term","value":"prostatic adenocarcinoma"},{"type":"term","value":"gleason"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C421","Priority":1,"Expression":[{"type":"term","value":"cll"},{"type":"term","value":"plasma cell myeloma"},{"type":"term","value":"small lymphocytic lymphoma"},{"type":"term","value":"chronic lymphocytic leukemia"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C779","Priority":1,"Expression":[{"type":"term","value":"follicular lymphoma"},{"type":"term","value":"diffuse large b-cell lymphoma"},{"type":"term","value":"dlbcl"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C189","Priority":1,"Expression":[{"type":"term","value":"mlh1"},{"type":"term","value":"pms2"},{"type":"term","value":"msh2"},{"type":"term","value":"msh6"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C421","Priority":2,"Expression":[{"type":"term","value":"bone marrow"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C579","Priority":1,"Expression":[{"type":"term","value":"serous carcinoma"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C349","Priority":1,"Expression":[{"type":"term","value":"nsclc"},{"type":"term","value":"non-small cell carcinoma"},{"type":"term","value":"dako pd-l1 22c3"},{"type":"group","logic":"AND","terms":["egfr","pd-l1"]},{"type":"group","logic":"AND","terms":["egfr","alk"]},{"type":"group","logic":"AND","terms":["pd-l1","alk"]}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C449","Priority":1,"Expression":[{"type":"term","value":"braf mutation analysis"}],"Logic":"OR","Enabled":true,"IsOverride":false}
+{"Code":"C809","Priority":1,"Expression":[{"type":"group","logic":"OR","terms":["unknown origin","unknown primary"]}],"Logic":"OR","Enabled":true,"IsOverride":false}

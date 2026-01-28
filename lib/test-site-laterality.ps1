@@ -12,7 +12,7 @@ function Test-SiteLateralityHeuristics {
     The pathology text to analyze
 
     .OUTPUTS
-    Hashtable with site code, description, match type, laterality, etc.
+    Hashtable with site code, description, match type, pattern name/priority, laterality, etc.
     #>
     param(
         [Parameter(Mandatory=$true)][string]$Text
@@ -24,6 +24,7 @@ function Test-SiteLateralityHeuristics {
     $topoMap = $maps.TopoMap
     $melTopoMap = $maps.MelTopoMap
     $lateralityCodes = $maps.LateralityCodes
+    $priorityPatterns = $maps.PriorityPatterns
 
     $low = $Text.ToLower()
 
@@ -32,89 +33,32 @@ function Test-SiteLateralityHeuristics {
         SiteDescription = ""
         MatchType = "none"
         MatchedPhrase = ""
+        PatternPriority = ""
         LateralityCode = ""
         LateralityDescription = ""
         SiteRequiresLaterality = $false
     }
 
     # Site Assignment Tiers:
-    # 1. Hard-coded patterns
-    if ($low -match '\b(invasive ductal carcinoma|metastatic mammary carcinoma|progesterone receptor|estrogen receptor|ductal carcinoma in-situ)\b') {
-        $result.SiteCode = "C509"
-        $result.SiteDescription = "Breast, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
+    # 1. Priority patterns (from PriorityPatterns.jsonl)
+    $patternMatched = $false
+    foreach ($pattern in $priorityPatterns) {
+        $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low
+        if ($testResult.Matched) {
+            $result.SiteCode = $pattern.Code
+            $result.MatchType = "priority-pattern"
+            $result.MatchedPhrase = $testResult.MatchedTerm
+            $result.PatternPriority = [string]$pattern.Priority
+            $patternMatched = $true
+            break
+        }
     }
-    elseif ($low -match '\brenal cell carcinoma\b') {
-        $result.SiteCode = "C649"
-        $result.SiteDescription = "Kidney, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
-    }
-    elseif ($low -match '\b(prostatectomy|prostatic adenocarcinoma|gleason)\b') {
-        $result.SiteCode = "C619"
-        $result.SiteDescription = "Prostate gland"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
-    }
-    elseif ($low -match '\b(cll|plasma cell myeloma|small lymphocytic lymphoma|chronic lymphocytic leukemia)\b') {
-        $result.SiteCode = "C421"
-        $result.SiteDescription = "Bone marrow"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
-    }
-    elseif ($low -match '\b(follicular lymphoma|diffuse large b-cell lymphoma|dlbcl)\b') {
-        $result.SiteCode = "C779"
-        $result.SiteDescription = "Lymph node, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
-    }
-    elseif ($low -match '\b(mlh1|pms2|msh2|msh6)\b') {
-        $result.SiteCode = "C189"
-        $result.SiteDescription = "Colon, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = $Matches[0]
-    }
-    elseif ($low -match '\bbone marrow\b') {
-        $result.SiteCode = "C421"
-        $result.SiteDescription = "Bone marrow"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = "bone marrow"
-    }
-    elseif ($low -match '\bserous carcinoma\b') {
-        $result.SiteCode = "C579"
-        $result.SiteDescription = "Female genital tract, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = "serous carcinoma"
-    }
-    elseif (
-        $low -like '*dako pd-l1 22c3*' -or
-        $low -like '*non-small cell carcinoma*' -or
-        $low -match '\bnsclc\b' -or
-        ($low -match '\begfr\b' -and $low -match 'pd-l1') -or
-        ($low -match '\begfr\b' -and $low -match '\balk\b') -or
-        ($low -match 'pd-l1' -and $low -match '\balk\b')
-    ) {
-        $result.SiteCode = "C349"
-        $result.SiteDescription = "Lung, NOS"
-        $result.MatchType = "hard-coded"
-        if ($low -like '*dako pd-l1 22c3*') { $result.MatchedPhrase = "dako pd-l1 22c3" }
-        elseif ($low -like '*non-small cell carcinoma*') { $result.MatchedPhrase = "non-small cell carcinoma" }
-        elseif ($low -match '\bnsclc\b') { $result.MatchedPhrase = "nsclc" }
-        else { $result.MatchedPhrase = "biomarker combination (EGFR/PD-L1/ALK)" }
-    }
-    elseif ($low -match '\bbraf mutation analysis\b') {
-        $result.SiteCode = "C449"
-        $result.SiteDescription = "Skin, NOS"
-        $result.MatchType = "hard-coded"
-        $result.MatchedPhrase = "braf mutation analysis"
-    }
-    else {
+
+    if (-not $patternMatched) {
         # 2. Melanoma dictionary - if "melanoma" found
         $hasMel = $low.Contains("melanoma")
 
         if ($hasMel) {
-            # Find best match in melanoma topography dictionary
             $bestCode = ""
             $bestPos = 0
             $bestPhrase = ""
@@ -123,11 +67,10 @@ function Test-SiteLateralityHeuristics {
                 $code = $row.Code
                 $phrase = $row.SearchPhrase
 
-                # Use word boundary matching to avoid partial matches (e.g., "lip" in "slip")
                 $escapedPhrase = [regex]::Escape($phrase)
-                $pattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
+                $regexPattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
 
-                $match = [regex]::Match($low, $pattern)
+                $match = [regex]::Match($low, $regexPattern)
                 if ($match.Success) {
                     $p = $match.Index + 1
                     if ($bestPos -eq 0 -or $p -lt $bestPos) {
@@ -144,7 +87,6 @@ function Test-SiteLateralityHeuristics {
                 $result.MatchedPhrase = $bestPhrase
             }
             else {
-                # Fallback for melanoma with no specific site
                 $result.SiteCode = "C449"
                 $result.SiteDescription = "Skin, NOS"
                 $result.MatchType = "melanoma-dict"
@@ -161,11 +103,10 @@ function Test-SiteLateralityHeuristics {
                 $code = $row.Code
                 $phrase = $row.SearchPhrase
 
-                # Use word boundary matching to avoid partial matches
                 $escapedPhrase = [regex]::Escape($phrase)
-                $pattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
+                $regexPattern = "(?<![a-zA-Z])$escapedPhrase(?![a-zA-Z])"
 
-                $match = [regex]::Match($low, $pattern)
+                $match = [regex]::Match($low, $regexPattern)
                 if ($match.Success) {
                     $p = $match.Index + 1
                     if ($bestPos -eq 0 -or $p -lt $bestPos) {
@@ -186,26 +127,13 @@ function Test-SiteLateralityHeuristics {
 
     # Look up site description if we have a code but no description yet
     if ($result.SiteCode -and -not $result.SiteDescription) {
-        # Try to find description in dictionaries
-        $foundDesc = $false
-        foreach ($row in $topoMap) {
-            if ($row.Code -eq $result.SiteCode) {
-                # Use first phrase as a rough description
-                $result.SiteDescription = "Site $($result.SiteCode)"
-                $foundDesc = $true
-                break
-            }
-        }
-        if (-not $foundDesc) {
-            $result.SiteDescription = "Site $($result.SiteCode)"
-        }
+        $result.SiteDescription = "Site $($result.SiteCode)"
     }
 
     if ($result.SiteCode) {
         $result.SiteRequiresLaterality = $lateralityCodes.ContainsKey($result.SiteCode)
 
         if ($result.SiteRequiresLaterality) {
-            # Search for left/right with word boundaries
             $leftMatch = [regex]::Match($low, '\bleft\b')
             $rightMatch = [regex]::Match($low, '\bright\b')
 
@@ -406,15 +334,19 @@ function Show-TestSiteLateralityResults {
 
     if ($Result.SiteCode) {
         $rtbResults.AppendText("  Code:         $($Result.SiteCode)`r`n")
-        # $rtbResults.AppendText("  Description:  $($Result.SiteDescription)`r`n")
 
         $matchTypeDesc = switch ($Result.MatchType) {
-            "hard-coded" { "Hard-coded pattern" }
+            "priority-pattern" { "Priority pattern" }
             "melanoma-dict" { "Melanoma dictionary" }
             "standard-dict" { "Standard dictionary" }
             default { $Result.MatchType }
         }
         $rtbResults.AppendText("  Match Type:   $matchTypeDesc`r`n")
+
+        if ($Result.PatternPriority) {
+            $rtbResults.AppendText("  Priority:     $($Result.PatternPriority)`r`n")
+        }
+
         $rtbResults.AppendText("  Matched:      `"$($Result.MatchedPhrase)`"`r`n")
     }
     else {

@@ -9,9 +9,11 @@
 $script:TopoMapCache = $null
 $script:MelTopoMapCache = $null
 $script:LateralityCodesCache = $null
+$script:PriorityPatternsCache = $null
 $script:TopoMapCacheTime = $null
 $script:MelTopoMapCacheTime = $null
 $script:LateralityCodesCacheTime = $null
+$script:PriorityPatternsCacheTime = $null
 
 # Load topography lookup tables
 function Read-TopographyExcel {
@@ -187,20 +189,141 @@ function Read-TopographyJson {
 
 function Read-LateralityJson {
     param([string]$Path)
-    
+
     if (-not (Test-Path $Path)) {
         throw "JSON file not found: $Path"
     }
-    
+
     $json = [System.IO.File]::ReadAllText($Path)
     $codes = @{}
     $array = $json | ConvertFrom-Json
-    
+
     foreach ($code in $array) {
         $codes[$code] = $true
     }
-    
+
     return $codes
+}
+
+function Read-PriorityPatterns {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return @()
+    }
+
+    $patterns = @()
+    $lines = [System.IO.File]::ReadAllLines($Path)
+
+    foreach ($line in $lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+
+        try {
+            $pattern = $line | ConvertFrom-Json
+            if ($pattern.Code -and $pattern.Enabled) {
+                $patterns += $pattern
+            }
+        }
+        catch {
+            Write-Warning "Failed to parse priority pattern line: $line"
+        }
+    }
+
+    # Sort by Priority (ascending), then by file order
+    $patterns = $patterns | Sort-Object { [int]$_.Priority }
+
+    return $patterns
+}
+
+function Test-PriorityPattern {
+    <#
+    .SYNOPSIS
+    Test if text matches a priority pattern expression
+
+    .PARAMETER Pattern
+    The pattern object with Expression and Logic properties
+
+    .PARAMETER TextLow
+    The lowercase text to search in
+
+    .OUTPUTS
+    Hashtable with Matched (bool) and MatchedTerm (string) if matched
+    #>
+    param(
+        $Pattern,
+        [string]$TextLow
+    )
+
+    $expressionResults = @()
+    $matchedTerm = ""
+
+    foreach ($item in $Pattern.Expression) {
+        $itemMatched = $false
+        $itemMatchedTerm = ""
+
+        if ($item.type -eq "term") {
+            $escaped = [regex]::Escape($item.value)
+            $regexPattern = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+            $match = [regex]::Match($TextLow, $regexPattern)
+            if ($match.Success) {
+                $itemMatched = $true
+                $itemMatchedTerm = $item.value
+            }
+        }
+        elseif ($item.type -eq "group") {
+            $groupResults = @()
+            $groupMatchedTerms = @()
+
+            foreach ($term in $item.terms) {
+                $escaped = [regex]::Escape($term)
+                $regexPattern = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+                $match = [regex]::Match($TextLow, $regexPattern)
+                $groupResults += $match.Success
+                if ($match.Success) {
+                    $groupMatchedTerms += $term
+                }
+            }
+
+            if ($item.logic -eq "AND") {
+                $itemMatched = ($groupResults -notcontains $false) -and ($groupResults.Count -gt 0)
+            }
+            else {
+                $itemMatched = $groupResults -contains $true
+            }
+
+            if ($itemMatched) {
+                $itemMatchedTerm = "(" + ($groupMatchedTerms -join " $($item.logic) ") + ")"
+            }
+        }
+
+        $expressionResults += @{ Matched = $itemMatched; Term = $itemMatchedTerm }
+    }
+
+    # Apply top-level Logic
+    $overallMatched = $false
+
+    if ($Pattern.Logic -eq "AND") {
+        $overallMatched = ($expressionResults | Where-Object { -not $_.Matched }).Count -eq 0
+        $overallMatched = $overallMatched -and ($expressionResults.Count -gt 0)
+    }
+    else {
+        # OR logic (default)
+        $firstMatch = $expressionResults | Where-Object { $_.Matched } | Select-Object -First 1
+        if ($firstMatch) {
+            $overallMatched = $true
+            $matchedTerm = $firstMatch.Term
+        }
+    }
+
+    if ($overallMatched -and -not $matchedTerm) {
+        $matchedTerms = ($expressionResults | Where-Object { $_.Matched } | ForEach-Object { $_.Term }) -join ", "
+        $matchedTerm = $matchedTerms
+    }
+
+    return @{
+        Matched = $overallMatched
+        MatchedTerm = $matchedTerm
+    }
 }
 
 function Get-BestCode {
@@ -358,24 +481,44 @@ function Get-CachedMaps {
         $script:LateralityCodesCacheTime = $latFileTime
         $needsReload = $true
     }
-    
+
+    # Check if we need to reload Priority Patterns
+    $priorityPatternsFile = Join-Path $dictDir "PriorityPatterns.jsonl"
+    $priorityPatternsCount = 0
+
+    if (Test-Path $priorityPatternsFile) {
+        $priorityPatternsFileTime = (Get-Item $priorityPatternsFile).LastWriteTime
+
+        if ($null -eq $script:PriorityPatternsCache -or $null -eq $script:PriorityPatternsCacheTime -or $priorityPatternsFileTime -gt $script:PriorityPatternsCacheTime) {
+            Write-Host "Loading PriorityPatterns.jsonl..." -ForegroundColor Cyan
+            $script:PriorityPatternsCache = Read-PriorityPatterns $priorityPatternsFile
+            $script:PriorityPatternsCacheTime = $priorityPatternsFileTime
+            $needsReload = $true
+        }
+        $priorityPatternsCount = $script:PriorityPatternsCache.Count
+    }
+    else {
+        $script:PriorityPatternsCache = @()
+    }
+
     $loadStopwatch.Stop()
-    
+
     if ($needsReload) {
         $sourceInfo = if ($sourceType -contains "JSON") { " (using JSON)" } else { " (using Excel)" }
-        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes in {3:F2} seconds{4}." -f 
-            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, 
-            $loadStopwatch.Elapsed.TotalSeconds, $sourceInfo) -ForegroundColor Cyan
+        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} priority patterns in {4:F2} seconds{5}." -f
+            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count,
+            $priorityPatternsCount, $loadStopwatch.Elapsed.TotalSeconds, $sourceInfo) -ForegroundColor Cyan
     } else {
-        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes (checked in {3:F3} seconds)." -f 
-            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count, 
-            $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
+        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} priority patterns (checked in {4:F3} seconds)." -f
+            $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count,
+            $priorityPatternsCount, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
     }
-    
+
     return @{
         TopoMap = $script:TopoMapCache
         MelTopoMap = $script:MelTopoMapCache
         LateralityCodes = $script:LateralityCodesCache
+        PriorityPatterns = $script:PriorityPatternsCache
     }
 }
 
@@ -392,6 +535,7 @@ function Get-MissingFields {
     $topoMap = $maps.TopoMap
     $melTopoMap = $maps.MelTopoMap
     $lateralityCodes = $maps.LateralityCodes
+    $priorityPatterns = $maps.PriorityPatterns
 
     $report = @()
     $assignments = @{}
@@ -487,52 +631,19 @@ function Get-MissingFields {
 
         # Assign primary site if missing
         if (-not $hasSite) {
-            # Check for histology-based overrides first
-            if ($low -match '\b(invasive ductal carcinoma|metastatic mammary carcinoma|progesterone receptor|estrogen receptor|ductal carcinoma in-situ)\b') {
-				# check ductal carcinomas
-                $proposedSite = "C509"
+            # 1. Check priority patterns first (sorted by Priority, then file order)
+            $patternMatched = $false
+            foreach ($pattern in $priorityPatterns) {
+                $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low
+                if ($testResult.Matched) {
+                    $proposedSite = $pattern.Code
+                    $patternMatched = $true
+                    break
+                }
             }
-            elseif ($low -match '\brenal cell carcinoma\b') {
-                $proposedSite = "C649"
-            }
-            elseif ($low -match '\b(prostatectomy|prostatic adenocarcinoma|gleason)\b') {
-                $proposedSite = "C619"
-            }
-			elseif ($low -match '\b(cll|plasma cell myeloma|small lymphocytic lymphoma|chronic lymphocytic leukemia)\b') {
-                $proposedSite = "C421"
-            }
-			elseif ($low -match '\b(follicular lymphoma|diffuse large b-cell lymphoma|dlbcl)\b') {
-                $proposedSite = "C779"
-            }
-			elseif ($low -match '\b(mlh1|pms2|msh2|msh6)\b') {
-                $proposedSite = "C189"
-            }
-            # Bone marrow override (must check before general bone)
-            elseif ($low -match '\bbone marrow\b') {
-                $proposedSite = "C421"
-            }
-			elseif ($low -match '\bserous carcinoma\b') {
-                $proposedSite = "C579" # Gyn, nos
-            }
-			elseif (
-				# simple phrase matches
-				$low -like '*dako pd-l1 22c3*' -or
-				$low -like '*non-small cell carcinoma*' -or
-				$low -match '\bnsclc\b' -or
 
-				# biomarker pairs anywhere in text
-				($low -match '\begfr\b' -and $low -match 'pd-l1') -or
-				($low -match '\begfr\b' -and $low -match '\balk\b') -or
-				($low -match 'pd-l1'     -and $low -match '\balk\b')
-			) {
-				$proposedSite = "C349"
-			}
-			elseif ($low -match '\bbraf mutation analysis\b') {
-				$proposedSite = "C449"
-			}
-			 
-            else {
-                # Standard topography lookup
+            # 2. Melanoma dictionary (if "melanoma" in text)
+            if (-not $patternMatched) {
                 $hasMel = $low.Contains("melanoma")
 
                 if ($hasMel) {
@@ -540,6 +651,7 @@ function Get-MissingFields {
                     if ($proposedSite -eq "") { $proposedSite = "C449" }
                 }
                 else {
+                    # 3. Standard topography dictionary
                     $proposedSite = Get-BestCode $topoMap $low
                 }
             }
