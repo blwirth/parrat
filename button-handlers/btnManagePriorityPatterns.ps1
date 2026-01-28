@@ -41,8 +41,25 @@ function Write-PriorityPatternsFile {
 
     $lines = @()
     foreach ($pattern in $Patterns) {
-        if (-not [string]::IsNullOrWhiteSpace($pattern.Code)) {
+        # Allow {topo} as special Code for dynamic lookup, or any non-empty Code
+        $code = $pattern.Code
+        if (-not [string]::IsNullOrWhiteSpace($code) -or $code -eq "{topo}") {
             $lines += ($pattern | ConvertTo-Json -Compress -Depth 10)
+        }
+        elseif ($pattern.Expression) {
+            # Check if pattern has topo-template expressions - save even with empty Code
+            $hasTopoTemplate = $false
+            foreach ($expr in $pattern.Expression) {
+                if ($expr.type -eq "topo-template") {
+                    $hasTopoTemplate = $true
+                    break
+                }
+            }
+            if ($hasTopoTemplate) {
+                # Default Code to {topo} for topo-template patterns
+                $pattern.Code = "{topo}"
+                $lines += ($pattern | ConvertTo-Json -Compress -Depth 10)
+            }
         }
     }
 
@@ -75,6 +92,9 @@ function Get-ExpressionPreview {
             $termsArray = @($item.terms)
             $groupTerms = $termsArray -join " $($item.logic) "
             $parts += "($groupTerms)"
+        }
+        elseif ($itemType -eq "topo-template") {
+            $parts += "{topo}: $($item.template)"
         }
     }
 
@@ -189,6 +209,9 @@ function Show-PatternEditDialog {
                 $groupDisplay = "[$($item.logic): $($item.terms -join ', ')]"
                 $lstTerms.Items.Add($groupDisplay)
             }
+            elseif ($item.type -eq "topo-template") {
+                $lstTerms.Items.Add("{topo}: $($item.template)")
+            }
         }
     }
 
@@ -214,17 +237,22 @@ function Show-PatternEditDialog {
     $btnAddOrGroup.Location = New-Object System.Drawing.Point(0, 70)
     $btnAddOrGroup.Width = 90
 
+    $btnAddTopoTemplate = New-Object System.Windows.Forms.Button
+    $btnAddTopoTemplate.Text = "Add {topo}"
+    $btnAddTopoTemplate.Location = New-Object System.Drawing.Point(0, 105)
+    $btnAddTopoTemplate.Width = 90
+
     $btnEditTerm = New-Object System.Windows.Forms.Button
     $btnEditTerm.Text = "Edit"
-    $btnEditTerm.Location = New-Object System.Drawing.Point(0, 115)
+    $btnEditTerm.Location = New-Object System.Drawing.Point(0, 150)
     $btnEditTerm.Width = 90
 
     $btnRemoveTerm = New-Object System.Windows.Forms.Button
     $btnRemoveTerm.Text = "Remove"
-    $btnRemoveTerm.Location = New-Object System.Drawing.Point(0, 150)
+    $btnRemoveTerm.Location = New-Object System.Drawing.Point(0, 185)
     $btnRemoveTerm.Width = 90
 
-    $pnlTermButtons.Controls.AddRange(@($btnAddTerm, $btnAddAndGroup, $btnAddOrGroup, $btnEditTerm, $btnRemoveTerm))
+    $pnlTermButtons.Controls.AddRange(@($btnAddTerm, $btnAddAndGroup, $btnAddOrGroup, $btnAddTopoTemplate, $btnEditTerm, $btnRemoveTerm))
 
     # Add Term handler
     $btnAddTerm.Add_Click({
@@ -367,6 +395,53 @@ function Show-PatternEditDialog {
         }
     })
 
+    # Add Topo-Template handler
+    $btnAddTopoTemplate.Add_Click({
+        $inputForm = New-Object System.Windows.Forms.Form
+        $inputForm.Text = "Add Topo-Template"
+        $inputForm.Width = 450
+        $inputForm.Height = 170
+        $inputForm.StartPosition = "CenterParent"
+        $inputForm.FormBorderStyle = "FixedDialog"
+        $inputForm.MaximizeBox = $false
+        $inputForm.MinimizeBox = $false
+
+        $lblInput = New-Object System.Windows.Forms.Label
+        $lblInput.Text = "Enter template with {topo} placeholder:`nExample: consistent with {topo} origin"
+        $lblInput.Location = New-Object System.Drawing.Point(15, 15)
+        $lblInput.Size = New-Object System.Drawing.Size(400, 35)
+
+        $txtInput = New-Object System.Windows.Forms.TextBox
+        $txtInput.Location = New-Object System.Drawing.Point(15, 55)
+        $txtInput.Width = 400
+        $txtInput.Text = "{topo}"
+
+        $btnInputOk = New-Object System.Windows.Forms.Button
+        $btnInputOk.Text = "OK"
+        $btnInputOk.Location = New-Object System.Drawing.Point(255, 95)
+        $btnInputOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+        $btnInputCancel = New-Object System.Windows.Forms.Button
+        $btnInputCancel.Text = "Cancel"
+        $btnInputCancel.Location = New-Object System.Drawing.Point(340, 95)
+        $btnInputCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+        $inputForm.Controls.AddRange(@($lblInput, $txtInput, $btnInputOk, $btnInputCancel))
+        $inputForm.AcceptButton = $btnInputOk
+        $inputForm.CancelButton = $btnInputCancel
+
+        if ($inputForm.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            $template = $txtInput.Text.Trim().ToLower()
+            if ($template -and $template.Contains("{topo}")) {
+                $script:ExpressionItems += @{ type = "topo-template"; template = $template }
+                & $refreshTermsList
+            }
+            else {
+                [System.Windows.Forms.MessageBox]::Show("Template must contain {topo} placeholder.", "Invalid Input", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning) | Out-Null
+            }
+        }
+    })
+
     # Edit Term handler
     $btnEditTerm.Add_Click({
         $idx = $lstTerms.SelectedIndex
@@ -461,6 +536,51 @@ function Show-PatternEditDialog {
                         $script:ExpressionItems[$idx] = @{ type = "group"; logic = $item.logic; terms = $terms }
                         & $refreshTermsList
                     }
+                }
+            }
+        }
+        elseif ($item.type -eq "topo-template") {
+            $inputForm = New-Object System.Windows.Forms.Form
+            $inputForm.Text = "Edit Topo-Template"
+            $inputForm.Width = 450
+            $inputForm.Height = 170
+            $inputForm.StartPosition = "CenterParent"
+            $inputForm.FormBorderStyle = "FixedDialog"
+            $inputForm.MaximizeBox = $false
+            $inputForm.MinimizeBox = $false
+
+            $lblInput = New-Object System.Windows.Forms.Label
+            $lblInput.Text = "Enter template with {topo} placeholder:`nExample: consistent with {topo} origin"
+            $lblInput.Location = New-Object System.Drawing.Point(15, 15)
+            $lblInput.Size = New-Object System.Drawing.Size(400, 35)
+
+            $txtInput = New-Object System.Windows.Forms.TextBox
+            $txtInput.Location = New-Object System.Drawing.Point(15, 55)
+            $txtInput.Width = 400
+            $txtInput.Text = $item.template
+
+            $btnInputOk = New-Object System.Windows.Forms.Button
+            $btnInputOk.Text = "OK"
+            $btnInputOk.Location = New-Object System.Drawing.Point(255, 95)
+            $btnInputOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+            $btnInputCancel = New-Object System.Windows.Forms.Button
+            $btnInputCancel.Text = "Cancel"
+            $btnInputCancel.Location = New-Object System.Drawing.Point(340, 95)
+            $btnInputCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+            $inputForm.Controls.AddRange(@($lblInput, $txtInput, $btnInputOk, $btnInputCancel))
+            $inputForm.AcceptButton = $btnInputOk
+            $inputForm.CancelButton = $btnInputCancel
+
+            if ($inputForm.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                $template = $txtInput.Text.Trim().ToLower()
+                if ($template -and $template.Contains("{topo}")) {
+                    $script:ExpressionItems[$idx] = @{ type = "topo-template"; template = $template }
+                    & $refreshTermsList
+                }
+                else {
+                    [System.Windows.Forms.MessageBox]::Show("Template must contain {topo} placeholder.", "Invalid Input", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning) | Out-Null
                 }
             }
         }

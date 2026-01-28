@@ -43,9 +43,20 @@ function Test-SiteLateralityHeuristics {
     # 1. Priority patterns (from PriorityPatterns.jsonl)
     $patternMatched = $false
     foreach ($pattern in $priorityPatterns) {
-        $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low
+        $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low -TopoMap $topoMap
         if ($testResult.Matched) {
-            $result.SiteCode = $pattern.Code
+            # Use TopoCode from topo-template match, otherwise use pattern's Code
+            # Skip if Code is {topo} but no TopoCode was found
+            if ($testResult.TopoCode) {
+                $result.SiteCode = $testResult.TopoCode
+            }
+            elseif ($pattern.Code -ne "{topo}") {
+                $result.SiteCode = $pattern.Code
+            }
+            else {
+                # {topo} pattern matched but no TopoCode - skip this pattern
+                continue
+            }
             $result.MatchType = "priority-pattern"
             $result.MatchedPhrase = $testResult.MatchedTerm
             $result.PatternPriority = [string]$pattern.Priority

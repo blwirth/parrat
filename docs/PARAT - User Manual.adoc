@@ -464,6 +464,7 @@ Expressions can contain:
 * *Simple terms*: Single phrases that trigger a match (e.g., `invasive ductal carcinoma`).
 * *AND groups*: Multiple terms that must all be present (e.g., both `egfr` AND `pd-l1` must appear).
 * *OR groups*: Multiple terms where any one triggers a match.
+* *Topo-templates*: Dynamic patterns using `{topo}` placeholder that matches any SearchPhrase from `Topography.jsonl`. When matched, the site code is automatically looked up from the topography dictionary. Example: `consistent with {topo} origin` will match "consistent with lung origin" and assign the corresponding lung site code.
 
 ===== Example Patterns
 
@@ -507,6 +508,7 @@ When adding terms to an expression:
 * *Add Term*: Adds a single search phrase.
 * *Add AND*: Adds a group where all terms must match. Enter comma-separated terms.
 * *Add OR*: Adds a group where any term triggers a match. Enter comma-separated terms.
+* *Add {topo}*: Adds a dynamic template that matches any topography SearchPhrase. The site code is looked up from the matching topography entry.
 
 Changes are saved to `/data/dictionaries/PriorityPatterns.jsonl`.
 

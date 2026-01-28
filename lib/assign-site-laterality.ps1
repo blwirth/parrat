@@ -246,20 +246,26 @@ function Test-PriorityPattern {
     .PARAMETER TextLow
     The lowercase text to search in
 
+    .PARAMETER TopoMap
+    Optional topography map for topo-template lookups
+
     .OUTPUTS
-    Hashtable with Matched (bool) and MatchedTerm (string) if matched
+    Hashtable with Matched (bool), MatchedTerm (string), and optionally TopoCode (string) if matched via topo-template
     #>
     param(
         $Pattern,
-        [string]$TextLow
+        [string]$TextLow,
+        $TopoMap = $null
     )
 
     $expressionResults = @()
     $matchedTerm = ""
+    $topoCode = $null
 
     foreach ($item in $Pattern.Expression) {
         $itemMatched = $false
         $itemMatchedTerm = ""
+        $itemTopoCode = $null
 
         if ($item.type -eq "term") {
             $escaped = [regex]::Escape($item.value)
@@ -295,8 +301,25 @@ function Test-PriorityPattern {
                 $itemMatchedTerm = "(" + ($groupMatchedTerms -join " $($item.logic) ") + ")"
             }
         }
+        elseif ($item.type -eq "topo-template" -and $TopoMap) {
+            # Template with {topo} placeholder - try each SearchPhrase from topography
+            $template = $item.template
+            foreach ($topoEntry in $TopoMap) {
+                $phrase = $topoEntry.SearchPhrase
+                $testPhrase = $template -replace '\{topo\}', $phrase
+                $escaped = [regex]::Escape($testPhrase)
+                $regexPattern = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+                $match = [regex]::Match($TextLow, $regexPattern)
+                if ($match.Success) {
+                    $itemMatched = $true
+                    $itemMatchedTerm = $testPhrase
+                    $itemTopoCode = $topoEntry.Code
+                    break
+                }
+            }
+        }
 
-        $expressionResults += @{ Matched = $itemMatched; Term = $itemMatchedTerm }
+        $expressionResults += @{ Matched = $itemMatched; Term = $itemMatchedTerm; TopoCode = $itemTopoCode }
     }
 
     # Apply top-level Logic
@@ -312,6 +335,7 @@ function Test-PriorityPattern {
         if ($firstMatch) {
             $overallMatched = $true
             $matchedTerm = $firstMatch.Term
+            $topoCode = $firstMatch.TopoCode
         }
     }
 
@@ -323,6 +347,7 @@ function Test-PriorityPattern {
     return @{
         Matched = $overallMatched
         MatchedTerm = $matchedTerm
+        TopoCode = $topoCode
     }
 }
 
@@ -634,9 +659,20 @@ function Get-MissingFields {
             # 1. Check priority patterns first (sorted by Priority, then file order)
             $patternMatched = $false
             foreach ($pattern in $priorityPatterns) {
-                $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low
+                $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low -TopoMap $topoMap
                 if ($testResult.Matched) {
-                    $proposedSite = $pattern.Code
+                    # Use TopoCode from topo-template match, otherwise use pattern's Code
+                    # Skip if Code is {topo} but no TopoCode was found (shouldn't happen, but safety check)
+                    if ($testResult.TopoCode) {
+                        $proposedSite = $testResult.TopoCode
+                    }
+                    elseif ($pattern.Code -ne "{topo}") {
+                        $proposedSite = $pattern.Code
+                    }
+                    else {
+                        # {topo} pattern matched but no TopoCode - skip this pattern
+                        continue
+                    }
                     $patternMatched = $true
                     break
                 }
