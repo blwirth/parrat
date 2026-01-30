@@ -213,14 +213,14 @@ function Show-PatternEditDialog {
         $lstTerms.Items.Clear()
         foreach ($item in $script:ExpressionItems) {
             if ($item.type -eq "term") {
-                $lstTerms.Items.Add($item.value)
+                [void]$lstTerms.Items.Add($item.value)
             }
             elseif ($item.type -eq "group") {
                 $groupDisplay = "[$($item.logic): $($item.terms -join ', ')]"
-                $lstTerms.Items.Add($groupDisplay)
+                [void]$lstTerms.Items.Add($groupDisplay)
             }
             elseif ($item.type -eq "topo-template") {
-                $lstTerms.Items.Add("{topo}: $($item.template)")
+                [void]$lstTerms.Items.Add("{topo}: $($item.template)")
             }
         }
     }
