@@ -593,13 +593,13 @@ function Get-BtnManageTablesHandler {
         # Separator
         [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
-        # Priority Patterns
-        $menuItemPriorityPatterns = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemPriorityPatterns.Text = "Priority Patterns"
-        $menuItemPriorityPatterns.Add_Click({
-            Show-PriorityPatternsEditor
+        # Site Coding Rules
+        $menuItemSiteCodingRules = New-Object System.Windows.Forms.ToolStripMenuItem
+        $menuItemSiteCodingRules.Text = "Site Coding Rules"
+        $menuItemSiteCodingRules.Add_Click({
+            Show-SiteCodingRulesEditor
         })
-        [void]$toolStripButton.DropDownItems.Add($menuItemPriorityPatterns)
+        [void]$toolStripButton.DropDownItems.Add($menuItemSiteCodingRules)
     }
 }
 
