@@ -935,6 +935,7 @@ function Show-PriorityPatternsEditor {
         if ($script:IsDirty) {
             $result = [System.Windows.Forms.MessageBox]::Show("You have unsaved changes. Discard them?", "Unsaved Changes", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
             if ($result -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+            $script:IsDirty = $false
         }
         $form.Close()
     })
