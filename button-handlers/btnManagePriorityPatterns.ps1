@@ -23,8 +23,12 @@ function Read-PriorityPatternsFile {
 
         try {
             $pattern = $line | ConvertFrom-Json
+            # If the parsed result is an array, extract the object element
+            if ($pattern -is [System.Array]) {
+                $pattern = $pattern | Where-Object { $_ -is [PSCustomObject] } | Select-Object -First 1
+            }
             # Only add valid patterns (must have a Code)
-            if (-not [string]::IsNullOrWhiteSpace($pattern.Code)) {
+            if ($pattern -and -not [string]::IsNullOrWhiteSpace($pattern.Code)) {
                 $patterns += $pattern
             }
         }
