@@ -129,7 +129,7 @@ function Show-PatternEditDialog {
     $dialog = New-Object System.Windows.Forms.Form
     $dialog.Text = $Title
     $dialog.Width = 600
-    $dialog.Height = 500
+    $dialog.Height = 700
     $dialog.StartPosition = "CenterScreen"
     $dialog.FormBorderStyle = "FixedDialog"
     $dialog.MaximizeBox = $false
@@ -621,20 +621,183 @@ function Show-PatternEditDialog {
         }
     })
 
+    # --- Test Rule Section ---
+    $lblTestPhrases = New-Object System.Windows.Forms.Label
+    $lblTestPhrases.Text = "Test Phrases (one per line):"
+    $lblTestPhrases.Location = New-Object System.Drawing.Point(15, 370)
+    $lblTestPhrases.AutoSize = $true
+
+    $txtTestPhrases = New-Object System.Windows.Forms.TextBox
+    $txtTestPhrases.Location = New-Object System.Drawing.Point(15, 390)
+    $txtTestPhrases.Size = New-Object System.Drawing.Size(450, 70)
+    $txtTestPhrases.Multiline = $true
+    $txtTestPhrases.ScrollBars = "Vertical"
+
+    $btnTest = New-Object System.Windows.Forms.Button
+    $btnTest.Text = "Test"
+    $btnTest.Location = New-Object System.Drawing.Point(475, 390)
+    $btnTest.Width = 90
+
+    $lblResults = New-Object System.Windows.Forms.Label
+    $lblResults.Text = "Results:"
+    $lblResults.Location = New-Object System.Drawing.Point(15, 465)
+    $lblResults.AutoSize = $true
+
+    $rtbTestResults = New-Object System.Windows.Forms.RichTextBox
+    $rtbTestResults.Location = New-Object System.Drawing.Point(15, 485)
+    $rtbTestResults.Size = New-Object System.Drawing.Size(555, 120)
+    $rtbTestResults.ReadOnly = $true
+    $rtbTestResults.BackColor = [System.Drawing.Color]::White
+    $rtbTestResults.Font = New-Object System.Drawing.Font("Consolas", 9)
+
+    # Load TopoMap for topo-template testing
+    $script:TestTopoMap = $null
+    try {
+        $maps = Get-CachedMaps -ScriptDir (Join-Path (Split-Path $PSScriptRoot -Parent) "lib")
+        $script:TestTopoMap = $maps.TopoMap
+    } catch {
+        # TopoMap not available; topo-template tests will be skipped
+    }
+
+    $btnTest.Add_Click({
+        $rtbTestResults.Clear()
+        $lines = $txtTestPhrases.Text -split "`r?`n"
+
+        # Build temp pattern from current dialog state
+        $tempLogic = if ($rdoAnd.Checked) { "AND" } else { "OR" }
+        $tempPattern = [PSCustomObject]@{
+            Code       = $txtCode.Text.Trim()
+            Logic      = $tempLogic
+            Expression = $script:ExpressionItems
+        }
+
+        $isFirstLine = $true
+        foreach ($line in $lines) {
+            $trimmed = $line.Trim()
+            if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+
+            if (-not $isFirstLine) {
+                $rtbTestResults.AppendText("`n")
+            }
+            $isFirstLine = $false
+
+            $low = $trimmed.ToLower()
+            $testResult = Test-SiteCodingRule -Pattern $tempPattern -TextLow $low -TopoMap $script:TestTopoMap
+
+            if ($testResult.Matched) {
+                # Collect all regex match positions from every matched expression term
+                $highlights = @()
+                foreach ($item in $script:ExpressionItems) {
+                    if ($item.type -eq "term") {
+                        $escaped = [regex]::Escape($item.value)
+                        $rx = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+                        $m = [regex]::Match($low, $rx)
+                        if ($m.Success) {
+                            $highlights += @{ Index = $m.Index; Length = $m.Length }
+                        }
+                    }
+                    elseif ($item.type -eq "group") {
+                        foreach ($term in $item.terms) {
+                            $escaped = [regex]::Escape($term)
+                            $rx = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+                            $m = [regex]::Match($low, $rx)
+                            if ($m.Success) {
+                                $highlights += @{ Index = $m.Index; Length = $m.Length }
+                            }
+                        }
+                    }
+                    elseif ($item.type -eq "topo-template" -and $script:TestTopoMap) {
+                        foreach ($topoEntry in $script:TestTopoMap) {
+                            $phrase = $item.template -replace '\{topo\}', $topoEntry.SearchPhrase
+                            $escaped = [regex]::Escape($phrase)
+                            $rx = "(?<![a-zA-Z])$escaped(?![a-zA-Z])"
+                            $m = [regex]::Match($low, $rx)
+                            if ($m.Success) {
+                                $highlights += @{ Index = $m.Index; Length = $m.Length }
+                                break
+                            }
+                        }
+                    }
+                }
+
+                # Sort highlights by position, merge overlaps
+                $highlights = $highlights | Sort-Object { $_.Index }
+                $merged = @()
+                foreach ($h in $highlights) {
+                    if ($merged.Count -gt 0) {
+                        $last = $merged[$merged.Count - 1]
+                        if ($h.Index -le ($last.Index + $last.Length)) {
+                            $end = [Math]::Max($last.Index + $last.Length, $h.Index + $h.Length)
+                            $merged[$merged.Count - 1] = @{ Index = $last.Index; Length = $end - $last.Index }
+                            continue
+                        }
+                    }
+                    $merged += $h
+                }
+
+                # Render the phrase with green highlights on matched spans
+                $lineStart = $rtbTestResults.TextLength
+                $rtbTestResults.AppendText($trimmed)
+
+                foreach ($h in $merged) {
+                    $rtbTestResults.Select($lineStart + $h.Index, $h.Length)
+                    $rtbTestResults.SelectionBackColor = [System.Drawing.Color]::FromArgb(180, 255, 180)
+                }
+
+                # Determine site code
+                $siteCode = $tempPattern.Code
+                if ($testResult.TopoCode) {
+                    $siteCode = $testResult.TopoCode
+                }
+                # Determine laterality
+                $lat = Get-Laterality $low
+                $latLabel = switch ($lat) {
+                    "1" { "1 (Right)" }
+                    "2" { "2 (Left)" }
+                    "9" { "9 (Unknown)" }
+                    default { "N/A" }
+                }
+                if ($chkForceLat.Checked) {
+                    $latLabel = "9 (Forced)"
+                }
+
+                # Append tag line: site code + laterality
+                $rtbTestResults.Select($rtbTestResults.TextLength, 0)
+                $rtbTestResults.SelectionBackColor = [System.Drawing.Color]::White
+                $tagText = "  [ pSite: $siteCode | Lat: $latLabel ]"
+                $tagStart = $rtbTestResults.TextLength
+                $rtbTestResults.AppendText($tagText)
+                $rtbTestResults.Select($tagStart, $tagText.Length)
+                $rtbTestResults.SelectionColor = [System.Drawing.Color]::FromArgb(0, 120, 0)
+            }
+            else {
+                # No match — render in gray
+                $startPos = $rtbTestResults.TextLength
+                $rtbTestResults.AppendText("$trimmed  - NO MATCH")
+                $rtbTestResults.Select($startPos, $rtbTestResults.TextLength - $startPos)
+                $rtbTestResults.SelectionColor = [System.Drawing.Color]::Gray
+            }
+        }
+
+        # Reset selection
+        $rtbTestResults.Select(0, 0)
+        $rtbTestResults.ScrollToCaret()
+    })
+
     # OK and Cancel buttons
     $btnOk = New-Object System.Windows.Forms.Button
     $btnOk.Text = "OK"
-    $btnOk.Location = New-Object System.Drawing.Point(400, 420)
+    $btnOk.Location = New-Object System.Drawing.Point(400, 620)
     $btnOk.Width = 80
     $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
 
     $btnCancel = New-Object System.Windows.Forms.Button
     $btnCancel.Text = "Cancel"
-    $btnCancel.Location = New-Object System.Drawing.Point(490, 420)
+    $btnCancel.Location = New-Object System.Drawing.Point(490, 620)
     $btnCancel.Width = 80
     $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 
-    $dialog.Controls.AddRange(@($lblCode, $txtCode, $lblPriority, $numPriority, $chkEnabled, $chkForceLat, $grpLogic, $lblTerms, $lstTerms, $pnlTermButtons, $btnOk, $btnCancel))
+    $dialog.Controls.AddRange(@($lblCode, $txtCode, $lblPriority, $numPriority, $chkEnabled, $chkForceLat, $grpLogic, $lblTerms, $lstTerms, $pnlTermButtons, $lblTestPhrases, $txtTestPhrases, $btnTest, $lblResults, $rtbTestResults, $btnOk, $btnCancel))
     $dialog.AcceptButton = $btnOk
     $dialog.CancelButton = $btnCancel
 
