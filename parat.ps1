@@ -86,11 +86,41 @@ $menuStrip = New-Object System.Windows.Forms.MenuStrip
 $menuStrip.Dock = 'Top'
 $form.MainMenuStrip = $menuStrip
 
+# Custom renderer to draw shortcut key text in gray
+Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @'
+using System.Drawing;
+using System.Windows.Forms;
+
+public class ShortcutGrayRenderer : ToolStripProfessionalRenderer
+{
+    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+    {
+        var menuItem = e.Item as ToolStripMenuItem;
+        if (menuItem != null && menuItem.ShowShortcutKeys && menuItem.ShortcutKeys != Keys.None)
+        {
+            string shortcutText = menuItem.ShortcutKeyDisplayString;
+            if (string.IsNullOrEmpty(shortcutText))
+            {
+                var converter = new KeysConverter();
+                shortcutText = converter.ConvertToString(menuItem.ShortcutKeys);
+            }
+            if (e.Text == shortcutText)
+            {
+                e.TextColor = SystemColors.GrayText;
+            }
+        }
+        base.OnRenderItemText(e);
+    }
+}
+'@
+$menuStrip.Renderer = New-Object ShortcutGrayRenderer
+
 $mnuFile = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuFile.Text = "File"
 
 $mnuOpen = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuOpen.Text = "Open"
+$mnuOpen.ShortcutKeys = [System.Windows.Forms.Keys]::Control -bor [System.Windows.Forms.Keys]::O
 [void]$mnuFile.DropDownItems.Add($mnuOpen)
 
 $mnuOpenRecent = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -133,6 +163,7 @@ $mnuConvertTxt.Text = "Convert .txt"
 
 $mnuRestart = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuRestart.Text = "Restart Application"
+$mnuRestart.ShortcutKeys = [System.Windows.Forms.Keys]::Control -bor [System.Windows.Forms.Keys]::Shift -bor [System.Windows.Forms.Keys]::R
 $mnuRestart.Add_Click({
     $scriptPath = $PSCommandPath
     if (-not $scriptPath) {
@@ -690,8 +721,52 @@ $gridNav.Add_SelectionChanged({
     }
 })
 
+# Space toggles the Selected checkbox on all selected rows
+$script:SpaceBatchToggling = $false
+$gridNav.Add_KeyDown({
+    param($sender, $e)
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Space) {
+        $e.Handled = $true
+        $e.SuppressKeyPress = $true
+        if ($sender.SelectedRows.Count -eq 0) { return }
+        $dataTable = $sender.DataSource
+        if ($null -eq $dataTable) { return }
+        # Move current cell off the checkbox column so the grid's
+        # built-in Space handling has no checkbox to toggle
+        if ($sender.CurrentCell -and $sender.CurrentCell.ColumnIndex -eq 0 -and $sender.ColumnCount -gt 1) {
+            $sender.CurrentCell = $sender.Rows[$sender.CurrentCell.RowIndex].Cells[1]
+        }
+        # Use first selected row to determine toggle direction
+        $firstIdx = $sender.SelectedRows[0].Index
+        $newVal = -not [bool]$dataTable.Rows[$firstIdx]["Selected"]
+        # Batch update: suppress per-row events and grid repaints
+        $script:SpaceBatchToggling = $true
+        $sender.SuspendLayout()
+        foreach ($gridRow in $sender.SelectedRows) {
+            $dataTable.Rows[$gridRow.Index]["Selected"] = $newVal
+        }
+        $sender.ResumeLayout()
+        $script:SpaceBatchToggling = $false
+        # Update the selected count label once
+        $selectedCount = @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count
+        $fileType = $global:FileType
+        if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+        if ($fileType -eq 'hl7') {
+            $messages = $global:Hl7Messages
+            if ($null -eq $messages) { $messages = $script:Hl7Messages }
+            $totalCount = if ($null -ne $messages) { $messages.Count } else { 0 }
+            $currentIdx = $global:CurrentIndex
+            if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
+            $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($currentIdx + 1), $totalCount, $selectedCount
+        } else {
+            $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $script:Tumors.Count, $selectedCount
+        }
+    }
+})
+
 # Commit checkbox changes immediately when clicked
 $gridNav.Add_CurrentCellDirtyStateChanged({
+    if ($script:SpaceBatchToggling) { return }
     if ($gridNav.IsCurrentCellDirty -and $gridNav.CurrentCell.ColumnIndex -eq 0) {
         $gridNav.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit)
     }
@@ -704,6 +779,7 @@ $gridNav.Add_CellValueChanged({
     # Only handle changes to the "Selected" column (column 0)
     if ($e.ColumnIndex -ne 0) { return }
     if ($global:IsLoadingData -eq $true -or $script:IsLoadingData -eq $true) { return }
+    if ($script:SpaceBatchToggling) { return }
 
     $dataTable = $gridNav.DataSource
     if ($null -eq $dataTable) { return }
@@ -900,6 +976,7 @@ $form.Add_KeyDown({
             $keyArgs.SuppressKeyPress = $true
         }
     }
+
 })
 
 # Close logging on form close
