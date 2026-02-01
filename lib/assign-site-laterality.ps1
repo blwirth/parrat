@@ -9,11 +9,11 @@
 $script:TopoMapCache = $null
 $script:MelTopoMapCache = $null
 $script:LateralityCodesCache = $null
-$script:PriorityPatternsCache = $null
+$script:SiteCodingRulesCache = $null
 $script:TopoMapCacheTime = $null
 $script:MelTopoMapCacheTime = $null
 $script:LateralityCodesCacheTime = $null
-$script:PriorityPatternsCacheTime = $null
+$script:SiteCodingRulesCacheTime = $null
 
 # Load topography lookup tables
 function Read-TopographyExcel {
@@ -205,7 +205,7 @@ function Read-LateralityJson {
     return $codes
 }
 
-function Read-PriorityPatterns {
+function Read-SiteCodingRules {
     param([string]$Path)
 
     if (-not (Test-Path $Path)) {
@@ -225,7 +225,7 @@ function Read-PriorityPatterns {
             }
         }
         catch {
-            Write-Warning "Failed to parse priority pattern line: $line"
+            Write-Warning "Failed to parse site coding rule line: $line"
         }
     }
 
@@ -235,10 +235,10 @@ function Read-PriorityPatterns {
     return $patterns
 }
 
-function Test-PriorityPattern {
+function Test-SiteCodingRule {
     <#
     .SYNOPSIS
-    Test if text matches a priority pattern expression
+    Test if text matches a site coding rule expression
 
     .PARAMETER Pattern
     The pattern object with Expression and Logic properties
@@ -507,43 +507,43 @@ function Get-CachedMaps {
         $needsReload = $true
     }
 
-    # Check if we need to reload Priority Patterns
-    $priorityPatternsFile = Join-Path $dictDir "PriorityPatterns.jsonl"
-    $priorityPatternsCount = 0
+    # Check if we need to reload Site Coding Rules
+    $siteCodingRulesFile = Join-Path $dictDir "SiteCodingRules.jsonl"
+    $siteCodingRulesCount = 0
 
-    if (Test-Path $priorityPatternsFile) {
-        $priorityPatternsFileTime = (Get-Item $priorityPatternsFile).LastWriteTime
+    if (Test-Path $siteCodingRulesFile) {
+        $siteCodingRulesFileTime = (Get-Item $siteCodingRulesFile).LastWriteTime
 
-        if ($null -eq $script:PriorityPatternsCache -or $null -eq $script:PriorityPatternsCacheTime -or $priorityPatternsFileTime -gt $script:PriorityPatternsCacheTime) {
-            Write-Host "Loading PriorityPatterns.jsonl..." -ForegroundColor Cyan
-            $script:PriorityPatternsCache = Read-PriorityPatterns $priorityPatternsFile
-            $script:PriorityPatternsCacheTime = $priorityPatternsFileTime
+        if ($null -eq $script:SiteCodingRulesCache -or $null -eq $script:SiteCodingRulesCacheTime -or $siteCodingRulesFileTime -gt $script:SiteCodingRulesCacheTime) {
+            Write-Host "Loading SiteCodingRules.jsonl..." -ForegroundColor Cyan
+            $script:SiteCodingRulesCache = Read-SiteCodingRules $siteCodingRulesFile
+            $script:SiteCodingRulesCacheTime = $siteCodingRulesFileTime
             $needsReload = $true
         }
-        $priorityPatternsCount = $script:PriorityPatternsCache.Count
+        $siteCodingRulesCount = $script:SiteCodingRulesCache.Count
     }
     else {
-        $script:PriorityPatternsCache = @()
+        $script:SiteCodingRulesCache = @()
     }
 
     $loadStopwatch.Stop()
 
     if ($needsReload) {
         $sourceInfo = if ($sourceType -contains "JSON") { " (using JSON)" } else { " (using Excel)" }
-        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} priority patterns in {4:F2} seconds{5}." -f
+        Write-Host ("Loaded {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} site coding rules in {4:F2} seconds{5}." -f
             $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count,
-            $priorityPatternsCount, $loadStopwatch.Elapsed.TotalSeconds, $sourceInfo) -ForegroundColor Cyan
+            $siteCodingRulesCount, $loadStopwatch.Elapsed.TotalSeconds, $sourceInfo) -ForegroundColor Cyan
     } else {
-        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} priority patterns (checked in {4:F3} seconds)." -f
+        Write-Host ("Using cached maps: {0} topography rules, {1} melanoma rules, {2} laterality codes, {3} site coding rules (checked in {4:F3} seconds)." -f
             $script:TopoMapCache.Count, $script:MelTopoMapCache.Count, $script:LateralityCodesCache.Count,
-            $priorityPatternsCount, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
+            $siteCodingRulesCount, $loadStopwatch.Elapsed.TotalSeconds) -ForegroundColor Green
     }
 
     return @{
         TopoMap = $script:TopoMapCache
         MelTopoMap = $script:MelTopoMapCache
         LateralityCodes = $script:LateralityCodesCache
-        PriorityPatterns = $script:PriorityPatternsCache
+        SiteCodingRules = $script:SiteCodingRulesCache
     }
 }
 
@@ -560,7 +560,7 @@ function Get-MissingFields {
     $topoMap = $maps.TopoMap
     $melTopoMap = $maps.MelTopoMap
     $lateralityCodes = $maps.LateralityCodes
-    $priorityPatterns = $maps.PriorityPatterns
+    $siteCodingRules = $maps.SiteCodingRules
 
     $report = @()
     $assignments = @{}
@@ -657,10 +657,10 @@ function Get-MissingFields {
         # Assign primary site if missing
         $matchedPattern = $null
         if (-not $hasSite) {
-            # 1. Check priority patterns first (sorted by Priority, then file order)
+            # 1. Check site coding rules first (sorted by Priority, then file order)
             $patternMatched = $false
-            foreach ($pattern in $priorityPatterns) {
-                $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low -TopoMap $topoMap
+            foreach ($pattern in $siteCodingRules) {
+                $testResult = Test-SiteCodingRule -Pattern $pattern -TextLow $low -TopoMap $topoMap
                 if ($testResult.Matched) {
                     # Use TopoCode from topo-template match, otherwise use pattern's Code
                     # Skip if Code is {topo} but no TopoCode was found (shouldn't happen, but safety check)

@@ -68,7 +68,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\button-handlers\btnNext.ps1"
 . "$PSScriptRoot\button-handlers\btnSplit.ps1"
 . "$PSScriptRoot\button-handlers\btnManageTables.ps1"
-. "$PSScriptRoot\button-handlers\btnManagePriorityPatterns.ps1"
+. "$PSScriptRoot\button-handlers\btnManageSiteCodingRules.ps1"
 . "$PSScriptRoot\button-handlers\btnTestSiteLaterality.ps1"
 . "$PSScriptRoot\button-handlers\btnSearch.ps1"
 

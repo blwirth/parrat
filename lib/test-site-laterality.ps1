@@ -24,7 +24,7 @@ function Test-SiteLateralityHeuristics {
     $topoMap = $maps.TopoMap
     $melTopoMap = $maps.MelTopoMap
     $lateralityCodes = $maps.LateralityCodes
-    $priorityPatterns = $maps.PriorityPatterns
+    $siteCodingRules = $maps.SiteCodingRules
 
     $low = $Text.ToLower()
 
@@ -40,11 +40,11 @@ function Test-SiteLateralityHeuristics {
     }
 
     # Site Assignment Tiers:
-    # 1. Priority patterns (from PriorityPatterns.jsonl)
+    # 1. Site coding rules (from SiteCodingRules.jsonl)
     $patternMatched = $false
     $matchedPattern = $null
-    foreach ($pattern in $priorityPatterns) {
-        $testResult = Test-PriorityPattern -Pattern $pattern -TextLow $low -TopoMap $topoMap
+    foreach ($pattern in $siteCodingRules) {
+        $testResult = Test-SiteCodingRule -Pattern $pattern -TextLow $low -TopoMap $topoMap
         if ($testResult.Matched) {
             # Use TopoCode from topo-template match, otherwise use pattern's Code
             # Skip if Code is {topo} but no TopoCode was found
@@ -58,7 +58,7 @@ function Test-SiteLateralityHeuristics {
                 # {topo} pattern matched but no TopoCode - skip this pattern
                 continue
             }
-            $result.MatchType = "priority-pattern"
+            $result.MatchType = "site-coding-rule"
             $result.MatchedPhrase = $testResult.MatchedTerm
             $result.PatternPriority = [string]$pattern.Priority
             $matchedPattern = $pattern
@@ -354,7 +354,7 @@ function Show-TestSiteLateralityResults {
         $rtbResults.AppendText("  Code:         $($Result.SiteCode)`r`n")
 
         $matchTypeDesc = switch ($Result.MatchType) {
-            "priority-pattern" { "Priority pattern" }
+            "site-coding-rule" { "Site coding rule" }
             "melanoma-dict" { "Melanoma dictionary" }
             "standard-dict" { "Standard dictionary" }
             default { $Result.MatchType }

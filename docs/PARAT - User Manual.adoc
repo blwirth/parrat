@@ -175,7 +175,7 @@ This function uses the JSONL files located in `/data/dictionaries`. For informat
 
 Several heuristics are applied to assign the most accurate primary site:
 
-. *Priority Patterns*: User-configurable patterns with AND/OR logic are evaluated first. See <<Managing Priority Patterns>> for details on customizing these patterns.
+. *Site Coding Rules*: User-configurable rules with AND/OR logic are evaluated first. See <<Managing Site Coding Rules>> for details on customizing these rules.
 . *Melanoma Dictionary*: If "melanoma" appears in the text, the melanoma-specific topography dictionary is used.
 . *Standard Dictionary*: General topography dictionary lookup using earliest phrase match.
 
@@ -207,8 +207,8 @@ To preview how the heuristics assign primary site and laterality without modifyi
 Results include:
 
 * The assigned site code and description
-* The match type (priority pattern, melanoma dictionary, or standard dictionary)
-* For priority pattern matches: the pattern priority
+* The match type (site coding rule, melanoma dictionary, or standard dictionary)
+* For site coding rule matches: the rule priority
 * The phrase that triggered the match
 * The assigned laterality code and description
 * Whether the site requires laterality
@@ -448,17 +448,17 @@ A newline-delimited list of primary site codes and triggering phrases.
 +
 A newline-delimited list of skin-specific anatomical terms used when the primary site is `C44x`.
 
-* *Priority Patterns*
+* *Site Coding Rules*
 +
-Advanced patterns that take precedence over dictionary lookups. See <<Managing Priority Patterns>> for details.
+Advanced rules that take precedence over dictionary lookups. See <<Managing Site Coding Rules>> for details.
 
 These tables are stored as JSON or NDJSON files in `/data/dictionaries` and may also be edited directly using a text editor.
 
-==== Managing Priority Patterns
+==== Managing Site Coding Rules
 
-Priority patterns allow customization of site coding heuristics with support for complex matching logic. These patterns are evaluated before standard dictionary lookups, enabling precise control over how specific pathology phrases are coded.
+Site coding rules allow customization of site coding heuristics with support for complex matching logic. These rules are evaluated before standard dictionary lookups, enabling precise control over how specific pathology phrases are coded.
 
-To open the Priority Patterns editor, select *Manage Coding Tables…* > *Priority Patterns*.
+To open the Site Coding Rules editor, select *Manage Coding Tables…* > *Site Coding Rules*.
 
 ===== Pattern Properties
 
@@ -513,7 +513,7 @@ The last example uses dynamic topography lookup with Force Laterality = 9 enable
 
 Site assignment follows this priority:
 
-. Priority patterns (sorted by Priority value, then file order)
+. Site coding rules (sorted by Priority value, then file order)
 . Melanoma dictionary (if "melanoma" appears in text)
 . Standard topography dictionary
 
@@ -531,7 +531,7 @@ When adding terms to an expression:
 * *Add OR*: Adds a group where any term triggers a match. Enter comma-separated terms.
 * *Add {topo}*: Adds a dynamic template that matches any topography SearchPhrase. The site code is looked up from the matching topography entry.
 
-Changes are saved to `/data/dictionaries/PriorityPatterns.jsonl`.
+Changes are saved to `/data/dictionaries/SiteCodingRules.jsonl`.
 
 === Logging
 

@@ -1,9 +1,9 @@
-# btnManagePriorityPatterns.ps1
-# Priority Patterns Editor - Manage site coding heuristics with AND/OR logic support
+# btnManageSiteCodingRules.ps1
+# Site Coding Rules Editor - Manage site coding heuristics with AND/OR logic support
 
-$script:PriorityPatternsFilePath = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries\PriorityPatterns.jsonl"
+$script:SiteCodingRulesFilePath = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries\SiteCodingRules.jsonl"
 
-function Read-PriorityPatternsFile {
+function Read-SiteCodingRulesFile {
     param([string]$Path)
 
     if (-not (Test-Path $Path)) {
@@ -23,20 +23,24 @@ function Read-PriorityPatternsFile {
 
         try {
             $pattern = $line | ConvertFrom-Json
+            # If the parsed result is an array, extract the object element
+            if ($pattern -is [System.Array]) {
+                $pattern = $pattern | Where-Object { $_ -is [PSCustomObject] } | Select-Object -First 1
+            }
             # Only add valid patterns (must have a Code)
-            if (-not [string]::IsNullOrWhiteSpace($pattern.Code)) {
+            if ($pattern -and -not [string]::IsNullOrWhiteSpace($pattern.Code)) {
                 $patterns += $pattern
             }
         }
         catch {
-            Write-Warning "Failed to parse priority pattern line: $line - $($_.Exception.Message)"
+            Write-Warning "Failed to parse site coding rule line: $line - $($_.Exception.Message)"
         }
     }
 
     return $patterns
 }
 
-function Write-PriorityPatternsFile {
+function Write-SiteCodingRulesFile {
     param(
         [string]$Path,
         [array]$Patterns
@@ -658,15 +662,15 @@ function Show-PatternEditDialog {
     return $null
 }
 
-function Show-PriorityPatternsEditor {
+function Show-SiteCodingRulesEditor {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
-    $filePath = $script:PriorityPatternsFilePath
+    $filePath = $script:SiteCodingRulesFilePath
 
     # Load patterns
     try {
-        $patterns = @(Read-PriorityPatternsFile -Path $filePath)
+        $patterns = @(Read-SiteCodingRulesFile -Path $filePath)
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
@@ -682,7 +686,7 @@ function Show-PriorityPatternsEditor {
     $script:CurrentPatterns = $patterns
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Edit Priority Patterns"
+    $form.Text = "Edit Site Coding Rules"
     $form.Width = 900
     $form.Height = 600
     $form.StartPosition = "CenterScreen"
@@ -899,7 +903,7 @@ function Show-PriorityPatternsEditor {
     # Save handler
     $btnSave.Add_Click({
         try {
-            Write-PriorityPatternsFile -Path $filePath -Patterns $script:CurrentPatterns
+            Write-SiteCodingRulesFile -Path $filePath -Patterns $script:CurrentPatterns
             $script:IsDirty = $false
             [System.Windows.Forms.MessageBox]::Show("File saved successfully.`n`n$filePath", "Saved", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
         }
@@ -911,7 +915,7 @@ function Show-PriorityPatternsEditor {
     # Save As handler
     $btnSaveAs.Add_Click({
         $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
-        $saveDialog.Title = "Save Priority Patterns As"
+        $saveDialog.Title = "Save Site Coding Rules As"
         $saveDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($filePath)
         $saveDialog.Filter = "JSONL Files (*.jsonl)|*.jsonl|All Files (*.*)|*.*"
         $saveDialog.DefaultExt = "jsonl"
@@ -919,7 +923,7 @@ function Show-PriorityPatternsEditor {
 
         if ($saveDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             try {
-                Write-PriorityPatternsFile -Path $saveDialog.FileName -Patterns $script:CurrentPatterns
+                Write-SiteCodingRulesFile -Path $saveDialog.FileName -Patterns $script:CurrentPatterns
                 $script:IsDirty = $false
                 $lblFile.Text = "File: $($saveDialog.FileName)"
                 [System.Windows.Forms.MessageBox]::Show("File saved successfully.`n`n$($saveDialog.FileName)", "Saved", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
