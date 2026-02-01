@@ -114,6 +114,7 @@ function Import-XmlFile {
                 return $lookup
             }
 
+            $table.BeginLoadData()
             for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
                 $tumor = $ScriptVars['Tumors'][$i]
                 $patient = $tumor.ParentNode
@@ -138,6 +139,7 @@ function Import-XmlFile {
 
                 [void]$table.Rows.Add($row)
             }
+            $table.EndLoadData()
 
             $ScriptVars['NavTable'] = $table
             
@@ -270,6 +272,7 @@ function Import-Hl7File {
         [void]$table.Columns.Add("messageType", [string])
         [void]$table.Columns.Add("orderDateTime", [string])
         
+        $table.BeginLoadData()
         foreach ($msg in $messages) {
             $row = $table.NewRow()
             $row["Selected"] = $false
@@ -280,9 +283,10 @@ function Import-Hl7File {
             $row["patientId"] = $msg.PatientId
             $row["messageType"] = $msg.MessageType
             $row["orderDateTime"] = $msg.OrderDateTime
-            
+
             [void]$table.Rows.Add($row)
         }
+        $table.EndLoadData()
         
         $ScriptVars['NavTable'] = $table
         
