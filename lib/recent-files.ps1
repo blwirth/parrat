@@ -134,3 +134,31 @@ function Clear-RecentFiles {
     Save-RecentFiles -Files @()
     Write-ParatLog -Level INFO -Message "Cleared recent files list" -Action "RECENT_FILES"
 }
+
+function Get-LastOpenedDirectory {
+    <#
+    .SYNOPSIS
+    Gets the directory of the most recently opened file. Returns $null if none or directory no longer exists.
+    #>
+    $files = Get-RecentFiles
+    if ($files.Count -eq 0) {
+        return $null
+    }
+
+    $mostRecent = $files[0]
+    if ($null -eq $mostRecent.path) {
+        return $null
+    }
+
+    try {
+        $dir = [System.IO.Path]::GetDirectoryName($mostRecent.path)
+        if (-not [string]::IsNullOrEmpty($dir) -and (Test-Path $dir -PathType Container)) {
+            return $dir
+        }
+    }
+    catch {
+        # Ignore path errors
+    }
+
+    return $null
+}

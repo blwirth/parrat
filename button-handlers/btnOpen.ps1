@@ -9,6 +9,11 @@ function Get-BtnOpenHandler {
         $ofd.Filter = "NAACCR/HL7 Files (*.xml;*.hl7)|*.xml;*.hl7|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*"
         $ofd.Title  = "Select NAACCR XML or HL7 file"
 
+        $lastDir = Get-LastOpenedDirectory
+        if ($null -ne $lastDir) {
+            $ofd.InitialDirectory = $lastDir
+        }
+
         if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             $extension = [System.IO.Path]::GetExtension($ofd.FileName).ToLower()
             
