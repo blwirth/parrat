@@ -1123,9 +1123,9 @@ function Show-AssignmentReport {
         foreach ($textId in $textFieldIds) {
             $node = $tumor.SelectSingleNode("./n:Item[@naaccrId='$textId']", $nsMgr)
             if ($node -ne $null) {
-                $rtbPreview.SelectionFont = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
+                $rtbPreview.SelectionFont = Get-BoldFont $rtbPreview.Font
                 $rtbPreview.AppendText("=== $textId ===`r`n")
-                $rtbPreview.SelectionFont = New-Object System.Drawing.Font("Consolas", 9)
+                $rtbPreview.SelectionFont = $rtbPreview.Font
 
                 $value = $node.InnerText
                 if ([string]::IsNullOrWhiteSpace($value)) {
