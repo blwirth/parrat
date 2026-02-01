@@ -242,11 +242,7 @@ function Add-ColoredTextToRichTextBox {
     $Box.SelectionLength = 0
 
     if ($Bold) {
-        $Box.SelectionFont = New-Object System.Drawing.Font(
-            $Box.Font.FontFamily,
-            $Box.Font.Size,
-            [System.Drawing.FontStyle]::Bold
-        )
+        $Box.SelectionFont = Get-BoldFont $Box.Font
     }
     else {
         $Box.SelectionFont = $Box.Font

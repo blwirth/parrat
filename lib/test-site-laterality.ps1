@@ -336,9 +336,9 @@ function Show-TestSiteLateralityResults {
     # Build results text
     # Show source info if available (from current record test)
     if ($Result.SourceInfo) {
-        $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
+        $rtbResults.SelectionFont = Get-BoldFont $rtbResults.Font
         $rtbResults.AppendText("SOURCE`r`n")
-        $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10)
+        $rtbResults.SelectionFont = $rtbResults.Font
         $rtbResults.AppendText("  Record:       $($Result.SourceInfo)`r`n")
         # if ($Result.TextLength) {
         #     $rtbResults.AppendText("  Text length:  $($Result.TextLength) characters`r`n")
@@ -346,9 +346,9 @@ function Show-TestSiteLateralityResults {
         $rtbResults.AppendText("`r`n")
     }
 
-    $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
+    $rtbResults.SelectionFont = Get-BoldFont $rtbResults.Font
     $rtbResults.AppendText("PRIMARY SITE`r`n")
-    $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10)
+    $rtbResults.SelectionFont = $rtbResults.Font
 
     if ($Result.SiteCode) {
         $rtbResults.AppendText("  Code:         $($Result.SiteCode)`r`n")
@@ -372,9 +372,9 @@ function Show-TestSiteLateralityResults {
     }
 
     $rtbResults.AppendText("`r`n")
-    $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
+    $rtbResults.SelectionFont = Get-BoldFont $rtbResults.Font
     $rtbResults.AppendText("LATERALITY`r`n")
-    $rtbResults.SelectionFont = New-Object System.Drawing.Font("Consolas", 10)
+    $rtbResults.SelectionFont = $rtbResults.Font
 
     if ($Result.LateralityCode) {
         $rtbResults.AppendText("  Code:         $($Result.LateralityCode)`r`n")
@@ -437,10 +437,10 @@ function Show-TestSiteLateralityResults {
                     $rtbSourceText.SelectionColor = [System.Drawing.Color]::Black
                 }
                 else {
-                    $rtbSourceText.SelectionFont = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
+                    $rtbSourceText.SelectionFont = Get-BoldFont $rtbSourceText.Font
                     $rtbSourceText.SelectionColor = [System.Drawing.Color]::DarkBlue
                     $rtbSourceText.AppendText("$identifierLine`n")
-                    $rtbSourceText.SelectionFont = New-Object System.Drawing.Font("Consolas", 9)
+                    $rtbSourceText.SelectionFont = $rtbSourceText.Font
                     $rtbSourceText.SelectionColor = [System.Drawing.Color]::Black
 
                     if (-not [string]::IsNullOrWhiteSpace($textContent)) {
@@ -702,7 +702,7 @@ function Add-RichTextBoxBold {
     $text = $RichTextBox.Text
     $searchLower = $SearchText.ToLower()
     $textLower = $text.ToLower()
-    $boldFont = New-Object System.Drawing.Font($RichTextBox.Font, [System.Drawing.FontStyle]::Bold)
+    $boldFont = Get-BoldFont $RichTextBox.Font
 
     $startIndex = 0
     while ($true) {

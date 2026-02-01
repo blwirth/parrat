@@ -11,6 +11,22 @@ $script:BoldIds = @(
     "laterality"
 )
 
+$script:CachedBoldFont = $null
+$script:CachedBoldFontKey = $null
+
+function Get-BoldFont {
+    param([System.Drawing.Font]$BaseFont)
+    $key = "$($BaseFont.FontFamily.Name)|$($BaseFont.Size)"
+    if ($script:CachedBoldFont -and $script:CachedBoldFontKey -eq $key) {
+        return $script:CachedBoldFont
+    }
+    $script:CachedBoldFont = New-Object System.Drawing.Font(
+        $BaseFont.FontFamily, $BaseFont.Size, [System.Drawing.FontStyle]::Bold
+    )
+    $script:CachedBoldFontKey = $key
+    return $script:CachedBoldFont
+}
+
 $script:TextFieldIds = @(
     "textDxProcPe",
     "textDxProcXRayScan",
@@ -46,11 +62,7 @@ function Add-LineToRichTextBox {
     $Box.SelectionLength = 0
 
     if ($Bold) {
-        $Box.SelectionFont = New-Object System.Drawing.Font(
-            $Box.Font.FontFamily,
-            $Box.Font.Size,
-            [System.Drawing.FontStyle]::Bold
-        )
+        $Box.SelectionFont = Get-BoldFont $Box.Font
     }
     else {
         $Box.SelectionFont = $Box.Font
@@ -215,11 +227,7 @@ function Set-Hl7SyntaxHighlighting {
                 'PID' { $RichTextBox.SelectionColor = $colorPid }
                 default { $RichTextBox.SelectionColor = $colorSegment }
             }
-            $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                $RichTextBox.Font.FontFamily,
-                $RichTextBox.Font.Size,
-                [System.Drawing.FontStyle]::Bold
-            )
+            $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
         }
     }
 
@@ -245,11 +253,7 @@ function Set-Hl7SyntaxHighlighting {
             $field5Length = $fields[5].Length
             if ($field5Length -gt 0) {
                 $RichTextBox.Select($fieldStart, $field5Length)
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
     }
@@ -279,11 +283,7 @@ function Set-Hl7SyntaxHighlighting {
             if ($comp1Length -gt 0) {
                 $RichTextBox.Select($fieldStart, $comp1Length)
                 $RichTextBox.SelectionColor = $colorObxId
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
 
@@ -298,11 +298,7 @@ function Set-Hl7SyntaxHighlighting {
             $comp1Length = $components[0].Length
             if ($comp1Length -gt 0) {
                 $RichTextBox.Select($fieldStart, $comp1Length)
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
     }
@@ -378,11 +374,7 @@ function Set-Hl7PanelHighlighting {
                 'PID' { $RichTextBox.SelectionColor = $colorPid }
                 default { $RichTextBox.SelectionColor = $colorSegment }
             }
-            $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                $RichTextBox.Font.FontFamily,
-                $RichTextBox.Font.Size,
-                [System.Drawing.FontStyle]::Bold
-            )
+            $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
         }
     }
 
@@ -403,11 +395,7 @@ function Set-Hl7PanelHighlighting {
             $field5Length = $fields[5].Length
             if ($field5Length -gt 0) {
                 $RichTextBox.Select($StartOffset + $fieldStart, $field5Length)
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
     }
@@ -433,11 +421,7 @@ function Set-Hl7PanelHighlighting {
             if ($comp1Length -gt 0) {
                 $RichTextBox.Select($StartOffset + $fieldStart, $comp1Length)
                 $RichTextBox.SelectionColor = $colorObxId
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
 
@@ -450,11 +434,7 @@ function Set-Hl7PanelHighlighting {
             $comp1Length = $fields[5].Length
             if ($comp1Length -gt 0) {
                 $RichTextBox.Select($StartOffset + $fieldStart, $comp1Length)
-                $RichTextBox.SelectionFont = New-Object System.Drawing.Font(
-                    $RichTextBox.Font.FontFamily,
-                    $RichTextBox.Font.Size,
-                    [System.Drawing.FontStyle]::Bold
-                )
+                $RichTextBox.SelectionFont = Get-BoldFont $RichTextBox.Font
             }
         }
     }
