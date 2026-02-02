@@ -254,11 +254,11 @@ $mnuTestSiteLatCustom = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuTestSiteLatCustom.Text = "Test custom text (Site/Lat)"
 
 $mnuFilterCurrentHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
-$mnuFilterCurrentHl7.Text = "Filter current HL7 (NOAH)"
+$mnuFilterCurrentHl7.Text = "Test current HL7 (NOAH)"
 $mnuFilterCurrentHl7.Enabled = $false
 
 $mnuFilterCustomPayload = New-Object System.Windows.Forms.ToolStripMenuItem
-$mnuFilterCustomPayload.Text = "Filter custom payload (NOAH)"
+$mnuFilterCustomPayload.Text = "Test custom payload (NOAH)"
 
 [void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCurrent)
 [void]$mnuTools.DropDownItems.Add($mnuTestSiteLatCustom)

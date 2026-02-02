@@ -260,16 +260,16 @@ function Get-BtnNoahMenuHandler {
         # Create context menu
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-        # Menu item 1: Filter current HL7
+        # Menu item 1: Test current HL7
         $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemSelected.Text = "Filter current HL7"
+        $menuItemSelected.Text = "Test current HL7"
         $menuItemSelected.Add_Click({
             Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
         })
 
-        # Menu item 2: Filter custom payload
+        # Menu item 2: Test custom payload
         $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
-        $menuItemCustom.Text = "Filter custom payload"
+        $menuItemCustom.Text = "Test custom payload"
         $menuItemCustom.Add_Click({
             Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
         })

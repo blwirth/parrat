@@ -24,9 +24,39 @@ These utilities require the working file to be loaded into the application.
 
 === Opening a File
 
-To select a file to view, click *Open…* and navigate the native file explorer. Supported file formats currently include HL7 and XML. Pipe-delimited files are not supported. Only one file can be viewed at a time.
+To select a file to view, select *Open* from the *File* menu and navigate the native file explorer. Supported file formats currently include HL7 and XML. Pipe-delimited files are not supported. Only one file can be viewed at a time.
 
-Once loaded, the left panel lists the records. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel. The status bar at the bottom displays the current record number, total record count, and the number of selected records (for example, "Tumor 1 of 25 (3 selected)").
+Once loaded, the left panel lists the records in a navigation grid. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel. The status bar at the bottom displays the current record number, total record count, and the number of selected records (for example, "Tumor 1 of 25 (3 selected)").
+
+==== Navigation Grid Columns
+
+The navigation grid displays different columns depending on the file type.
+
+*XML files*:
+
+* *Selected* (checkbox)
+* *Index*
+* *nameLast*
+* *nameFirst*
+* *dateOfBirth*
+* *pathReportNumber1*
+* *primarySite*
+* *dateOfDiagnosis*
+
+*HL7 files*:
+
+* *Selected* (checkbox)
+* *Index*
+* *nameLast*
+* *nameFirst*
+* *dateOfBirth*
+* *patientId*
+* *messageType*
+* *orderDateTime*
+
+==== Sorting by Column
+
+Clicking any column header (except *Selected*) sorts the navigation grid by that column. Clicking the same header again reverses the sort order. This applies to both XML and HL7 files.
 
 ==== Recently Opened Files
 
@@ -65,7 +95,7 @@ To clear the search, click the clear button (*✕*) or press `Escape` while the 
 
 === Comparing Records
 
-To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff*.
+To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff Records* from the *View* menu.
 
 This feature supports XML and HL7 records. Only two records may be compared. A warning is shown if fewer than two or more than two records are selected.
 
@@ -83,19 +113,19 @@ When comparing HL7 records, the application displays a line-by-line diff of the 
 
 === Showing the Original Record
 
-To show the raw message, select the message and click *Show Raw*. This function supports both XML and HL7 records.
+To show the raw message, select the record and choose *Raw Record* from the *View* menu. This function supports both XML and HL7 records.
 
 For both file types, the appropriate file-level headers or opening and closing tags are shown, allowing the abstract or report to be copied from this screen and used in other software.
 
 === Deduplicating Records
 
-There are several methods available to deduplicate messages within a single file. After clicking *Deduplicate…*, select the appropriate method from the context menu.
+There are several methods available to deduplicate messages within a single file. Select *Deduplicate...* from the *Edit* menu, then choose the appropriate method from the submenu.
 
 The methods below are listed from most conservative to least conservative.
 
 ==== Deduplication Methods
 
-* *True matches*: Records that are identical across most fields are considered matches, except for the following meta fields:
+* *Dedup true matches*: Records that are identical across most fields are considered matches, except for the following meta fields:
 +
 --
 * `dateCaseReportReceived`
@@ -111,9 +141,9 @@ The methods below are listed from most conservative to least conservative.
 * `physicianFollowUp`
 --
 
-* *pathReportNumber1*: Records with identical `pathReportNumber1` values are considered matches. For some reporters, addenda use the same `pathReportNumber1` value.
+* *Dedup by pathReportNumber1*: Records with identical `pathReportNumber1` values are considered matches. For some reporters, addenda use the same `pathReportNumber1` value.
 
-* *Primary key*: Records with identical `nameLast`, `nameFirst`, `dateOfBirth`, `primarySite`, and `laterality` values are considered matches.
+* *Dedup by primary key*: Records with identical `nameLast`, `nameFirst`, `dateOfBirth`, `primarySite`, and `laterality` values are considered matches.
 +
 For best results, primary site and laterality should be assigned to cases missing these values prior to using this method, as null values are considered matches.
 
@@ -167,11 +197,20 @@ After deduplication completes, a dialog prompts whether to open the newly create
 Currently, only XML records can be deduplicated.
 ====
 
-=== Assigning Primary Site and Laterality
+=== Assigning Fields
 
-To assign primary site and laterality to records missing this data, select *Assign Site/Lat*.
+To assign primary site, laterality, facility, and patient ID values, select *Assign...* from the *Edit* menu. This opens the unified assignment dialog, which combines all field assignment operations into a single workflow.
 
-This function uses the JSONL files located in `/data/dictionaries`. For information on editing these files within the client, see <<Managing Coding Tables>>.
+The dialog header displays the loaded filename, tumor count, and patient count. Each assignment type can be independently enabled or disabled using its checkbox. A status label next to each option shows how many records already have that field populated (e.g., "12 of 25 tumors have primary site").
+
+[NOTE]
+====
+Only NAACCR XML files can be assigned these fields.
+====
+
+==== Primary Site and Laterality
+
+When *Assign Primary Site* or *Assign Laterality* is checked, the application assigns values to records missing this data using the JSONL files located in `/data/dictionaries`. For information on editing these files within the client, see <<Managing Coding Tables>>.
 
 Several heuristics are applied to assign the most accurate primary site:
 
@@ -186,16 +225,51 @@ In general:
 
 This functionality is currently simple and does not accurately handle metastatic reports. For example, a liver biopsy showing metastatic lung cancer will likely be coded to the liver.
 
-Existing primary site and laterality values are not overwritten.
+Existing values are not overwritten unless *Override existing values* is selected. The override checkbox is displayed in red as a warning.
 
-A summary of the changes to be applied is displayed and may be saved in `.csv` format.
+==== Facility
 
-The new file is saved to the same location as the original file, with the suffix `-psite` appended to the original filename. After the operation completes, a dialog prompts whether to open the newly created file.
+When *Assign Facility* is checked, a 10-digit facility code is assigned to every record in the file.
 
-[NOTE]
-====
-Only NAACCR XML files contain these variables. As a result, only these records can be assigned primary site and laterality.
-====
+[source,xml]
+----
+<Item naaccrId="reportingFacility">0006120000</Item>
+----
+
+Seven-digit facility codes present in the filename are automatically detected and displayed as "(auto-detected)". If no seven-digit code is identified, the facility code may be entered manually. Codes shorter than 10 digits are automatically left-padded with zeros.
+
+Existing facility codes are not overwritten unless *Override existing values* is selected.
+
+==== Patient ID
+
+When *Assign Patient ID* is checked, a unique patient ID is assigned. A unique patient ID is required to use the files in Match*Pro.
+
+[source,xml]
+----
+<Item naaccrId="patientId">00000001</Item>
+----
+
+Three assignment modes are available:
+
+* *Assign to patients without IDs only*: Only assigns patient IDs to patients that do not currently have one. The starting number defaults to the next available ID (highest existing ID + 1) and can be customized.
+
+* *Overwrite all (renumber all patients)*: Renumbers every patient sequentially, replacing any existing IDs. The starting number can be customized.
+
+* *Replace zeros only (start at 90000001)*: Only assigns IDs to patients with no ID or IDs that are all zeros. The starting number is fixed at `90000001`. This mode is intended for CRS Plus exports where pending abstracts have `0` for the patient ID, which causes multiplicative matching in Match*Pro.
+
+==== Preview and Output
+
+After selecting options, click *Analyze & Preview*. The application analyzes all records and displays a preview report showing before-and-after values for each record. The preview includes:
+
+* A summary line with total change counts for each field type
+* A data grid with before/after columns for all affected fields
+* A *Show only records with changes* filter (enabled by default)
+* A text preview panel showing the diagnostic text for the selected record
+
+From the preview, the following actions are available:
+
+* *Save Updated XML*: Writes the updated file. The output file is saved to the same location as the original file, with a suffix reflecting which fields were changed (e.g., `-psite-lat-fac-pid`). A dialog then prompts whether to open the newly created file.
+* *Save CSV Report*: Exports the full preview report as a CSV file.
 
 ==== Testing Site and Laterality Assignments
 
@@ -228,57 +302,21 @@ When testing site and laterality on HL7 files, certain OBX segments can be exclu
 
 To configure skip codes, select *OBX Skip Codes...* from the *Settings* menu.
 
-From this dialog, codes can be added, edited, or removed. Changes are saved to `/config/obx-skip-config.json`.
+The configuration dialog displays all current skip codes in a list with their code and description. From this dialog:
 
-=== Assigning Facility
+* *Add...*: Opens a subdialog to enter a new code (converted to uppercase) and an optional description.
+* *Edit...*: Opens the selected code for modification.
+* *Remove*: Deletes the selected code from the list.
 
-To assign a 10-digit facility code, select *Assign Facility*.
-
-Example:
-
-[source,xml]
-----
-<Item naaccrId="reportingFacility">0006120000</Item>
-----
-
-Seven-digit facility codes present in the filename are automatically detected. If no seven-digit code is identified, the facility code may be entered manually.
-
-Optionally, existing facility codes may be overwritten by selecting the appropriate checkbox. A warning is shown during confirmation.
-
-The facility code is assigned to every record in the file.
-
-The new file is saved to the same location as the original file, with the suffix `-facility` appended to the original filename. After the operation completes, a dialog prompts whether to open the newly created file.
-
-[NOTE]
-====
-Only NAACCR XML files contain the reporting facility field. As a result, only these records can be assigned a facility code.
-====
-
-=== Assigning Patient ID
-
-Records that do not have a patient ID
-
-[source,xml]
-----
-<Item naaccrId="patientId">00000001</Item>
-----
-
-can be assigned one by selecting *Add PID*. A unique patient ID is required to use the files in Match*Pro.
-
-CRS Plus exports abstracts that are pending by default. All pending abstracts have `0`s for the patient ID, which causes multiplicative matching in Match*Pro. In this case, there is an option to assign only these records a patient ID starting at `90000001` (an arbitrarily high number not likely to be used).
-
-This does not overwrite existing valid patient IDs, which may be useful for tracking files downstream.
-
-[NOTE]
-====
-Since only NAACCR XML files contain the patient ID variable, only these records can be assigned a patient ID.
-====
+Changes are saved to `/config/obx-skip-config.json`. If the configuration file does not exist, the application uses default skip codes.
 
 === Modifying OBX Segments
 
+OBX modification tools are available under *Edit* > *Modify HL7*. This submenu is enabled only when an HL7 file is loaded.
+
 ==== Fixing Malformed OBX Segments
 
-To fix malformed OBX segments that cause NOAH to fail processing an HL7 record, select *Fix OBX3.1*.
+To fix malformed OBX segments that cause NOAH to fail processing an HL7 record, select *Fix OBX 3.1* from the *Modify HL7* submenu.
 
 Malformed OBX segments contain fewer than five pipe delimiters. For example:
 
@@ -299,7 +337,7 @@ For information on removing empty OBX segments, see <<Removing Empty OBX Segment
 
 Some HL7 records contain excessive empty OBX segments (segments with no OBX-5 value). While these provide visual spacing, they are non-performant for downstream processing.
 
-To remove trailing and duplicate intra-record empty OBX segments, select *Remove Empty Segments*.
+To remove trailing and duplicate intra-record empty OBX segments, select *Remove Empty OBX 5* from the *Modify HL7* submenu.
 
 Example:
 
@@ -329,7 +367,7 @@ NOAH automatically removes empty segments when outputting to XML. HL7 records ar
 
 === Exporting Records
 
-There are several methods for exporting records.
+Export options are available from the *Export* menu. The available items depend on the loaded file type.
 
 * *Export Selected as XML* or *Export Selected as HL7*
 +
@@ -350,27 +388,34 @@ If the JSON file is missing, the application falls back to the XML data dictiona
 
 Custom header configurations can be saved via *Save Config* and loaded via *Load Config*.
 
+When exporting HL7 records to CSV, the following fixed columns are used:
+
+* `LastName`
+* `FirstName`
+* `DateOfBirth`
+* `MessageDateTime`
+
 [NOTE]
 ====
 Column headers cannot currently be configured when exporting HL7 records to CSV.
 ====
 
-=== Classifying Record Reportability with NOAH
+=== Filtering Records with NOAH
 
-To classify the reportability of the selected record, select *NOAH…* and then *POST Selected HL7*.
+To filter the selected record for reportability using NOAH, select *Test current HL7 (NOAH)* from the *Tools* menu.
 
-The raw HL7 message is sent to NOAH’s reportability, entity recognition, and coding API. Results are returned in a new pop-up window, and output files are stored in a temporary folder, which can be accessed via *Open Working Folder*.
+The raw HL7 message is sent to NOAH's reportability, entity recognition, and coding API. Results are returned in a new pop-up window, and output files are stored in a temporary folder, which can be accessed via *Open Working Folder*.
 
-On first use, the model GUID must be configured. This can be obtained from NOAH’s *Update NLP Models* screen. The path to the NOAH executable must also be configured. These settings are stored in the `/config` folder.
+On first use, the model GUID must be configured. This can be obtained from NOAH's *Update NLP Models* screen. The path to the NOAH executable must also be configured. These settings are stored in the `/config` folder and can be modified via *NOAH Configuration* in the *Settings* menu.
 
 If NOAH is already running on another server, the POST request will fail.
 
 [NOTE]
 ====
-Since NOAH only accepts HL7 records, *POST Selected HL7* is disabled when an XML file is loaded.
+Since NOAH only accepts HL7 records, *Test current HL7 (NOAH)* is disabled when an XML file is loaded.
 ====
 
-For sending a custom payload independent of a loaded file, see <<Classifying Custom Payload Reportability with NOAH>>.
+For sending a custom payload independent of a loaded file, see <<Testing Custom Payload with NOAH>>.
 
 <<<
 == Additional Utilities
@@ -379,15 +424,17 @@ These utilities do not require a working file to be loaded.
 
 === Concatenating Files
 
-Files can be concatenated by selecting *Concatenate…*. Only files of the same format may be concatenated.
+Files can be concatenated by selecting *Concatenate...* from the *File* menu. Only files of the same format may be concatenated.
 
 * *Concatenate XML*: Only files with identical headers or versions (for example NAACCR v250) should be concatenated. To concatenate files of differing versions, first convert them using NorthCon.
 
 * *Concatenate HL7*
 
+* *Concatenate TXT*
+
 A confirmation screen displays the total number of files, tumors, and record type.
 
-==== Duplicate Patient ID Warning 
+==== Duplicate Patient ID Warning
 
 When concatenating XML files, the application checks for duplicate patient IDs across all selected files. If duplicates are found, a warning dialog displays the affected patient IDs and their occurrence counts. Three options are available:
 
@@ -412,7 +459,7 @@ The PDF must first be converted to plain text (`.txt`) using Adobe Acrobat.
 
 To convert a text file:
 
-. Select *Convert TXT*
+. Select *Convert TXT* from the *File* menu
 . Browse to the input file
 . Select the correct facility from the dropdown
 
@@ -422,9 +469,9 @@ A summary of parsed cases is shown for quality review. Missing fields indicate p
 
 If the results appear correct, select *Convert to HL7*.
 
-=== Classifying Custom Payload Reportability with NOAH
+=== Testing Custom Payload with NOAH
 
-To send a custom payload to NOAH, select *NOAH…* and then *POST Custom Payload*.
+To send a custom payload to NOAH, select *Test custom payload (NOAH)* from the *Tools* menu.
 
 In the pop-up window, enter the text to be classified. This text is assigned to OBX-5.1 in the POST payload. Minimal required HL7 headers are preconfigured.
 
@@ -432,7 +479,7 @@ If NOAH is already running on another server, the POST request will fail.
 
 === Managing Coding Tables
 
-Coding tables used for assigning primary site and laterality can be managed by selecting *Manage Coding Tables…*.
+Coding tables used for assigning primary site and laterality can be managed by selecting *Manage Coding Tables* from the *Settings* menu.
 
 Available tables include:
 
@@ -458,7 +505,7 @@ These tables are stored as JSON or NDJSON files in `/data/dictionaries` and may 
 
 Site coding rules allow customization of site coding heuristics with support for complex matching logic. These rules are evaluated before standard dictionary lookups, enabling precise control over how specific pathology phrases are coded.
 
-To open the Site Coding Rules editor, select *Manage Coding Tables…* > *Site Coding Rules*.
+To open the Site Coding Rules editor, select *Manage Coding Tables* > *Site Coding Rules* from the *Settings* menu.
 
 ===== Pattern Properties
 
@@ -517,6 +564,11 @@ Site assignment follows this priority:
 . Melanoma dictionary (if "melanoma" appears in text)
 . Standard topography dictionary
 
+[NOTE]
+====
+This program currently does not handle melanoma arising from non-cutaneous sites (e.g., ocular melanoma). These will be coded as cutaneous melanoma.
+====
+
 ===== Adding and Editing Patterns
 
 * *Add*: Creates a new pattern. A dialog opens to configure all pattern properties.
@@ -532,6 +584,17 @@ When adding terms to an expression:
 * *Add {topo}*: Adds a dynamic template that matches any topography SearchPhrase. The site code is looked up from the matching topography entry.
 
 Changes are saved to `/data/dictionaries/SiteCodingRules.jsonl`.
+
+===== Testing Patterns
+
+The pattern edit dialog includes a test section for verifying rules against sample text. Enter one phrase per line in the test input area and click *Test*.
+
+Results are displayed with syntax highlighting:
+
+* *Green background*: Matched terms within the phrase
+* *Gray text with "NO MATCH"*: Phrases that did not match the pattern
+
+Each matched result also displays the assigned site code and detected laterality.
 
 === Logging
 
@@ -551,7 +614,7 @@ Large files can be split for manageability.
 
 To split a file:
 
-. Select *Split…*
+. Select *Split...* from the *File* menu
 . Choose the file using the native file browser
 . Select the number of output files
 
@@ -559,7 +622,7 @@ Files are split by last name to preserve effective deduplication. Output files a
 
 === Diffing Files
 
-To compare two NAACCR files against each other, select *Diff Files…* from the *File* menu.
+To compare two NAACCR files against each other, select *Diff Files...* from the *File* menu.
 
 A setup dialog prompts for file selection and comparison options. After selecting the first file, the second file is restricted to the same type (both XML or both HL7).
 
