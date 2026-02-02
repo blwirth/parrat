@@ -33,7 +33,6 @@ function Show-Hl7Message {
     }
     $message = $Messages[$Index]
 
-    # Get UI controls
     $rtbPath = $Controls['rtbPath']
     $rtbItems = $Controls['rtbItems']
     $lblIndex = $Controls['lblIndex']
@@ -41,7 +40,6 @@ function Show-Hl7Message {
     $btnNext = $Controls['btnNext']
     $gridNav = $Controls['gridNav']
 
-    # Clear text boxes
     $rtbPath.Clear()
     $rtbItems.Clear()
 
@@ -60,11 +58,10 @@ function Show-Hl7Message {
     Add-LineToRichTextBox $rtbPath ("=== PATHOLOGY REPORT TEXT ===") $true
     Add-LineToRichTextBox $rtbPath ""
 
-    # Extract and display clean OBX text
     if ($message.Segments.ContainsKey("OBX")) {
         $cleanText = Get-ObxTextContent -ObxSegments $message.Segments["OBX"]
         if (-not [string]::IsNullOrWhiteSpace($cleanText)) {
-            $lines = $cleanText -split "(`r`n|`n|`r)"
+            $lines = $cleanText -split "(?:`r`n|`n|`r)"
             foreach ($line in $lines) {
                 Add-LineToRichTextBox $rtbPath $line
             }
@@ -81,7 +78,6 @@ function Show-Hl7Message {
     Add-LineToRichTextBox $rtbItems ("Message {0} of {1}" -f ($Index + 1), $Messages.Count) $true
     Add-LineToRichTextBox $rtbItems ""
 
-    # Message Header Info
     Add-LineToRichTextBox $rtbItems "=== MESSAGE INFO ===" $true
     Add-LineToRichTextBox $rtbItems ("Message Type: {0}" -f $message.MessageType) $true
     Add-LineToRichTextBox $rtbItems ("Date/Time: {0}" -f (Format-Hl7DateTime $message.MessageDateTime))
@@ -89,7 +85,6 @@ function Show-Hl7Message {
     Add-LineToRichTextBox $rtbItems ("Sending Facility: {0}" -f $message.SendingFacility)
     Add-LineToRichTextBox $rtbItems ""
 
-    # Patient Info
     Add-LineToRichTextBox $rtbItems "=== PATIENT INFO ===" $true
     Add-LineToRichTextBox $rtbItems ("Patient ID: {0}" -f $message.PatientId) $true
     Add-LineToRichTextBox $rtbItems ("Name: {0}" -f $message.PatientName) $true
@@ -99,7 +94,6 @@ function Show-Hl7Message {
     Add-LineToRichTextBox $rtbItems ("Sex: {0}" -f $message.Sex)
     Add-LineToRichTextBox $rtbItems ""
 
-    # Order Info
     if (-not [string]::IsNullOrWhiteSpace($message.OrderDateTime) -or 
         -not [string]::IsNullOrWhiteSpace($message.OrderingProvider)) {
         Add-LineToRichTextBox $rtbItems "=== ORDER INFO ===" $true
@@ -122,11 +116,9 @@ function Show-Hl7Message {
         Add-LineToRichTextBox $rtbItems ""
     }
 
-    # Raw HL7 Segments
     Add-LineToRichTextBox $rtbItems "=== RAW HL7 SEGMENTS ===" $true
     Add-LineToRichTextBox $rtbItems ""
 
-    # Display segments grouped by type
     $segmentOrder = @("MSH", "PID", "PV1", "ORC", "OBR", "NTE", "OBX")
     $displayedTypes = @()
 
@@ -134,7 +126,6 @@ function Show-Hl7Message {
         if ($message.Segments.ContainsKey($segType)) {
             Add-LineToRichTextBox $rtbItems ("--- $segType Segment(s) ---") $true
             foreach ($seg in $message.Segments[$segType]) {
-                # Format segment with field separators visible
                 $formattedSeg = Format-Hl7SegmentForDisplay -Segment $seg
                 Add-LineToRichTextBox $rtbItems $formattedSeg
             }
@@ -155,7 +146,6 @@ function Show-Hl7Message {
         }
     }
 
-    # Apply syntax highlighting to RAW HL7 SEGMENTS section
     $rtbText = $rtbItems.Text
     $rawSectionMarker = "=== RAW HL7 SEGMENTS ==="
     $rawSectionStart = $rtbText.IndexOf($rawSectionMarker)
@@ -163,7 +153,6 @@ function Show-Hl7Message {
         Set-Hl7PanelHighlighting -RichTextBox $rtbItems -StartOffset ($rawSectionStart + $rawSectionMarker.Length)
     }
 
-    # Highlight search matches in both panels
     $txtSearch = $Controls['txtSearch']
     if ($null -ne $txtSearch) {
         $searchText = $txtSearch.Text
@@ -171,7 +160,6 @@ function Show-Hl7Message {
         Invoke-SearchHighlight -RichTextBox $rtbItems -SearchText $searchText
     }
 
-    # Update navigation
     $dataTable = $gridNav.DataSource
     $selectedCount = if ($null -ne $dataTable) { @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count } else { 0 }
     $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($Index + 1), $Messages.Count, $selectedCount
@@ -188,7 +176,6 @@ function Format-Hl7SegmentForDisplay {
         return ""
     }
 
-    # Split into fields and format with field numbers for readability
     $fields = $Segment -split '\|'
     $segType = $fields[0]
     
@@ -246,7 +233,6 @@ function Show-RawHl7ForMessage {
     $rtb.WordWrap = $false
     $rtb.ScrollBars = "Both"
 
-    # Apply syntax highlighting
     Set-Hl7SyntaxHighlighting -RichTextBox $rtb -Hl7Text $rawContent
 
     $hl7Form.Controls.Add($rtb)
