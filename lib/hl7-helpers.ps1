@@ -1,6 +1,18 @@
 # hl7-helpers.ps1
 # Shared utilities for HL7 message processing
 
+# Pre-compiled regex and lookup for HL7 escape sequence replacement (single-pass)
+$script:Hl7EscapeRegex = [regex]::new('\\(X0D|X0A|E|F|S|T|R)\\', [System.Text.RegularExpressions.RegexOptions]::Compiled)
+$script:Hl7EscapeMap = @{
+    'X0D' = "`r"
+    'X0A' = "`n"
+    'E'   = '\'
+    'F'   = '|'
+    'S'   = '^'
+    'T'   = '&'
+    'R'   = '~'
+}
+
 function Get-Hl7Field {
     param(
         [string]$Segment,
@@ -340,15 +352,11 @@ function Get-ObxTextContent {
             continue
         }
         
-        # Handle HL7 escape sequences if present
-        # Common ones: \X0D\ = carriage return, \X0A\ = line feed, \E\ = escape, \F\ = field separator
-        $observationValue = $observationValue -replace '\\X0D\\', "`r"
-        $observationValue = $observationValue -replace '\\X0A\\', "`n"
-        $observationValue = $observationValue -replace '\\E\\', '\'
-        $observationValue = $observationValue -replace '\\F\\', '|'
-        $observationValue = $observationValue -replace '\\S\\', '^'
-        $observationValue = $observationValue -replace '\\T\\', '&'
-        $observationValue = $observationValue -replace '\\R\\', '~'
+        # Replace HL7 escape sequences in a single pass
+        $observationValue = $script:Hl7EscapeRegex.Replace($observationValue, {
+            param($m)
+            $script:Hl7EscapeMap[$m.Groups[1].Value]
+        })
         
         $textLines += $observationValue
     }
