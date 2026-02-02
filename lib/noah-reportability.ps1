@@ -822,14 +822,17 @@ function Invoke-NoahReportabilityApi {
         
         $errorDetails = $_.Exception.Message
         if ($_.Exception.Response) {
+            $reader = $null
             try {
                 $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
                 $responseBody = $reader.ReadToEnd()
-                $reader.Close()
                 $errorDetails += "`nResponse: $responseBody"
             }
             catch {
                 # Ignore errors reading response stream
+            }
+            finally {
+                if ($null -ne $reader) { $reader.Dispose() }
             }
         }
         
