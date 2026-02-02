@@ -1,7 +1,7 @@
 # assign-unified.ps1
 # Unified NAACCR XML assignment dialog - combines Primary Site/Laterality, Facility, and Patient ID
 
-. "$PSScriptRoot\xml-helpers.ps1"
+. "$PSScriptRoot\syntax-helpers.ps1"
 
 function Get-ItemValue {
     param(

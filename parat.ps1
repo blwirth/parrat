@@ -11,7 +11,7 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 . "$PSScriptRoot\lib\logging.ps1"
 Initialize-ParatLogging
 
-. "$PSScriptRoot\lib\xml-helpers.ps1"
+. "$PSScriptRoot\lib\syntax-helpers.ps1"
 . "$PSScriptRoot\lib\xml-viewer.ps1"
 . "$PSScriptRoot\lib\hl7-helpers.ps1"
 . "$PSScriptRoot\lib\hl7-viewer.ps1"

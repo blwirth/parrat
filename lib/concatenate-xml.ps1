@@ -1,7 +1,7 @@
 # concatenate-xml.ps1
 # NAACCR XML concatenation utilities
 
-. "$PSScriptRoot\xml-helpers.ps1"
+. "$PSScriptRoot\syntax-helpers.ps1"
 
 function Get-DuplicatePatientIds {
     param(

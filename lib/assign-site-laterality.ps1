@@ -1,7 +1,7 @@
 # assign-site-laterality.ps1
 # NAACCR XML primary site and laterality assignment utilities
 
-. "$PSScriptRoot\xml-helpers.ps1"
+. "$PSScriptRoot\syntax-helpers.ps1"
 
 # Cache for loaded Excel maps to avoid reloading on every call
 # More important if we don't have the .json and .jsonl files created

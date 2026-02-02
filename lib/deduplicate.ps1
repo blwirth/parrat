@@ -1,7 +1,7 @@
 # deduplicate.ps1
 # NAACCR XML deduplication utilities
 
-. "$PSScriptRoot\xml-helpers.ps1"
+. "$PSScriptRoot\syntax-helpers.ps1"
 
 function Get-PatientTumorGroups {
     param(
