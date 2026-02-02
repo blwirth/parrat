@@ -3,7 +3,18 @@
 
 function Get-BtnSplitHandler {
     return {
-        Start-SplitFile
+        try {
+            Start-SplitFile
+        }
+        catch {
+            Write-ParatError -Message "Split file failed" -Action "SPLIT" -ErrorRecord $_
+            [System.Windows.Forms.MessageBox]::Show(
+                "Error during file split: $($_.Exception.Message)",
+                "Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+        }
     }
 }
 

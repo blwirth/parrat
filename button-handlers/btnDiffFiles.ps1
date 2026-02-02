@@ -8,6 +8,17 @@ function Get-BtnDiffFilesHandler {
     #>
     
     return {
-        Show-FileDiff
+        try {
+            Show-FileDiff
+        }
+        catch {
+            Write-ParatError -Message "File diff failed" -Action "DIFF_FILES" -ErrorRecord $_
+            [System.Windows.Forms.MessageBox]::Show(
+                "Error during file diff: $($_.Exception.Message)",
+                "Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+        }
     }
 }
