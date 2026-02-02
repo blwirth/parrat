@@ -35,8 +35,11 @@ function Initialize-NaaccrDictionary {
             foreach ($item in $items) {
                 $xmlId = $item.id
                 if (-not [string]::IsNullOrWhiteSpace($xmlId)) {
+                    $sortKey = 999999
+                    [void][int]::TryParse($item.n, [ref]$sortKey)
                     $script:NaaccrDictionary[$xmlId] = @{
                         Number = $item.n
+                        NumberInt = $sortKey
                         Name = $item.name
                         XmlId = $xmlId
                         ParentElement = $item.p
@@ -55,8 +58,11 @@ function Initialize-NaaccrDictionary {
             foreach ($item in $xml.NaaccrDataItemExport.NaaccrDataItems.NaaccrDataItem) {
                 $xmlId = $item.XmlNaaccrId
                 if (-not [string]::IsNullOrWhiteSpace($xmlId)) {
+                    $sortKey = 999999
+                    [void][int]::TryParse($item.ItemNumber, [ref]$sortKey)
                     $script:NaaccrDictionary[$xmlId] = @{
                         Number = $item.ItemNumber
+                        NumberInt = $sortKey
                         Name = $item.ItemName
                         XmlId = $xmlId
                         ParentElement = $item.XmlParentId
@@ -91,11 +97,8 @@ function Get-NaaccrDictionary {
         Initialize-NaaccrDictionary | Out-Null
     }
     
-    # Return as array sorted by number (safely parse as int)
-    $items = $script:NaaccrDictionary.Values | Sort-Object { 
-        $num = 0
-        if ([int]::TryParse($_.Number, [ref]$num)) { $num } else { 999999 }
-    }
+    # Return as array sorted by pre-computed integer key
+    $items = $script:NaaccrDictionary.Values | Sort-Object { $_.NumberInt }
     return $items
 }
 
