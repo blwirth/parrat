@@ -28,6 +28,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\lib\add-pid.ps1"
 . "$PSScriptRoot\lib\fix-obx.ps1"
 . "$PSScriptRoot\lib\remove-empty-obx5.ps1"
+. "$PSScriptRoot\lib\remove-variable.ps1"
 . "$PSScriptRoot\lib\naaccr-dictionary.ps1"
 . "$PSScriptRoot\lib\export-config.ps1"
 . "$PSScriptRoot\lib\export-selected-xml.ps1"
@@ -56,6 +57,7 @@ Initialize-ParatLogging
 . "$PSScriptRoot\button-handlers\btnAddPid.ps1"
 . "$PSScriptRoot\button-handlers\btnFixObx.ps1"
 . "$PSScriptRoot\button-handlers\btnRemoveEmptyObx5.ps1"
+. "$PSScriptRoot\button-handlers\btnRemoveVariable.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahReportability.ps1"
 . "$PSScriptRoot\button-handlers\btnNoahMenu.ps1"
 . "$PSScriptRoot\button-handlers\btnExportSelectedXml.ps1"
@@ -219,6 +221,11 @@ $mnuModifyHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuModifyHl7.Text = "Modify HL7"
 $mnuModifyHl7.Enabled = $false
 [void]$mnuEdit.DropDownItems.Add($mnuModifyHl7)
+
+$mnuModifyXml = New-Object System.Windows.Forms.ToolStripMenuItem
+$mnuModifyXml.Text = "Modify XML"
+$mnuModifyXml.Enabled = $false
+[void]$mnuEdit.DropDownItems.Add($mnuModifyXml)
 
 [void]$mnuEdit.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
@@ -510,6 +517,7 @@ $script:Controls = @{
     'mnuDiffRecords' = $mnuDiffRecords
     'mnuAssign' = $mnuAssign
     'mnuModifyHl7' = $mnuModifyHl7
+    'mnuModifyXml' = $mnuModifyXml
     'mnuDeduplicate' = $mnuDeduplicate
     'mnuExport' = $mnuExport
     'mnuTools' = $mnuTools
@@ -557,7 +565,8 @@ function Update-ButtonStatesForFileType {
     $isXmlFile = ($FileType -eq 'xml')
     
     if ($Controls['mnuAssign']) { $Controls['mnuAssign'].Enabled = $isXmlFile }
-    
+    if ($Controls['mnuModifyXml']) { $Controls['mnuModifyXml'].Enabled = $isXmlFile }
+
     $isHl7File = ($FileType -eq 'hl7')
     
     if ($Controls['mnuModifyHl7']) { $Controls['mnuModifyHl7'].Enabled = $isHl7File }
@@ -817,6 +826,11 @@ $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX 5"
 $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 [void]$mnuModifyHl7.DropDownItems.Add($menuItemRemoveEmptyObx5)
+
+$menuItemRemoveVariable = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemRemoveVariable.Text = "Remove Variable..."
+$menuItemRemoveVariable.Add_Click((Get-BtnRemoveVariableHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+[void]$mnuModifyXml.DropDownItems.Add($menuItemRemoveVariable)
 
 $mnuTestSiteLatCurrent.Add_Click((Get-BtnTestSiteLatCurrentHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
 $mnuTestSiteLatCustom.Add_Click((Get-BtnTestSiteLatCustomHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))

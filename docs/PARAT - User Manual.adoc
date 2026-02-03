@@ -365,6 +365,18 @@ This function removes these lines so records process faster in NOAH and other do
 NOAH automatically removes empty segments when outputting to XML. HL7 records are not truncated by NOAH, so this feature is only useful when outputting to HL7.
 ====
 
+=== Modifying XML Variables
+
+XML modification tools are available under *Edit* > *Modify XML*. This submenu is enabled only when an XML file is loaded.
+
+==== Removing a Variable
+
+To remove all occurrences of a specific variable from the file, select *Remove Variable...* from the *Modify XML* submenu.
+
+The application scans the loaded XML and presents a searchable list of all variables present, with occurrence counts and the structural levels at which each appears (NaaccrData, Patient, or Tumor). Variables not found in the standard dictionary are labeled "(custom)".
+
+After selecting a variable, a confirmation dialog displays the variable name, occurrence count, and levels. The original file is not modified; a new file is created with the suffix `-removed-{variableName}` in the same directory.
+
 === Exporting Records
 
 Export options are available from the *Export* menu. The available items depend on the loaded file type.
