@@ -371,11 +371,13 @@ XML modification tools are available under *Edit* > *Modify XML*. This submenu i
 
 ==== Removing a Variable
 
-To remove all occurrences of a specific variable from the file, select *Remove Variable...* from the *Modify XML* submenu.
+To remove all occurrences of one or more variables from the file, select *Remove Variable...* from the *Modify XML* submenu.
 
-The application scans the loaded XML and presents a searchable list of all variables present, with occurrence counts and the structural levels at which each appears (NaaccrData, Patient, or Tumor). Variables not found in the standard dictionary are labeled "(custom)".
+The application scans the loaded XML and presents a dual-list selection dialog. The left list displays all variables currently in the file, with occurrence counts and the structural levels at which each appears (NaaccrData, Patient, or Tumor). Variables not found in the standard dictionary are labeled "(custom)". A search box above the left list filters variables in real time.
 
-After selecting a variable, a confirmation dialog displays the variable name, occurrence count, and levels. The original file is not modified; a new file is created with the suffix `-removed-{variableName}` in the same directory.
+To mark variables for removal, select one or more items in the left list and click the right arrow button (or double-click). Selected variables move from the left list to the right "Variables to Remove" list. To move variables back, select them in the right list and click the left arrow button (or double-click). Multi-select is supported using `Shift+Click` and `Ctrl+Click`.
+
+After selecting variables, click *Remove*. A confirmation dialog displays each selected variable with its occurrence count and levels, along with the total number of occurrences to be removed. The original file is not modified; a new file is created with the suffix `-rm{number of variables}v` in the same directory.
 
 === Exporting Records
 
