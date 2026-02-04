@@ -325,6 +325,7 @@ $statusStrip.Dock = 'Bottom'
 $lblStatus = New-Object System.Windows.Forms.ToolStripStatusLabel
 $lblStatus.Text = "No file loaded"
 $lblStatus.Spring = $true
+$lblStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
 [void]$statusStrip.Items.Add($lblStatus)
 
 $lblFileName = New-Object System.Windows.Forms.ToolStripStatusLabel

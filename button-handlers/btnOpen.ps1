@@ -68,7 +68,7 @@ function Import-XmlFile {
             [System.Windows.Forms.MessageBox]::Show("No <Tumor> elements found in this file.", "No Tumors")
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No tumors found"
-            $Controls['lblFileName'].Text = "File: $fileName"
+            $Controls['lblFileName'].Text = "File: $FilePath"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -80,7 +80,7 @@ function Import-XmlFile {
         else {
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $ScriptVars['Tumors'].Count
-            $Controls['lblFileName'].Text = "File: $fileName"
+            $Controls['lblFileName'].Text = "File: $FilePath"
 
             Write-ParatLog -Level INFO -Message "Loaded $fileName with $($ScriptVars['Tumors'].Count) tumors" -Action "OPEN_FILE"
 
@@ -219,7 +219,7 @@ function Import-Hl7File {
             [System.Windows.Forms.MessageBox]::Show("No HL7 messages found in this file.", "No Messages")
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No messages found"
-            $Controls['lblFileName'].Text = "File: $fileName"
+            $Controls['lblFileName'].Text = "File: $FilePath"
             $Controls['rtbPath'].Clear()
             $Controls['rtbItems'].Clear()
             $Controls['gridNav'].DataSource = $null
@@ -255,7 +255,7 @@ function Import-Hl7File {
         
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count
-        $Controls['lblFileName'].Text = "File: $fileName"
+        $Controls['lblFileName'].Text = "File: $FilePath"
 
         Write-ParatLog -Level INFO -Message "Loaded $fileName with $($messages.Count) messages" -Action "OPEN_FILE"
 
