@@ -1,7 +1,7 @@
 function Show-VariableSelectionDialog {
     <#
     .SYNOPSIS
-        Shows a searchable list of NAACCR variables for the user to select.
+        Shows a dual-list shuttle dialog for selecting NAACCR variables to remove.
     .PARAMETER Variables
         Array of PSCustomObject from Get-UniqueNaaccrIds.
     .RETURNS
@@ -13,94 +13,219 @@ function Show-VariableSelectionDialog {
 
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = "Select Variables to Remove"
-    $dlg.Size = New-Object System.Drawing.Size(600, 500)
+    $dlg.Size = New-Object System.Drawing.Size(900, 520)
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'Sizable'
-    $dlg.MinimumSize = New-Object System.Drawing.Size(400, 300)
+    $dlg.MinimumSize = New-Object System.Drawing.Size(600, 350)
 
     $txtFilter = New-Object System.Windows.Forms.TextBox
     $txtFilter.Location = New-Object System.Drawing.Point(12, 12)
-    $txtFilter.Size = New-Object System.Drawing.Size(560, 23)
-    $txtFilter.Anchor = 'Top,Left,Right'
+    $txtFilter.Size = New-Object System.Drawing.Size(390, 23)
     $txtFilter.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 
-    # Placeholder text via a flag to avoid race conditions
+    # Placeholder text — set ForeColor before Text to avoid TextChanged race
     $placeholderText = "Search variables..."
-    $placeholderActive = $true
-    $txtFilter.Text = $placeholderText
     $txtFilter.ForeColor = [System.Drawing.Color]::Gray
+    $txtFilter.Text = $placeholderText
     $txtFilter.Add_GotFocus({
-        if ($placeholderActive) {
-            $placeholderActive = $false
+        if ($txtFilter.ForeColor -eq [System.Drawing.Color]::Gray) {
             $txtFilter.ForeColor = [System.Drawing.Color]::Black
             $txtFilter.Text = ""
         }
     })
     $txtFilter.Add_LostFocus({
         if ([string]::IsNullOrEmpty($txtFilter.Text)) {
-            $placeholderActive = $true
             $txtFilter.ForeColor = [System.Drawing.Color]::Gray
             $txtFilter.Text = $placeholderText
         }
     })
 
-    $lblCount = New-Object System.Windows.Forms.Label
-    $lblCount.Location = New-Object System.Drawing.Point(12, 40)
-    $lblCount.Size = New-Object System.Drawing.Size(560, 18)
-    $lblCount.Anchor = 'Top,Left,Right'
-    $lblCount.ForeColor = [System.Drawing.Color]::Gray
-    $lblCount.Text = "$($Variables.Count) of $($Variables.Count) variables"
+    $lblAvailable = New-Object System.Windows.Forms.Label
+    $lblAvailable.Location = New-Object System.Drawing.Point(12, 40)
+    $lblAvailable.Size = New-Object System.Drawing.Size(390, 18)
+    $lblAvailable.ForeColor = [System.Drawing.Color]::Gray
+    $lblAvailable.Text = "$($Variables.Count) of $($Variables.Count) variables"
 
-    $listBox = New-Object System.Windows.Forms.ListBox
-    $listBox.Location = New-Object System.Drawing.Point(12, 62)
-    $listBox.Size = New-Object System.Drawing.Size(560, 350)
-    $listBox.Anchor = 'Top,Bottom,Left,Right'
-    $listBox.Font = New-Object System.Drawing.Font("Consolas", 9)
-    $listBox.IntegralHeight = $false
-    $listBox.SelectionMode = 'MultiExtended'
+    $lblRemove = New-Object System.Windows.Forms.Label
+    $lblRemove.Location = New-Object System.Drawing.Point(460, 40)
+    $lblRemove.Size = New-Object System.Drawing.Size(390, 18)
+    $lblRemove.ForeColor = [System.Drawing.Color]::Gray
+    $lblRemove.Text = "Variables to Remove (0)"
 
-    # Build display items and populate list
+    $listAll = New-Object System.Windows.Forms.ListBox
+    $listAll.Location = New-Object System.Drawing.Point(12, 60)
+    $listAll.Size = New-Object System.Drawing.Size(390, 370)
+    $listAll.Font = New-Object System.Drawing.Font("Consolas", 9)
+    $listAll.IntegralHeight = $false
+    $listAll.SelectionMode = 'MultiExtended'
+
+    $listRemoveBox = New-Object System.Windows.Forms.ListBox
+    $listRemoveBox.Location = New-Object System.Drawing.Point(460, 60)
+    $listRemoveBox.Size = New-Object System.Drawing.Size(390, 370)
+    $listRemoveBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+    $listRemoveBox.IntegralHeight = $false
+    $listRemoveBox.SelectionMode = 'MultiExtended'
+
+    # --- Build display items and populate left list ---
+    # DisplayName comes from the NAACCR dictionary (data/dictionaries/naaccr-items-v25.json)
+    # via Get-NaaccrItemByXmlId in Get-UniqueNaaccrIds; custom items show "(custom)" suffix
     $allItems = @()
     foreach ($v in $Variables) {
-        $displayText = "$($v.DisplayName) ($($v.XmlId)) - $($v.Count) occurrences [$($v.Levels)]"
+        $displayText = "$($v.XmlId)) - $($v.Count) [$($v.Levels)]"
         $allItems += [PSCustomObject]@{
             DisplayText = $displayText
             XmlId       = $v.XmlId
         }
-        [void]$listBox.Items.Add($displayText)
+        [void]$listAll.Items.Add($displayText)
     }
 
-    # Filter logic
+    # HashSet to track which IDs are in the remove list (reference type, shared across handlers)
+    $removeSet = New-Object 'System.Collections.Generic.HashSet[string]'
+
+    $btnAdd = New-Object System.Windows.Forms.Button
+    $btnAdd.Text = [char]0x25B6  # right-pointing triangle
+    $btnAdd.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $btnAdd.Size = New-Object System.Drawing.Size(40, 30)
+    $btnAdd.Location = New-Object System.Drawing.Point(410, 200)
+    $btnAdd.Enabled = $false
+
+    $btnRemoveFromList = New-Object System.Windows.Forms.Button
+    $btnRemoveFromList.Text = [char]0x25C0  # left-pointing triangle
+    $btnRemoveFromList.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $btnRemoveFromList.Size = New-Object System.Drawing.Size(40, 30)
+    $btnRemoveFromList.Location = New-Object System.Drawing.Point(410, 240)
+    $btnRemoveFromList.Enabled = $false
+
+    $btnConfirm = New-Object System.Windows.Forms.Button
+    $btnConfirm.Text = "Remove"
+    $btnConfirm.Size = New-Object System.Drawing.Size(80, 28)
+    $btnConfirm.Location = New-Object System.Drawing.Point(686, 442)
+    $btnConfirm.Enabled = $false
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancel"
+    $btnCancel.Size = New-Object System.Drawing.Size(80, 28)
+    $btnCancel.Location = New-Object System.Drawing.Point(772, 442)
+    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    $dlg.CancelButton = $btnCancel
+
+    # --- Proportional layout applied on Shown + Resize ---
+    # Shown fires after the form has its final dimensions; Resize keeps it updated
+    $layoutHandler = {
+        $cw = $dlg.ClientSize.Width
+        $ch = $dlg.ClientSize.Height
+        if ($cw -lt 100 -or $ch -lt 100) { return }
+        $margin = 12
+        $arrowW = 40
+        $gap = 8
+        $topY = 60
+        $bottomH = 48
+
+        $listW = [int](($cw - (2 * $margin) - $arrowW - (2 * $gap)) / 2)
+        $arrowX = $margin + $listW + $gap
+        $rightX = $arrowX + $arrowW + $gap
+        $listH = $ch - $topY - $bottomH
+
+        $txtFilter.Width = $listW
+        $lblAvailable.Width = $listW
+        $listAll.Width = $listW
+        $listAll.Height = $listH
+
+        $centerY = $topY + [int]($listH / 2)
+        $btnAdd.Left = $arrowX
+        $btnAdd.Top = $centerY - 35
+        $btnRemoveFromList.Left = $arrowX
+        $btnRemoveFromList.Top = $centerY + 5
+
+        $lblRemove.Left = $rightX
+        $lblRemove.Width = $listW
+        $listRemoveBox.Left = $rightX
+        $listRemoveBox.Width = $listW
+        $listRemoveBox.Height = $listH
+
+        $btnConfirm.Left = $cw - $margin - 80 - 6 - 80
+        $btnConfirm.Top = $ch - $margin - 28
+        $btnCancel.Left = $cw - $margin - 80
+        $btnCancel.Top = $ch - $margin - 28
+    }
+
+    $dlg.Add_Shown({ & $layoutHandler })
+    $dlg.Add_Resize({ & $layoutHandler })
+
+    $btnAdd.Add_Click({
+        $toMove = @($listAll.SelectedItems)
+        $listAll.BeginUpdate()
+        foreach ($selText in $toMove) {
+            $match = $allItems | Where-Object { $_.DisplayText -eq $selText } | Select-Object -First 1
+            if ($null -ne $match -and -not $removeSet.Contains($match.XmlId)) {
+                [void]$removeSet.Add($match.XmlId)
+                [void]$listRemoveBox.Items.Add($selText)
+                $listAll.Items.Remove($selText)
+            }
+        }
+        $listAll.EndUpdate()
+        $lblAvailable.Text = "$($listAll.Items.Count) of $($Variables.Count) variables"
+        $lblRemove.Text = "Variables to Remove ($($listRemoveBox.Items.Count))"
+        $btnConfirm.Enabled = ($listRemoveBox.Items.Count -gt 0)
+    })
+
+    $btnRemoveFromList.Add_Click({
+        $toRemove = @($listRemoveBox.SelectedItems)
+        $filterLower = if ($txtFilter.ForeColor -eq [System.Drawing.Color]::Gray) { "" } else { $txtFilter.Text.ToLower() }
+        $listAll.BeginUpdate()
+        foreach ($selText in $toRemove) {
+            $match = $allItems | Where-Object { $_.DisplayText -eq $selText } | Select-Object -First 1
+            if ($null -ne $match) {
+                [void]$removeSet.Remove($match.XmlId)
+                if ([string]::IsNullOrEmpty($filterLower) -or $match.DisplayText.ToLower().Contains($filterLower)) {
+                    [void]$listAll.Items.Add($selText)
+                }
+            }
+            $listRemoveBox.Items.Remove($selText)
+        }
+        $listAll.EndUpdate()
+        $lblAvailable.Text = "$($listAll.Items.Count) of $($Variables.Count) variables"
+        $lblRemove.Text = "Variables to Remove ($($listRemoveBox.Items.Count))"
+        $btnConfirm.Enabled = ($listRemoveBox.Items.Count -gt 0)
+    })
+
+    $listAll.Add_SelectedIndexChanged({
+        $btnAdd.Enabled = ($listAll.SelectedItems.Count -gt 0)
+    })
+    $listRemoveBox.Add_SelectedIndexChanged({
+        $btnRemoveFromList.Enabled = ($listRemoveBox.SelectedItems.Count -gt 0)
+    })
+
+    $listAll.Add_DoubleClick({
+        if ($listAll.SelectedItems.Count -gt 0) { $btnAdd.PerformClick() }
+    })
+    $listRemoveBox.Add_DoubleClick({
+        if ($listRemoveBox.SelectedItems.Count -gt 0) { $btnRemoveFromList.PerformClick() }
+    })
+
     $txtFilter.Add_TextChanged({
-        if ($placeholderActive) { return }
+        if ($txtFilter.ForeColor -eq [System.Drawing.Color]::Gray) { return }
         $filterLower = $txtFilter.Text.ToLower()
 
-        $listBox.BeginUpdate()
-        $listBox.Items.Clear()
+        $listAll.BeginUpdate()
+        $listAll.Items.Clear()
         $matchCount = 0
         foreach ($item in $allItems) {
+            if ($removeSet.Contains($item.XmlId)) { continue }
             if ([string]::IsNullOrEmpty($filterLower) -or $item.DisplayText.ToLower().Contains($filterLower)) {
-                [void]$listBox.Items.Add($item.DisplayText)
+                [void]$listAll.Items.Add($item.DisplayText)
                 $matchCount++
             }
         }
-        $listBox.EndUpdate()
-        $lblCount.Text = "$matchCount of $($Variables.Count) variables"
+        $listAll.EndUpdate()
+        $lblAvailable.Text = "$matchCount of $($Variables.Count) variables"
     })
 
-    $btnRemove = New-Object System.Windows.Forms.Button
-    $btnRemove.Text = "Remove"
-    $btnRemove.Size = New-Object System.Drawing.Size(80, 28)
-    $btnRemove.Location = New-Object System.Drawing.Point(408, 422)
-    $btnRemove.Anchor = 'Bottom,Right'
-    $btnRemove.Enabled = $false
-    $btnRemove.Add_Click({
+    $btnConfirm.Add_Click({
         $selectedIds = @()
-        foreach ($selText in $listBox.SelectedItems) {
+        foreach ($selText in $listRemoveBox.Items) {
             $match = $allItems | Where-Object { $_.DisplayText -eq $selText } | Select-Object -First 1
-            if ($null -ne $match) {
-                $selectedIds += $match.XmlId
-            }
+            if ($null -ne $match) { $selectedIds += $match.XmlId }
         }
         if ($selectedIds.Count -gt 0) {
             $dlg.Tag = $selectedIds
@@ -109,27 +234,11 @@ function Show-VariableSelectionDialog {
         }
     })
 
-    $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Cancel"
-    $btnCancel.Size = New-Object System.Drawing.Size(80, 28)
-    $btnCancel.Location = New-Object System.Drawing.Point(494, 422)
-    $btnCancel.Anchor = 'Bottom,Right'
-    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $dlg.CancelButton = $btnCancel
-
-    # Enable Remove button when selection changes
-    $listBox.Add_SelectedIndexChanged({
-        $btnRemove.Enabled = ($listBox.SelectedItems.Count -gt 0)
-    })
-
-    # Double-click confirms selection
-    $listBox.Add_DoubleClick({
-        if ($listBox.SelectedItems.Count -gt 0) {
-            $btnRemove.PerformClick()
-        }
-    })
-
-    $dlg.Controls.AddRange(@($txtFilter, $lblCount, $listBox, $btnRemove, $btnCancel))
+    $dlg.Controls.AddRange(@(
+        $txtFilter, $lblAvailable, $lblRemove,
+        $listAll, $btnAdd, $btnRemoveFromList, $listRemoveBox,
+        $btnConfirm, $btnCancel
+    ))
 
     $result = $dlg.ShowDialog()
     if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -149,7 +258,6 @@ function Get-BtnRemoveVariableHandler {
     )
 
     return {
-        # Validate XML file is loaded
         if ($null -eq $ScriptVars['XmlDoc']) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Remove Variable")
             return
@@ -169,7 +277,6 @@ function Get-BtnRemoveVariableHandler {
             $Controls['lblStatus'].Text = "Scanning variables..."
             $Controls['form'].Refresh()
 
-            # Scan for all unique variables
             $variables = Get-UniqueNaaccrIds -XmlDoc $ScriptVars['XmlDoc'] -NsMgr $ScriptVars['NsMgr']
 
             if ($null -eq $variables -or @($variables).Count -eq 0) {
@@ -180,7 +287,6 @@ function Get-BtnRemoveVariableHandler {
 
             $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
 
-            # Show selection dialog (returns array of XmlId strings)
             $selectedIds = Show-VariableSelectionDialog -Variables @($variables)
 
             if ($null -eq $selectedIds -or @($selectedIds).Count -eq 0) {
@@ -188,14 +294,13 @@ function Get-BtnRemoveVariableHandler {
             }
             $selectedIds = @($selectedIds)
 
-            # Build confirmation details for all selected variables
             $totalOccurrences = 0
             $confirmLines = @()
             foreach ($id in $selectedIds) {
                 $varInfo = @($variables) | Where-Object { $_.XmlId -eq $id } | Select-Object -First 1
                 if ($null -ne $varInfo) {
                     $totalOccurrences += $varInfo.Count
-                    $confirmLines += "  $($varInfo.DisplayName) ($id) - $($varInfo.Count) occurrences [$($varInfo.Levels)]"
+                    $confirmLines += "  $id - $($varInfo.Count) occurrences [$($varInfo.Levels)]"
                 }
             }
 
@@ -218,21 +323,16 @@ function Get-BtnRemoveVariableHandler {
             $Controls['lblStatus'].Text = "Removing $($selectedIds.Count) $varWord..."
             $Controls['form'].Refresh()
 
-            # Build output path with suffix based on selection count
             $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
             $extension = [System.IO.Path]::GetExtension($ScriptVars['CurrentFilePath'])
             $directory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
-            if ($selectedIds.Count -le 3) {
-                $suffix = ($selectedIds -join '-')
-            } else {
-                $suffix = "$($selectedIds.Count)vars"
-            }
-            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-removed-$suffix$extension")
+            $suffix = "$($selectedIds.Count)v"
+
+            $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-rm$suffix$extension")
 
             $idsJoined = $selectedIds -join ', '
             Write-ParatLog -Level INFO -Message "Removing $($selectedIds.Count) $varWord ($idsJoined) totaling $totalOccurrences occurrences from $([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath']))" -Action "MODIFY_XML"
 
-            # Remove the variables
             $result = Remove-XmlVariable -XmlDoc $ScriptVars['XmlDoc'] -NaaccrIds $selectedIds -OutputPath $outputPath
 
             $outputFileName = [System.IO.Path]::GetFileName($outputPath)
