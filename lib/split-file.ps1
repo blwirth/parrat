@@ -106,7 +106,7 @@ function Get-FileSplitBucket {
     return $SplitCount - 1
 }
 
-function Scan-XmlFileForSplit {
+function Get-XmlFileSplitInfo {
     <#
     .SYNOPSIS
     Quick scan XML file to count patients/tumors and extract last names
@@ -194,7 +194,7 @@ function Scan-XmlFileForSplit {
     }
 }
 
-function Scan-Hl7FileForSplit {
+function Get-Hl7FileSplitInfo {
     <#
     .SYNOPSIS
     Quick scan HL7 file to count messages and extract last names
@@ -566,7 +566,7 @@ function Split-XmlFile {
     Split an NAACCR XML file into multiple files by last name
     
     .PARAMETER ScanResult
-    Result from Scan-XmlFileForSplit
+    Result from Get-XmlFileSplitInfo
     
     .PARAMETER FilePath
     Original file path
@@ -685,7 +685,7 @@ function Split-Hl7File {
     Split an HL7 file into multiple files by last name
     
     .PARAMETER ScanResult
-    Result from Scan-Hl7FileForSplit
+    Result from Get-Hl7FileSplitInfo
     
     .PARAMETER FilePath
     Original file path
@@ -786,7 +786,7 @@ function Start-SplitFile {
     try {
         # Scan the file
         if ($fileType -eq "hl7") {
-            $scanResult = Scan-Hl7FileForSplit -FilePath $filePath
+            $scanResult = Get-Hl7FileSplitInfo -FilePath $filePath
             
             if (-not $scanResult.Success) {
                 [System.Windows.Forms.MessageBox]::Show(
@@ -802,7 +802,7 @@ function Start-SplitFile {
             $lastNames = $scanResult.MessageData | ForEach-Object { $_.LastName }
         }
         else {
-            $scanResult = Scan-XmlFileForSplit -FilePath $filePath
+            $scanResult = Get-XmlFileSplitInfo -FilePath $filePath
             
             if (-not $scanResult.Success) {
                 [System.Windows.Forms.MessageBox]::Show(
