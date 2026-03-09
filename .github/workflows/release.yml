@@ -49,11 +49,12 @@ jobs:
 
       - name: Build release zip
         run: |
-          mkdir -p staging/docs staging/button-handlers staging/lib staging/config staging/data staging/logo
+          mkdir -p staging/docs staging/button-handlers staging/lib staging/ui staging/config staging/data staging/logo
 
           cp parat.ps1 Run.bat staging/
           cp -r button-handlers/*.ps1 staging/button-handlers/
           cp -r lib/*.ps1 staging/lib/
+          cp -r ui/*.ps1 staging/ui/
           cp -r config/* staging/config/
           cp -r data/* staging/data/
           cp -r logo/* staging/logo/
