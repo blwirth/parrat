@@ -117,6 +117,7 @@ function Get-BtnExportAllCsvHandler {
                 }
             }
             catch {
+                Write-ParatError -Message "CSV export (all) failed" -Action "EXPORT" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Error during export: $($_.Exception.Message)",
                     "Export Error",

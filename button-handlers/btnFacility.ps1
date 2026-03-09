@@ -158,6 +158,7 @@ function Get-BtnFacilityHandler {
             }
         }
         catch {
+            Write-ParatError -Message "Facility assignment failed" -Action "ASSIGN" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show(
                 "Error during facility assignment: $($_.Exception.Message)",
                 "Error",

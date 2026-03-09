@@ -89,6 +89,7 @@ function Get-BtnExportSelectedHl7CsvHandler {
                 }
             }
             catch {
+                Write-ParatError -Message "HL7 CSV export failed" -Action "EXPORT" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Error during export: $($_.Exception.Message)",
                     "Export Error",

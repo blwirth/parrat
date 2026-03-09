@@ -237,6 +237,7 @@ function Get-BtnConvertTxtHandler {
                     $btnConvert.Enabled = $true
 
                 } catch {
+                    Write-ParatError -Message "Text converter load failed" -Action "CONVERT" -ErrorRecord $_
                     [System.Windows.Forms.MessageBox]::Show("Error loading file: $($_.Exception.Message)", "Load Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                     $lblConverterStatus.Text = "Load failed"
                     $lblConverterStatus.ForeColor = [System.Drawing.Color]::Red
@@ -392,6 +393,7 @@ Open the output file location?
                         }
 
                     } catch {
+                        Write-ParatError -Message "Text to HL7 conversion failed" -Action "CONVERT" -ErrorRecord $_
                         [System.Windows.Forms.MessageBox]::Show("Error during conversion: $($_.Exception.Message)", "Conversion Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                         $lblConverterStatus.Text = "Conversion failed"
                         $lblConverterStatus.ForeColor = [System.Drawing.Color]::Red
@@ -404,6 +406,7 @@ Open the output file location?
             [void]$converterForm.ShowDialog()
 
         } catch {
+            Write-ParatError -Message "Text converter failed to open" -Action "CONVERT" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show(
                 "Error opening txt converter: $($_.Exception.Message)",
                 "Error",

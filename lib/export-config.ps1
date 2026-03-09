@@ -209,8 +209,8 @@ function Get-AvailableExportConfigs {
             }
         }
         catch {
-            # Skip invalid config files
-            $null = $_.Exception
+            # Skip invalid config files but warn
+            Write-ParatLog -Level WARN -Message "Skipping invalid export config '$($file.Name)': $($_.Exception.Message)" -Action "CONFIG"
         }
     }
 

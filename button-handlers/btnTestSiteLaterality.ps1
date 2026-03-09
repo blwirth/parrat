@@ -146,6 +146,7 @@ function Invoke-TestSiteLatCurrentXml {
         }
     }
     catch {
+        Write-ParatError -Message "Site/Laterality test (XML) failed" -Action "TEST_HEURISTICS" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show(
             "Error testing heuristics: $($_.Exception.Message)",
             "Test Site/Laterality - Error",
@@ -243,6 +244,7 @@ function Invoke-TestSiteLatCurrentHl7 {
         }
     }
     catch {
+        Write-ParatError -Message "Site/Laterality test (HL7) failed" -Action "TEST_HEURISTICS" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show(
             "Error testing heuristics: $($_.Exception.Message)",
             "Test Site/Laterality - Error",
@@ -291,6 +293,7 @@ function Invoke-TestSiteLatCustom {
         }
     }
     catch {
+        Write-ParatError -Message "Site/Laterality test (custom) failed" -Action "TEST_HEURISTICS" -ErrorRecord $_
         [System.Windows.Forms.MessageBox]::Show(
             "Error testing heuristics: $($_.Exception.Message)",
             "Test Site/Laterality - Error",

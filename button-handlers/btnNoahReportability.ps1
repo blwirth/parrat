@@ -44,6 +44,7 @@ function Get-BtnNoahReportabilityHandler {
                 $recordCount = $script:Tumors.Count
             }
             catch {
+                Write-ParatError -Message "NOAH reportability (XML) failed" -Action "NOAH_API" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Unexpected error: $($_.Exception.Message)",
                     "NOAH Reportability - Error",
@@ -90,6 +91,7 @@ function Get-BtnNoahReportabilityHandler {
                 $recordCount = $script:Hl7Messages.Count
             }
             catch {
+                Write-ParatError -Message "NOAH reportability (HL7) failed" -Action "NOAH_API" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Unexpected error: $($_.Exception.Message)",
                     "NOAH Reportability - Error",

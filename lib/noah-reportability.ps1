@@ -66,8 +66,8 @@ function Get-NoahConfig {
             }
         }
         catch {
-            # ignore and fall back to defaults
-            $null = $_.Exception
+            # Fall back to defaults; warn about corrupt config
+            Write-ParatLog -Level WARN -Message "Failed to parse NOAH config, using defaults: $($_.Exception.Message)" -Action "CONFIG"
         }
     }
 

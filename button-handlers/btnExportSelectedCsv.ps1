@@ -140,6 +140,7 @@ function Get-BtnExportSelectedCsvHandler {
                 }
             }
             catch {
+                Write-ParatError -Message "CSV export (selected) failed" -Action "EXPORT" -ErrorRecord $_
                 [System.Windows.Forms.MessageBox]::Show(
                     "Error during export: $($_.Exception.Message)",
                     "Export Error",

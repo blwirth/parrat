@@ -121,6 +121,7 @@ function Get-BtnAddPidHandler {
             }
         }
         catch {
+            Write-ParatError -Message "Add Patient ID failed" -Action "MODIFY_XML" -ErrorRecord $_
             [System.Windows.Forms.MessageBox]::Show(
                 "Error during analysis: $($_.Exception.Message)",
                 "Error",
