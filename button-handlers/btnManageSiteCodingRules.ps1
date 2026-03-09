@@ -1,4 +1,4 @@
-# btnManageSiteCodingRules.ps1
+﻿# btnManageSiteCodingRules.ps1
 # Site Coding Rules Editor - Manage site coding heuristics with AND/OR logic support
 
 $script:SiteCodingRulesFilePath = Join-Path $script:DictionaryDir "SiteCodingRules.jsonl"

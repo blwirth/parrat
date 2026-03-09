@@ -43,7 +43,7 @@ function Import-XmlFile {
 
         # Clear HL7 data
         $script:Hl7Messages = @()
-        
+
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'xml'
 
         $nsUri = $xml.DocumentElement.NamespaceURI
@@ -147,11 +147,11 @@ function Import-XmlFile {
             $Controls['gridNav'].Columns["pathReportNumber1"].ReadOnly = $true
             $Controls['gridNav'].Columns["dateOfDiagnosis"].ReadOnly = $true
             $Controls['gridNav'].Columns["primarySite"].ReadOnly = $true
-            
+
             # Set checkbox column width and move to first position
             $Controls['gridNav'].Columns["Selected"].Width = 60
             $Controls['gridNav'].Columns["Selected"].DisplayIndex = 0
-            
+
             # Ensure checkbox column is properly configured as checkbox
             $checkboxColumn = $Controls['gridNav'].Columns["Selected"]
             if ($checkboxColumn -is [System.Windows.Forms.DataGridViewCheckBoxColumn]) {
@@ -172,7 +172,7 @@ function Import-XmlFile {
 
             # Re-enable event handling
             $script:IsLoadingData = $false
-            
+
             Show-Tumor -Index 0
 
             $script:SearchIndex = New-SearchIndex -FileType 'xml'
@@ -195,14 +195,14 @@ function Import-Hl7File {
 
     try {
         $content = Get-Content -Path $FilePath -Raw -Encoding ASCII
-        
+
         if ([string]::IsNullOrWhiteSpace($content)) {
             [System.Windows.Forms.MessageBox]::Show("File is empty.", "No Data")
             return
         }
-        
+
         $messages = ConvertFrom-Hl7Content -Content $content
-        
+
         if ($messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 messages found in this file.", "No Messages")
             $fileName = [System.IO.Path]::GetFileName($FilePath)
@@ -217,7 +217,7 @@ function Import-Hl7File {
             $Controls['pnlSearch'].Visible = $false
             return
         }
-        
+
         # Set state
         $script:Hl7Messages = $messages
         $script:CurrentFilePath = $FilePath
@@ -228,9 +228,9 @@ function Import-Hl7File {
         $script:XmlDoc = $null
         $script:Tumors = @()
         $script:NsMgr = $null
-        
+
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'hl7'
-        
+
         $fileName = [System.IO.Path]::GetFileName($FilePath)
         $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f $fileName, $messages.Count
         $Controls['lblFileName'].Text = "File: $FilePath"
@@ -249,7 +249,7 @@ function Import-Hl7File {
         [void]$table.Columns.Add("patientId", [string])
         [void]$table.Columns.Add("messageType", [string])
         [void]$table.Columns.Add("orderDateTime", [string])
-        
+
         $table.BeginLoadData()
         foreach ($msg in $messages) {
             $row = $table.NewRow()
@@ -265,13 +265,13 @@ function Import-Hl7File {
             [void]$table.Rows.Add($row)
         }
         $table.EndLoadData()
-        
+
         $script:NavTable = $table
 
         # Temporarily disable event handling while loading data
         $script:IsLoadingData = $true
         $Controls['gridNav'].DataSource = $table
-        
+
         # Configure columns after data binding
         $Controls['gridNav'].Columns["Selected"].ReadOnly = $false
         $Controls['gridNav'].Columns["Index"].ReadOnly = $true
@@ -281,11 +281,11 @@ function Import-Hl7File {
         $Controls['gridNav'].Columns["patientId"].ReadOnly = $true
         $Controls['gridNav'].Columns["messageType"].ReadOnly = $true
         $Controls['gridNav'].Columns["orderDateTime"].ReadOnly = $true
-        
+
         # Set checkbox column width and move to first position
         $Controls['gridNav'].Columns["Selected"].Width = 60
         $Controls['gridNav'].Columns["Selected"].DisplayIndex = 0
-        
+
         # Ensure checkbox column is properly configured as checkbox
         $checkboxColumn = $Controls['gridNav'].Columns["Selected"]
         if ($checkboxColumn -is [System.Windows.Forms.DataGridViewCheckBoxColumn]) {
@@ -294,7 +294,7 @@ function Import-Hl7File {
             # Convert to checkbox column if needed
             $checkboxColumn.CellTemplate = New-Object System.Windows.Forms.DataGridViewCheckBoxCell
         }
-        
+
         # Allow sorting by clicking column headers (except checkbox)
         foreach ($col in $Controls['gridNav'].Columns) {
             if ($col.Name -ne "Selected") {
@@ -303,10 +303,10 @@ function Import-Hl7File {
                 $col.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::NotSortable
             }
         }
-        
+
         # Re-enable event handling
         $script:IsLoadingData = $false
-        
+
         # Select first row and show first message
         if ($Controls['gridNav'].Rows.Count -gt 0) {
             $Controls['gridNav'].Rows[0].Selected = $true

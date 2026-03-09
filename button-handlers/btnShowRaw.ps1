@@ -2,7 +2,7 @@ function Get-BtnShowRawHandler {
     param(
         [hashtable]$Controls
     )
-    
+
     return {
         try {
             $fileType = $script:FileType

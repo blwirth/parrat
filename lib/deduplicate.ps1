@@ -33,7 +33,7 @@ function Get-PatientTumorGroups {
 
         $dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
         if ($dxNode) { $dateOfDiagnosis = $dxNode.InnerText }
-		
+
 		$dxNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
         if ($dxNode) { $pathReportNumber1 = $dxNode.InnerText }
 
@@ -85,7 +85,7 @@ function Get-TumorFingerprint {
         foreach ($item in $pItems) {
             $id = $item.GetAttribute("naaccrId")
             $val = $item.InnerText
-            
+
             if ($ignoredFields -notcontains $id) {
                 $items += "P|$id|$val"
             }
@@ -136,7 +136,7 @@ function Invoke-TiebreakerRules {
     if ($DuplicateGroup.Count -eq 1) {
         return $DuplicateGroup[0]
     }
-	
+
 	# New Rule 1: If there is any dateCaseReportLoaded, keep earliest
     $withLoaded = @($DuplicateGroup | Where-Object {
         $loadDate = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
@@ -160,7 +160,7 @@ function Invoke-TiebreakerRules {
     if ($withDates.Count -gt 0) {
         $candidates = @($withDates[0])
         $earliestDate = Get-TiebreakerValue -Tumor $withDates[0].Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
-        
+
         # Get all with same earliest date
         for ($i = 1; $i -lt $withDates.Count; $i++) {
             $date = Get-TiebreakerValue -Tumor $withDates[$i].Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
@@ -470,22 +470,22 @@ function Get-DuplicatesByPathReport {
     for ($i = 0; $i -lt $Tumors.Count; $i++) {
         $tumor = $Tumors[$i]
         $pathReportNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
-        
+
         $pathReportNumber1 = ""
         if ($pathReportNode) {
             $pathReportNumber1 = $pathReportNode.InnerText
         }
-        
+
         # Skip tumors without pathReportNumber1
         if ([string]::IsNullOrWhiteSpace($pathReportNumber1)) {
             $indicesToKeep[$i] = $true
             continue
         }
-        
+
         if (-not $pathReportGroups.ContainsKey($pathReportNumber1)) {
             $pathReportGroups[$pathReportNumber1] = @()
         }
-        
+
         $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $NsMgr)
         $pathReportGroups[$pathReportNumber1] += @{
             Index = $i
@@ -497,16 +497,16 @@ function Get-DuplicatesByPathReport {
     # Process groups with duplicates
     foreach ($pathReport in $pathReportGroups.Keys) {
         $group = $pathReportGroups[$pathReport]
-        
+
         if ($group.Count -eq 1) {
             # No duplicates for this pathReportNumber1; keep it
             $indicesToKeep[$group[0].Index] = $true
             continue
         }
-        
+
         # Multiple tumors with same pathReportNumber1 - apply tiebreaker
         $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
-        
+
         if ($null -eq $winner -or $null -eq $winner.Index) {
             Write-Warning "PathReport $pathReport : Invoke-TiebreakerRules returned null or invalid winner; keeping all entries."
             foreach ($item in $group) {
@@ -516,22 +516,22 @@ function Get-DuplicatesByPathReport {
             }
             continue
         }
-        
+
         $indicesToKeep[$winner.Index] = $true
-        
+
         $allIndices     = ($group | ForEach-Object { $_.Index + 1 }) -join ","
         $removedIndices = ($group | Where-Object { $_.Index -ne $winner.Index } | ForEach-Object { $_.Index + 1 }) -join ","
-        
+
         $dateLoaded   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
         $dateReceived = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
         $physician3   = Get-TiebreakerValue -Tumor $winner.Tumor -NsMgr $NsMgr -FieldId 'physician3'
-        
+
         $reason =
             if (-not [string]::IsNullOrWhiteSpace($dateLoaded)) { "Earliest dateCaseReportLoaded" }
             elseif (-not [string]::IsNullOrWhiteSpace($dateReceived)) { "Earliest dateCaseReportReceived" }
             elseif (-not [string]::IsNullOrWhiteSpace($physician3)) { "Non-empty physician3" }
             else { "First occurrence" }
-        
+
         $duplicateReport += [PSCustomObject]@{
             PatientKey     = "pathReportNumber1: $pathReport"
             AllIndices     = $allIndices

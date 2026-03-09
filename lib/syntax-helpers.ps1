@@ -1,4 +1,4 @@
-# syntax-helpers.ps1
+﻿# syntax-helpers.ps1
 # Shared utilities for NAACCR XML processing
 
 # Central dictionary directory path (data/dictionaries relative to project root)

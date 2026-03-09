@@ -2,7 +2,7 @@ function Get-BtnExportAllCsvHandler {
     param(
         [hashtable]$Controls
     )
-    
+
     return {
         if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export All")
@@ -66,7 +66,7 @@ function Get-BtnExportAllCsvHandler {
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*"
         $saveFileDialog.Title = "Save Exported CSV File"
-        
+
         # Suggest default filename based on current file
         if ($script:CurrentFilePath) {
             $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
@@ -91,7 +91,7 @@ function Get-BtnExportAllCsvHandler {
                     if ($result.Errors.Count -gt 0) {
                         $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
                     }
-                    
+
                     $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                         $message,
                         "Export Complete",

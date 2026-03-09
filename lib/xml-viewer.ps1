@@ -68,13 +68,13 @@ function Show-RawXmlForTumor {
     else {
         $finalXml = $bodyXml
     }
-	
-	$finalXml = Format-Xml -Xml $finalXml
+
+    $finalXml = Format-Xml -Xml $finalXml
 
     $label = Get-TumorLabel -Index $Index
 
     $xmlForm = New-Object System.Windows.Forms.Form
-    $xmlForm.Text   = "Raw XML - $label" 
+    $xmlForm.Text   = "Raw XML - $label"
     $xmlForm.Width  = 1400
     $xmlForm.Height = 900
     $xmlForm.StartPosition = "CenterScreen"

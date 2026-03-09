@@ -1,4 +1,4 @@
-function Show-VariableSelectionDialog {
+﻿function Show-VariableSelectionDialog {
     <#
     .SYNOPSIS
         Shows a dual-list shuttle dialog for selecting NAACCR variables to remove.

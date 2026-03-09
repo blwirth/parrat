@@ -12,7 +12,7 @@ function Get-CachedNoahModels {
     <#
     .SYNOPSIS
     Load cached NOAH models from config/models.json
-    
+
     .OUTPUTS
     PSCustomObject with lastUpdated and models properties, or null if cache doesn't exist/is invalid
     #>
@@ -38,7 +38,7 @@ function Save-CachedNoahModels {
     <#
     .SYNOPSIS
     Save NOAH models to config/models.json cache
-    
+
     .PARAMETER Models
     Array of model objects with id and name properties
     #>
@@ -51,7 +51,7 @@ function Save-CachedNoahModels {
         lastUpdated = (Get-Date).ToString("o")
         models = $Models
     }
-    
+
     $json = $cache | ConvertTo-Json -Depth 6
     Set-Content -LiteralPath $modelsPath -Value $json -Encoding UTF8
 }
@@ -348,7 +348,7 @@ function Start-NoahServer {
 
     # Start the server process
     $exeDir = Split-Path -Parent $exePath
-    
+
     try {
         # Start server process (may need specific arguments - adjust as needed)
         $proc = Start-Process `
@@ -461,7 +461,7 @@ function Show-NoahModelSelectionDialog {
     <#
     .SYNOPSIS
     Show model selection dialog using cached models (no server required)
-    
+
     .DESCRIPTION
     Loads models from config/models.json cache. If cache is empty,
     prompts user to go to Settings to refresh models from API.
@@ -529,7 +529,7 @@ function Show-NoahModelSelectionDialog {
         $btnOk.Enabled = $false
         $lblStatus.Text = "No cached models. Go to NOAH > Settings to refresh models from API."
         $lblStatus.ForeColor = [System.Drawing.Color]::Red
-        
+
         $dialog.ShowDialog() | Out-Null
         return $null
     }
@@ -563,11 +563,11 @@ function Show-NoahModelSelectionDialog {
         $selectedModelIndex = $cmbModel.SelectedIndex
         if ($selectedModelIndex -ge 0 -and $selectedModelIndex -lt $models.Count) {
             $selectedModel = $models[$selectedModelIndex]
-            
+
             # Save selected model to config for next time
             $Config.modelId = $selectedModel.id
             Save-NoahConfig -Config $Config
-            
+
             return @{
                 ModelId = $selectedModel.id
                 ModelName = $selectedModel.name
@@ -754,12 +754,12 @@ function Invoke-NoahReportabilityApi {
         messageEncodingFormat = "Base64"
         modelId = $ModelId
     }
-    
+
     # Wrap array in "value" property as required by the API
     $requestBodyObj = @{
         value = @($requestObj)
     }
-    
+
     $requestBody = $requestBodyObj | ConvertTo-Json -Depth 10 -Compress
 
     $endpoint = "$apiServerUrl/api/NER"
@@ -779,12 +779,12 @@ function Invoke-NoahReportabilityApi {
         }
 
         $response = Invoke-RestMethod -Uri $endpoint -Method Post -Headers $headers -Body $requestBody -ErrorAction Stop
-        
+
         # Stop server after successful POST
         if ($null -ne $ServerProcess) {
             Stop-NoahServer -Process $ServerProcess
         }
-        
+
         if ($null -eq $response -or $response.Count -eq 0) {
             return @{
                 Success = $false
@@ -823,7 +823,7 @@ function Invoke-NoahReportabilityApi {
         if ($null -ne $ServerProcess) {
             Stop-NoahServer -Process $ServerProcess
         }
-        
+
         $errorDetails = $_.Exception.Message
         if ($_.Exception.Response) {
             $reader = $null
@@ -840,7 +840,7 @@ function Invoke-NoahReportabilityApi {
                 if ($null -ne $reader) { $reader.Dispose() }
             }
         }
-        
+
         return @{
             Success = $false
             Message = "Failed to POST to NOAH API: $errorDetails"
@@ -855,7 +855,7 @@ function Invoke-NoahReportabilityFilterForMessage {
     <#
     .SYNOPSIS
     Run NOAH reportability filter on an HL7 message using CLI
-    
+
     .DESCRIPTION
     Uses NOAHClientCentralRegistry.exe CLI to process the HL7 message.
     Creates temp folders, writes HL7 to file, runs CLI, and returns results.
@@ -925,27 +925,27 @@ function New-MinimalHl7Message {
 
     # HL7 segment separator is carriage return (0x0D)
     $segmentSeparator = "`r"
-    
+
     # Build minimal HL7 ORU^R01 message
     $segments = @()
-    
+
     # MSH - Message Header
     $segments += "MSH|^~\&|ePATH|TEST_FACILITY|NOAH|NOAH_FACILITY|$timestamp||ORU^R01|$msgId|P|2.5.1"
-    
+
     # PID - Patient Identification
     $segments += "PID|1||$PatientId^^^TEST_FACILITY^MR||TEST^PATIENT||19700101|U"
-    
+
     # OBR - Observation Request
     $segments += "OBR|1||$AccessionNumber||88305^Surgical Pathology|||$timestamp"
-    
+
     # OBX - Observation/Result
     # OBX segment 2 corresponds to FinalDiagnosis in NOAH's mapping
     # Format: OBX|SequenceNum|DataType|ObservationID|SubID|Value|Units|RefRange|AbnormalFlags|Probability|NatureOfAbnormalTest|ObservationResultStatus
     $segments += "OBX|1|FT|88305&ICD10&2.16.840.1.113883.6.90^Final Diagnosis^L|2|$CustomText||||||F"
-    
+
     # Join segments with carriage return
     $hl7Message = $segments -join $segmentSeparator
-    
+
     return $hl7Message
 }
 
@@ -1011,7 +1011,7 @@ function Invoke-NoahReportabilityFilterForCustomPayload {
     <#
     .SYNOPSIS
     Run NOAH reportability filter on custom text using CLI
-    
+
     .DESCRIPTION
     Generates a minimal HL7 message with the custom text and processes via CLI.
     #>
@@ -1104,7 +1104,7 @@ function Invoke-NoahReportabilityFilter {
         $argsDebugPath = Join-Path $Folders.base "noah_args.txt"
         $argsString = $cliArgs -join " "
         Set-Content -Path $argsDebugPath -Value $argsString -ErrorAction SilentlyContinue
-        
+
         $proc = Start-Process `
             -FilePath $ExePath `
             -WorkingDirectory $exeDir `
@@ -1114,7 +1114,7 @@ function Invoke-NoahReportabilityFilter {
             -RedirectStandardOutput $stdoutPath `
             -RedirectStandardError $stderrPath `
             -ErrorAction Stop
-        
+
         if (-not $proc) {
             return @{
                 Success = $false
@@ -1125,16 +1125,16 @@ function Invoke-NoahReportabilityFilter {
                 StderrPath = $stderrPath
             }
         }
-        
+
         # Give the process a moment to start
         Start-Sleep -Milliseconds 100
-        
+
         # Check if process has already exited (indicates immediate failure)
         if ($proc.HasExited) {
             $exitCode = $proc.ExitCode
             $stdoutContent = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw -ErrorAction SilentlyContinue } else { "" }
             $stderrContent = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw -ErrorAction SilentlyContinue } else { "" }
-            
+
             return @{
                 Success = $false
                 Message = "NOAH process exited immediately with code $exitCode"
@@ -1147,10 +1147,10 @@ function Invoke-NoahReportabilityFilter {
                 StderrContent = $stderrContent
             }
         }
-        
+
         $timeoutMs = 15000
         $exited = $proc.WaitForExit($timeoutMs)
-            
+
         if (-not $exited) {
             try { $proc.Kill() } catch { $null = $_.Exception }
             return @{
@@ -1162,7 +1162,7 @@ function Invoke-NoahReportabilityFilter {
                 StderrPath = $stderrPath
             }
         }
-            
+
         $exitCode = $proc.ExitCode
     }
     catch {

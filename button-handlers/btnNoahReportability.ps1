@@ -6,7 +6,7 @@ function Get-BtnNoahReportabilityHandler {
     return {
         $fileType = $script:FileType
         $idx = [int]$script:CurrentIndex
-        
+
         # Check for XML file
         if ($fileType -eq 'xml' -or $null -eq $fileType) {
             if ($script:Tumors.Count -eq 0 -or -not $script:XmlDoc -or -not $script:NsMgr) {

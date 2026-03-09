@@ -550,22 +550,22 @@ function Update-ButtonStatesForFileType {
         [hashtable]$Controls,
         [string]$FileType
     )
-    
+
     $hasFile = ($null -ne $FileType -and $FileType -ne '')
-    
+
     if ($Controls['mnuRawRecord'])    { $Controls['mnuRawRecord'].Enabled = $hasFile }
     if ($Controls['mnuDiffRecords'])  { $Controls['mnuDiffRecords'].Enabled = $hasFile }
     if ($Controls['mnuDeduplicate'])  { $Controls['mnuDeduplicate'].Enabled = $hasFile }
     if ($Controls['mnuExport'])       { $Controls['mnuExport'].Enabled = $hasFile }
     if ($Controls['mnuOpenFolder'])   { $Controls['mnuOpenFolder'].Enabled = $hasFile }
-    
+
     $isXmlFile = ($FileType -eq 'xml')
-    
+
     if ($Controls['mnuAssign']) { $Controls['mnuAssign'].Enabled = $isXmlFile }
     if ($Controls['mnuModifyXml']) { $Controls['mnuModifyXml'].Enabled = $isXmlFile }
 
     $isHl7File = ($FileType -eq 'hl7')
-    
+
     if ($Controls['mnuModifyHl7']) { $Controls['mnuModifyHl7'].Enabled = $isHl7File }
 }
 
@@ -576,7 +576,7 @@ function Show-Tumor {
 
     if ($script:Tumors.Count -eq 0) { return }
     if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) { return }
-    
+
     # Prevent re-entry (recursion guard)
     if ($script:IsShowingTumor -eq $true) { return }
     $script:IsShowingTumor = $true
@@ -682,7 +682,7 @@ $gridNav.Add_SelectionChanged({
     # Skip event handling during data loading or when Show-Tumor is running to prevent recursion
     if ($script:IsLoadingData -eq $true) { return }
     if ($script:IsShowingTumor -eq $true) { return }
-    
+
     # Determine which data source to use based on file type
     $recordCount = 0
     $fileType = $script:FileType
@@ -890,27 +890,27 @@ $menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:C
 
 $mnuExport.Add_DropDownOpening({
     param($toolStripButton, $e)
-    
+
     $toolStripButton.DropDownItems.Clear()
-    
+
     $fileType = $script:FileType
     $isXml = ($fileType -eq 'xml')
     $isHl7 = ($fileType -eq 'hl7')
-    
+
     $menuItemXml = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemXml.Text = "Export Selected as XML"
     $menuItemXml.Enabled = $isXml
     $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $script:Controls))
     [void]$toolStripButton.DropDownItems.Add($menuItemXml)
-    
+
     $menuItemHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemHl7.Text = "Export Selected as HL7"
     $menuItemHl7.Enabled = $isHl7
     $menuItemHl7.Add_Click((Get-BtnExportSelectedHl7Handler -Controls $script:Controls))
     [void]$toolStripButton.DropDownItems.Add($menuItemHl7)
-    
+
     [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-    
+
     # Export All as CSV (context-aware)
     $menuItemAllCsv = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemAllCsv.Text = "Export All as CSV"
@@ -921,7 +921,7 @@ $mnuExport.Add_DropDownOpening({
         $menuItemAllCsv.Add_Click((Get-BtnExportAllHl7CsvHandler -Controls $script:Controls))
     }
     [void]$toolStripButton.DropDownItems.Add($menuItemAllCsv)
-    
+
     $menuItemSelectedCsv = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemSelectedCsv.Text = "Export Selected as CSV"
     $menuItemSelectedCsv.Enabled = ($isXml -or $isHl7)

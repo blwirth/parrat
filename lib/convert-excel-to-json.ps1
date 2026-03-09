@@ -35,15 +35,15 @@ if (-not (Test-Path $latXlsx)) {
 
 # Convert Topography
 $topoMap = Read-TopographyExcel $topoXlsx | Where-Object { $_.Code -and $_.SearchPhrase -and $_.Code -notlike 'C77?' }
-$topoLines = $topoMap | ForEach-Object { 
-    $_ | ConvertTo-Json -Compress 
+$topoLines = $topoMap | ForEach-Object {
+    $_ | ConvertTo-Json -Compress
 }
 $topoLines | Set-Content $topoJson -Encoding UTF8
 
 # Convert Melanoma Topography
 $melTopoMap = Read-TopographyExcel $melTopoXlsx | Where-Object { $_.Code -and $_.SearchPhrase }
-$melTopoLines = $melTopoMap | ForEach-Object { 
-    $_ | ConvertTo-Json -Compress 
+$melTopoLines = $melTopoMap | ForEach-Object {
+    $_ | ConvertTo-Json -Compress
 }
 $melTopoLines | Set-Content $melTopoJson -Encoding UTF8
 

@@ -1050,17 +1050,17 @@ function Get-PatientName {
         [System.Xml.XmlElement]$Patient,
         [System.Xml.XmlNamespaceManager]$NsMgr
     )
-    
+
     $lastName = $Patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
     $firstName = $Patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
-    
+
     $name = ""
     if ($lastName) { $name = $lastName.InnerText }
-    if ($firstName) { 
+    if ($firstName) {
         if ($name) { $name += ", " }
-        $name += $firstName.InnerText 
+        $name += $firstName.InnerText
     }
-    
+
     return $name
 }
 
@@ -1115,30 +1115,30 @@ function Get-FormattedXmlLines {
     param(
         [string]$FilePath
     )
-    
+
     try {
         $xmlDoc = New-Object System.Xml.XmlDocument
         $xmlDoc.PreserveWhitespace = $false
         $xmlDoc.Load($FilePath)
-        
+
         $settings = New-Object System.Xml.XmlWriterSettings
         $settings.Indent = $true
         $settings.IndentChars = "  "
         $settings.NewLineChars = "`n"
         $settings.NewLineHandling = "Replace"
         $settings.OmitXmlDeclaration = $false
-        
+
         $sw = New-Object System.IO.StringWriter
         $xw = [System.Xml.XmlWriter]::Create($sw, $settings)
         $xmlDoc.Save($xw)
         $xw.Flush()
         $xw.Close()
-        
+
         $formattedXml = $sw.ToString()
         $sw.Close()
 
         $lines = @($formattedXml -split "`n" | ForEach-Object { $_.TrimEnd("`r") })
-        
+
         return ,$lines
     }
     catch {
@@ -1152,27 +1152,27 @@ function Show-DiffPreview {
         [string]$FilePathA,
         [string]$FilePathB
     )
-    
+
     $fileNameA = [System.IO.Path]::GetFileName($FilePathA)
     $fileNameB = [System.IO.Path]::GetFileName($FilePathB)
-    
+
     $diffForm = New-Object System.Windows.Forms.Form
     $diffForm.Text = "File Diff: $fileNameA vs $fileNameB"
     $diffForm.Width = 1600
     $diffForm.Height = 900
     $diffForm.StartPosition = "CenterScreen"
-    
+
     $stats = $DiffResult.Stats
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Location = New-Object System.Drawing.Point(10, 10)
     $lblSummary.Size = New-Object System.Drawing.Size(1560, 60)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    
+
     $summaryText = "File A: $fileNameA ($($stats.TotalPatientsA) patients)`n"
     $summaryText += "File B: $fileNameB ($($stats.TotalPatientsB) patients)`n"
     $summaryText += "Results: $($stats.Same) same, $($stats.Different) different content, $($stats.OnlyInA) only in A, $($stats.OnlyInB) only in B"
     $lblSummary.Text = $summaryText
-    
+
     $gridDiff = New-Object System.Windows.Forms.DataGridView
     $gridDiff.Location = New-Object System.Drawing.Point(10, 80)
     $gridDiff.Size = New-Object System.Drawing.Size(1560, 750)
@@ -1184,7 +1184,7 @@ function Show-DiffPreview {
     $gridDiff.SelectionMode = 'FullRowSelect'
     $gridDiff.MultiSelect = $false
     $gridDiff.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    
+
     $table = New-Object System.Data.DataTable
     [void]$table.Columns.Add("Status", [string])
     [void]$table.Columns.Add("PatientID", [string])
@@ -1192,26 +1192,26 @@ function Show-DiffPreview {
     [void]$table.Columns.Add("NameB", [string])
     [void]$table.Columns.Add("TumorsA", [int])
     [void]$table.Columns.Add("TumorsB", [int])
-    
+
     foreach ($comp in $DiffResult.Comparisons) {
         $row = $table.NewRow()
-        
+
         $row["Status"] = switch ($comp.Status) {
             "Same" { "Same" }
             "Different Content" { "Different Content" }
             "OnlyInA" { "Only in A" }
             "OnlyInB" { "Only in B" }
         }
-        
+
         $row["PatientID"] = $comp.PatientId
         $row["NameA"] = $comp.NameA
         $row["NameB"] = $comp.NameB
         $row["TumorsA"] = $comp.TumorCountA
         $row["TumorsB"] = $comp.TumorCountB
-        
+
         [void]$table.Rows.Add($row)
     }
-    
+
     $gridDiff.DataSource = $table
 
     if ($gridDiff.Columns.Count -ge 6) {
@@ -1221,7 +1221,7 @@ function Show-DiffPreview {
         $col3 = $gridDiff.Columns[3]
         $col4 = $gridDiff.Columns[4]
         $col5 = $gridDiff.Columns[5]
-        
+
         if ($null -ne $col0) { $col0.Width = 100 }
         if ($null -ne $col1) { $col1.Width = 150 }
         if ($null -ne $col2) { $col2.AutoSizeMode = 'Fill' }

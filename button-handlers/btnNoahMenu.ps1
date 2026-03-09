@@ -5,7 +5,7 @@ function Invoke-PostSelectedHL7 {
 
     $fileType = $script:FileType
     $idx = [int]$script:CurrentIndex
-    
+
     # Check for HL7 file (NOAH only accepts HL7 inputs)
     if ($fileType -ne 'hl7') {
         [System.Windows.Forms.MessageBox]::Show(

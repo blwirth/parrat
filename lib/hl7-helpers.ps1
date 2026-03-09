@@ -18,11 +18,11 @@ function Get-Hl7Field {
         [string]$Segment,
         [int]$FieldIndex
     )
-    
+
     if ([string]::IsNullOrWhiteSpace($Segment)) {
         return ""
     }
-    
+
     $fields = $Segment -split '\|'
     if ($FieldIndex -lt $fields.Count) {
         return $fields[$FieldIndex]
@@ -35,11 +35,11 @@ function Get-Hl7Component {
         [string]$Field,
         [int]$ComponentIndex
     )
-    
+
     if ([string]::IsNullOrWhiteSpace($Field)) {
         return ""
     }
-    
+
     $components = $Field -split '\^'
     if ($ComponentIndex -lt $components.Count) {
         return $components[$ComponentIndex]
@@ -51,24 +51,24 @@ function ConvertFrom-Hl7Content {
     param(
         [string]$Content
     )
-    
+
     # Use ArrayList for efficient appending
     $messages = New-Object System.Collections.ArrayList
-    
+
     # Normalize line endings to just \n
     $Content = $Content -replace "`r`n", "`n"
     $Content = $Content -replace "`r", "`n"
-    
+
     # Split content into individual messages by finding MSH segments
     $messageTexts = New-Object System.Collections.ArrayList
     $currentMessageLines = New-Object System.Collections.ArrayList
-    
+
     $allLines = $Content -split "`n"
-    
+
     foreach ($line in $allLines) {
         $trimmedLine = $line.Trim()
         if ([string]::IsNullOrEmpty($trimmedLine)) { continue }
-        
+
         if ($trimmedLine.StartsWith("MSH|")) {
             # Start of a new message
             if ($currentMessageLines.Count -gt 0) {
@@ -83,25 +83,25 @@ function ConvertFrom-Hl7Content {
             }
         }
     }
-    
+
     # Don't forget the last message
     if ($currentMessageLines.Count -gt 0) {
         [void]$messageTexts.Add(($currentMessageLines -join "`n"))
     }
-    
+
     for ($i = 0; $i -lt $messageTexts.Count; $i++) {
         $msg = $messageTexts[$i]
-        
+
         # Parse segments
         $segments = @{}
         $allSegments = New-Object System.Collections.ArrayList
         $lines = $msg -split "`n"
-        
+
         foreach ($line in $lines) {
             $trimmedLine = $line.Trim()
             if ([string]::IsNullOrEmpty($trimmedLine)) { continue }
             if ($trimmedLine.Length -lt 3) { continue }
-            
+
             $segmentType = $trimmedLine.Substring(0, 3)
             if (-not $segments.ContainsKey($segmentType)) {
                 $segments[$segmentType] = New-Object System.Collections.ArrayList
@@ -109,15 +109,15 @@ function ConvertFrom-Hl7Content {
             [void]$segments[$segmentType].Add($trimmedLine)
             [void]$allSegments.Add($trimmedLine)
         }
-        
+
         $mshLine = if ($segments.ContainsKey("MSH")) { $segments["MSH"][0] } else { "" }
         $pidLine = if ($segments.ContainsKey("PID")) { $segments["PID"][0] } else { "" }
         $obrLine = if ($segments.ContainsKey("OBR")) { $segments["OBR"][0] } else { "" }
-        
+
         $parsedPid = ConvertFrom-PidSegment -PidSegment $pidLine
         $parsedMsh = ConvertFrom-MshSegment -MshSegment $mshLine
         $parsedObr = ConvertFrom-ObrSegment -ObrSegment $obrLine
-        
+
         [void]$messages.Add([PSCustomObject]@{
             Index = $i
             RawContent = $msg
@@ -137,7 +137,7 @@ function ConvertFrom-Hl7Content {
             OrderingProvider = $parsedObr.OrderingProvider
         })
     }
-    
+
     return $messages
 }
 
@@ -145,7 +145,7 @@ function ConvertFrom-MshSegment {
     param(
         [string]$MshSegment
     )
-    
+
     # Todo: check this against different HL7 version specifications
     # MSH fields (0-indexed after split by |):
     # 0: MSH
@@ -158,9 +158,9 @@ function ConvertFrom-MshSegment {
     # 7: Security (usually empty)
     # 8: Message Type (e.g., ORU^R01)
     # 9: Message Control ID
-    
+
     $fields = $MshSegment -split '\|'
-    
+
     return @{
         SendingApplication = if ($fields.Count -gt 2) { $fields[2] } else { "" }
         SendingFacility = if ($fields.Count -gt 3) { $fields[3] } else { "" }
@@ -174,7 +174,7 @@ function ConvertFrom-PidSegment {
     param(
         [string]$PidSegment
     )
-    
+
     # Todo: check this against different HL7 version specifications
     # PID fields (0-indexed after split by |):
     # 0: PID
@@ -186,24 +186,24 @@ function ConvertFrom-PidSegment {
     # 6: Mother's Maiden Name
     # 7: Date of Birth
     # 8: Sex
-    
+
     $fields = $PidSegment -split '\|'
-    
+
     $patientId = if ($fields.Count -gt 3) { $fields[3] } else { "" }
     $patientNameField = if ($fields.Count -gt 5) { $fields[5] } else { "" }
     $dateOfBirth = if ($fields.Count -gt 7) { $fields[7] } else { "" }
     $sex = if ($fields.Count -gt 8) { $fields[8] } else { "" }
-    
+
     $nameComponents = $patientNameField -split '\^'
     $lastName = if ($nameComponents.Count -gt 0) { $nameComponents[0] } else { "" }
     $firstName = if ($nameComponents.Count -gt 1) { $nameComponents[1] } else { "" }
     $middleName = if ($nameComponents.Count -gt 2) { $nameComponents[2] } else { "" }
-    
+
     $patientName = "$lastName, $firstName"
     if (-not [string]::IsNullOrWhiteSpace($middleName)) {
         $patientName = "$lastName, $firstName $middleName"
     }
-    
+
     return @{
         PatientId = $patientId
         PatientName = $patientName.Trim(", ")
@@ -219,7 +219,7 @@ function ConvertFrom-ObrSegment {
     param(
         [string]$ObrSegment
     )
-    
+
     # Todo: check this against different HL7 version specifications
     # OBR fields (0-indexed after split by |):
     # 0: OBR
@@ -232,22 +232,22 @@ function ConvertFrom-ObrSegment {
     # 7: Observation Date/Time
     # ...
     # 16: Ordering Provider
-    
+
     $fields = $ObrSegment -split '\|'
-    
+
     $orderDateTime = if ($fields.Count -gt 7) { $fields[7] } else { "" }
     $orderingProviderField = if ($fields.Count -gt 16) { $fields[16] } else { "" }
-    
+
     $providerComponents = $orderingProviderField -split '\^'
     $providerId = if ($providerComponents.Count -gt 0) { $providerComponents[0] } else { "" }
     $providerLast = if ($providerComponents.Count -gt 1) { $providerComponents[1] } else { "" }
     $providerFirst = if ($providerComponents.Count -gt 2) { $providerComponents[2] } else { "" }
-    
+
     $orderingProvider = "$providerLast, $providerFirst"
     if (-not [string]::IsNullOrWhiteSpace($providerId)) {
         $orderingProvider = "$orderingProvider ($providerId)"
     }
-    
+
     return @{
         OrderDateTime = $orderDateTime
         OrderingProvider = $orderingProvider.Trim(", ")
@@ -258,7 +258,7 @@ function ConvertFrom-ObxSegments {
     param(
         [array]$ObxSegments
     )
-    
+
     # Todo: check this against different HL7 version specifications
     # OBX fields (0-indexed after split by |):
     # 0: OBX
@@ -270,12 +270,12 @@ function ConvertFrom-ObxSegments {
     # 6: Units
     # 7: Reference Range
     # 8: Abnormal Flags
-    
+
     $observations = @()
-    
+
     foreach ($obx in $ObxSegments) {
         $fields = $obx -split '\|'
-        
+
         $setId = if ($fields.Count -gt 1) { $fields[1] } else { "" }
         $valueType = if ($fields.Count -gt 2) { $fields[2] } else { "" }
         $observationId = if ($fields.Count -gt 3) { $fields[3] } else { "" }
@@ -283,7 +283,7 @@ function ConvertFrom-ObxSegments {
         $units = if ($fields.Count -gt 6) { $fields[6] } else { "" }
         $referenceRange = if ($fields.Count -gt 7) { $fields[7] } else { "" }
         $abnormalFlag = if ($fields.Count -gt 8) { $fields[8] } else { "" }
-        
+
         $observations += [PSCustomObject]@{
             SetId = $setId
             ValueType = $valueType
@@ -294,7 +294,7 @@ function ConvertFrom-ObxSegments {
             AbnormalFlag = $abnormalFlag
         }
     }
-    
+
     return $observations
 }
 
@@ -302,18 +302,18 @@ function Format-Hl7DateTime {
     param(
         [string]$Hl7DateTime
     )
-    
+
     if ([string]::IsNullOrWhiteSpace($Hl7DateTime)) {
         return ""
     }
-    
+
     # HL7 datetime format: YYYYMMDDHHMMSS or YYYYMMDD
     try {
         if ($Hl7DateTime.Length -ge 8) {
             $year = $Hl7DateTime.Substring(0, 4)
             $month = $Hl7DateTime.Substring(4, 2)
             $day = $Hl7DateTime.Substring(6, 2)
-            
+
             if ($Hl7DateTime.Length -ge 14) {
                 $hour = $Hl7DateTime.Substring(8, 2)
                 $minute = $Hl7DateTime.Substring(10, 2)
@@ -327,7 +327,7 @@ function Format-Hl7DateTime {
         # Return original if parsing fails
         $null = $_.Exception
     }
-    
+
     return $Hl7DateTime
 }
 
@@ -335,33 +335,33 @@ function Get-ObxTextContent {
     param(
         [array]$ObxSegments
     )
-    
+
     if (-not $ObxSegments -or $ObxSegments.Count -eq 0) {
         return ""
     }
-    
+
     $textLines = @()
-    
+
     foreach ($obx in $ObxSegments) {
         $fields = $obx -split '\|'
-        
+
         # OBX-5 is the observation value (index 5 after split by |)
         $observationValue = if ($fields.Count -gt 5) { $fields[5] } else { "" }
-        
+
         # Skip empty OBX values - they're just spacers in HL7
         if ([string]::IsNullOrWhiteSpace($observationValue)) {
             continue
         }
-        
+
         # Replace HL7 escape sequences in a single pass
         $observationValue = $script:Hl7EscapeRegex.Replace($observationValue, {
             param($m)
             $script:Hl7EscapeMap[$m.Groups[1].Value]
         })
-        
+
         $textLines += $observationValue
     }
-    
+
     # Join lines with newline
     return ($textLines -join "`r`n")
 }

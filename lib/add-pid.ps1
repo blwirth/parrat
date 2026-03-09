@@ -149,7 +149,7 @@ function Write-PatientIdXml {
         foreach ($child in $patientNode.ChildNodes) {
             if ($child.LocalName -eq "Item") {
                 $idAttr = $child.GetAttribute("naaccrId")
-                
+
                 if ($idAttr -eq "patientIdNumber") {
                     # If we need to update it, use the new value; otherwise keep existing
                     if ($needsId) {
@@ -179,7 +179,7 @@ function Write-PatientIdXml {
                     [void]$newPatient.AppendChild($item)
                     $patientIdAdded = $true
                 }
-                
+
                 # Add the tumor
                 $imported = $newDoc.ImportNode($child, $true)
                 [void]$newPatient.AppendChild($imported)

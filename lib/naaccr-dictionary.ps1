@@ -31,7 +31,7 @@ function Initialize-NaaccrDictionary {
         if (Test-Path $jsonPath) {
             $jsonContent = [System.IO.File]::ReadAllText($jsonPath, [System.Text.Encoding]::UTF8)
             $items = $jsonContent | ConvertFrom-Json
-            
+
             foreach ($item in $items) {
                 $xmlId = $item.id
                 if (-not [string]::IsNullOrWhiteSpace($xmlId)) {
@@ -46,7 +46,7 @@ function Initialize-NaaccrDictionary {
                     }
                 }
             }
-            
+
             $script:NaaccrDictionaryLoaded = $true
             Write-Verbose "Loaded $($script:NaaccrDictionary.Count) NAACCR dictionary items from JSON"
             return $true
@@ -54,7 +54,7 @@ function Initialize-NaaccrDictionary {
         # Fallback to XML if JSON doesn't exist
         elseif (Test-Path $xmlPath) {
             [xml]$xml = Get-Content -Path $xmlPath -Encoding UTF8
-            
+
             foreach ($item in $xml.NaaccrDataItemExport.NaaccrDataItems.NaaccrDataItem) {
                 $xmlId = $item.XmlNaaccrId
                 if (-not [string]::IsNullOrWhiteSpace($xmlId)) {
@@ -69,7 +69,7 @@ function Initialize-NaaccrDictionary {
                     }
                 }
             }
-            
+
             $script:NaaccrDictionaryLoaded = $true
             Write-Verbose "Loaded $($script:NaaccrDictionary.Count) NAACCR dictionary items from XML"
             return $true
@@ -92,11 +92,11 @@ function Get-NaaccrDictionary {
     .DESCRIPTION
         Returns an array of all dictionary items sorted by data item number.
     #>
-    
+
     if (-not $script:NaaccrDictionaryLoaded) {
         Initialize-NaaccrDictionary | Out-Null
     }
-    
+
     # Return as array sorted by pre-computed integer key
     $items = $script:NaaccrDictionary.Values | Sort-Object { $_.NumberInt }
     return $items
@@ -113,15 +113,15 @@ function Get-NaaccrItemByXmlId {
         [Parameter(Mandatory = $true)]
         [string]$XmlId
     )
-    
+
     if (-not $script:NaaccrDictionaryLoaded) {
         Initialize-NaaccrDictionary | Out-Null
     }
-    
+
     if ($script:NaaccrDictionary.ContainsKey($XmlId)) {
         return $script:NaaccrDictionary[$XmlId]
     }
-    
+
     return $null
 }
 
@@ -140,19 +140,19 @@ function Get-NaaccrParentElement {
     param(
         [Parameter(Mandatory = $true)]
         [string]$XmlId,
-        
+
         [hashtable]$CustomFields = @{}
     )
-    
+
     if (-not $script:NaaccrDictionaryLoaded) {
         Initialize-NaaccrDictionary | Out-Null
     }
-    
+
     # Check custom fields first
     if ($CustomFields.ContainsKey($XmlId)) {
         return $CustomFields[$XmlId]
     }
-    
+
     # Check dictionary
     if ($script:NaaccrDictionary.ContainsKey($XmlId)) {
         $parent = $script:NaaccrDictionary[$XmlId].ParentElement
@@ -160,7 +160,7 @@ function Get-NaaccrParentElement {
             return $parent
         }
     }
-    
+
     # Default to Tumor for unknown fields
     return "Tumor"
 }
@@ -176,22 +176,22 @@ function Search-NaaccrDictionary {
         [Parameter(Mandatory = $true)]
         [string]$SearchText
     )
-    
+
     if (-not $script:NaaccrDictionaryLoaded) {
         Initialize-NaaccrDictionary | Out-Null
     }
-    
+
     $searchLower = $SearchText.ToLower()
-    
+
     $results = $script:NaaccrDictionary.Values | Where-Object {
         $_.Name.ToLower().Contains($searchLower) -or
         $_.XmlId.ToLower().Contains($searchLower) -or
         $_.Number -eq $SearchText
-    } | Sort-Object { 
+    } | Sort-Object {
         $num = 0
         if ([int]::TryParse($_.Number, [ref]$num)) { $num } else { 999999 }
     }
-    
+
     return $results
 }
 
@@ -208,13 +208,13 @@ function Get-NaaccrDictionaryDisplayName {
         [Parameter(Mandatory = $true)]
         [string]$XmlId
     )
-    
+
     $item = Get-NaaccrItemByXmlId -XmlId $XmlId
-    
+
     if ($null -ne $item) {
         return "$($item.Name) ($($item.XmlId))"
     }
-    
+
     # For custom/unknown fields, just return the ID
     return "$XmlId (custom)"
 }

@@ -10,11 +10,11 @@ function Get-ExportConfigPath {
     .DESCRIPTION
         Creates the folder if it doesn't exist.
     #>
-    
+
     if (-not (Test-Path $script:ExportConfigPath)) {
         New-Item -ItemType Directory -Path $script:ExportConfigPath -Force | Out-Null
     }
-    
+
     return $script:ExportConfigPath
 }
 
@@ -25,7 +25,7 @@ function Get-DefaultFieldList {
     .DESCRIPTION
         These are the original hardcoded fields from the export functions.
     #>
-    
+
     return @(
         @{ XmlId = "patientIdNumber"; IsCustom = $false },
         @{ XmlId = "nameLast"; IsCustom = $false },
@@ -57,7 +57,7 @@ function New-ExportConfig {
         [array]$Fields = @(),
         [int]$Version = 25
     )
-    
+
     return @{
         Name = $Name
         Version = $Version
@@ -80,34 +80,34 @@ function Save-ExportConfig {
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Config,
-        
+
         [string]$FileName,
-        
+
         [string]$Path
     )
-    
+
     try {
         if ([string]::IsNullOrWhiteSpace($Path)) {
             $Path = Get-ExportConfigPath
         }
-        
+
         if ([string]::IsNullOrWhiteSpace($FileName)) {
             # Sanitize config name for filename
             $safeName = $Config.Name -replace '[^\w\-]', '_'
             $FileName = "$safeName.json"
         }
-        
+
         # Ensure .json extension
         if (-not $FileName.EndsWith(".json")) {
             $FileName = "$FileName.json"
         }
-        
+
         $fullPath = Join-Path $Path $FileName
-        
+
         # Convert to JSON and save
         $jsonContent = $Config | ConvertTo-Json -Depth 10
         [System.IO.File]::WriteAllText($fullPath, $jsonContent, [System.Text.Encoding]::UTF8)
-        
+
         return @{
             Success = $true
             Path = $fullPath
@@ -134,7 +134,7 @@ function Get-ExportConfig {
         [Parameter(Mandatory = $true)]
         [string]$FilePath
     )
-    
+
     try {
         if (-not (Test-Path $FilePath)) {
             return @{
@@ -143,10 +143,10 @@ function Get-ExportConfig {
                 Message = "Configuration file not found: $FilePath"
             }
         }
-        
+
         $jsonContent = [System.IO.File]::ReadAllText($FilePath, [System.Text.Encoding]::UTF8)
         $config = $jsonContent | ConvertFrom-Json
-        
+
         # Convert PSCustomObject to hashtable for consistency
         $configHashtable = @{
             Name = $config.Name
@@ -154,21 +154,21 @@ function Get-ExportConfig {
             CreatedDate = $config.CreatedDate
             Fields = @()
         }
-        
+
         foreach ($field in $config.Fields) {
             $fieldHashtable = @{
                 XmlId = $field.XmlId
                 IsCustom = $field.IsCustom
             }
-            
+
             # Include ParentElement for custom fields
             if ($field.PSObject.Properties.Name -contains "ParentElement") {
                 $fieldHashtable.ParentElement = $field.ParentElement
             }
-            
+
             $configHashtable.Fields += $fieldHashtable
         }
-        
+
         return @{
             Success = $true
             Config = $configHashtable
@@ -191,9 +191,9 @@ function Get-AvailableExportConfigs {
     .DESCRIPTION
         Returns file info for all .json files in the export-configs folder.
     #>
-    
+
     $configPath = Get-ExportConfigPath
-    
+
     $configs = Get-ChildItem -Path $configPath -Filter "*.json" -File | ForEach-Object {
         try {
             $result = Get-ExportConfig -FilePath $_.FullName
@@ -213,7 +213,7 @@ function Get-AvailableExportConfigs {
             $null = $_.Exception
         }
     }
-    
+
     return $configs
 }
 
@@ -230,7 +230,7 @@ function Convert-FieldListToXmlIds {
         [Parameter(Mandatory = $true)]
         [array]$Fields
     )
-    
+
     return $Fields | ForEach-Object { $_.XmlId }
 }
 
@@ -247,16 +247,16 @@ function Get-CustomFieldsFromConfig {
         [Parameter(Mandatory = $true)]
         [array]$Fields
     )
-    
+
     $customFields = @{}
-    
+
     foreach ($field in $Fields) {
         if ($field.IsCustom -eq $true) {
             $parentElement = if ($field.ContainsKey("ParentElement")) { $field.ParentElement } else { "Tumor" }
             $customFields[$field.XmlId] = $parentElement
         }
     }
-    
+
     return $customFields
 }
 
@@ -265,10 +265,10 @@ function Initialize-DefaultExportConfig {
     .SYNOPSIS
         Creates the default export configuration file if it doesn't exist.
     #>
-    
+
     $configPath = Get-ExportConfigPath
     $defaultPath = Join-Path $configPath "default.json"
-    
+
     if (-not (Test-Path $defaultPath)) {
         $defaultConfig = New-ExportConfig -Name "Default" -Fields (Get-DefaultFieldList) -Version 25
         Save-ExportConfig -Config $defaultConfig -FileName "default.json"

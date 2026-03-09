@@ -177,31 +177,31 @@ function Get-BtnConvertTxtHandler {
             $converterForm.Add_Resize($layoutInputRow)
 
             $previewData = $null
-            
+
             $loadAndPreview = {
                 param([string]$InputPath, [string]$FacilityName)
-                
+
                 try {
                     if ([string]::IsNullOrWhiteSpace($InputPath)) {
                         return
                     }
-                    
+
                     if (-not (Test-Path $InputPath)) {
                         [System.Windows.Forms.MessageBox]::Show("Input file not found: $InputPath", "File Not Found", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                         return
                     }
-                    
+
                     $lblConverterStatus.Text = "Loading..."
                     $lblConverterStatus.ForeColor = [System.Drawing.Color]::Blue
                     $converterForm.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
                     [System.Windows.Forms.Application]::DoEvents()
-                    
+
                     $script:previewData = Convert-PathologyTextToHL7 -InputPath $InputPath -FacilityName $FacilityName -PreviewOnly
-                    
+
                     # Populate cases grid
                     $dgvCases.Columns.Clear()
                     $dgvCases.Rows.Clear()
-                    
+
                     [void]$dgvCases.Columns.Add("CaseNum", "Case #")
                     [void]$dgvCases.Columns.Add("PatientName", "Patient Name")
                     [void]$dgvCases.Columns.Add("MRN", "MRN")
@@ -209,7 +209,7 @@ function Get-BtnConvertTxtHandler {
                     [void]$dgvCases.Columns.Add("PathReportID", "Path Report ID")
                     [void]$dgvCases.Columns.Add("SpecimenDate", "Specimen Date")
                     [void]$dgvCases.Columns.Add("TextLines", "Text Lines")
-                    
+
                     $dgvCases.Columns[0].Width = 60
                     $dgvCases.Columns[1].Width = 150
                     $dgvCases.Columns[2].Width = 100
@@ -217,10 +217,10 @@ function Get-BtnConvertTxtHandler {
                     $dgvCases.Columns[4].Width = 120
                     $dgvCases.Columns[5].Width = 120
                     $dgvCases.Columns[6].Width = 80
-                    
+
                     foreach ($case in $script:previewData.Cases) {
                         $patientName = "$($case.PatientData.NameLast), $($case.PatientData.NameFirst) $($case.PatientData.NameMiddle)".Trim()
-                        
+
                         [void]$dgvCases.Rows.Add(
                             $case.CaseNumber,
                             $patientName,
@@ -231,11 +231,11 @@ function Get-BtnConvertTxtHandler {
                             $case.TextLines.Count
                         )
                     }
-                    
+
                     $lblConverterStatus.Text = "Ready: $($script:previewData.Cases.Count) cases found"
                     $lblConverterStatus.ForeColor = [System.Drawing.Color]::Green
                     $btnConvert.Enabled = $true
-                    
+
                 } catch {
                     [System.Windows.Forms.MessageBox]::Show("Error loading file: $($_.Exception.Message)", "Load Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                     $lblConverterStatus.Text = "Load failed"
@@ -245,38 +245,38 @@ function Get-BtnConvertTxtHandler {
                     $converterForm.Cursor = [System.Windows.Forms.Cursors]::Default
                 }
             }
-            
+
             $btnBrowseInput.Add_Click({
                 $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
                 $openFileDialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
                 $openFileDialog.Title = "Select Input Pathology Text File"
                 $openFileDialog.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
-                
+
                 if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                     $txtInput.Text = $openFileDialog.FileName
                     # Auto-load and preview
                     & $loadAndPreview -InputPath $txtInput.Text -FacilityName $cmbFacility.SelectedItem.ToString()
                 }
             })
-            
+
             # Event: Facility changed - reload if file is already selected
             $cmbFacility.Add_SelectedIndexChanged({
                 if (-not [string]::IsNullOrWhiteSpace($txtInput.Text)) {
                     & $loadAndPreview -InputPath $txtInput.Text -FacilityName $cmbFacility.SelectedItem.ToString()
                 }
             })
-            
+
             # Event: Case selection changed
             $dgvCases.Add_SelectionChanged({
                 if ($dgvCases.SelectedRows.Count -eq 0 -or $null -eq $script:previewData) {
                     return
                 }
-                
+
                 $selectedRow = $dgvCases.SelectedRows[0]
                 $caseNumber = $selectedRow.Cells[0].Value
-                
+
                 $case = $script:previewData.Cases | Where-Object { $_.CaseNumber -eq $caseNumber } | Select-Object -First 1
-                
+
                 if ($case) {
                     # Show case details
                     $detailsText = @"
@@ -298,13 +298,13 @@ Facility: $($cmbFacility.SelectedItem)
   CLIA: $($script:previewData.FacilityConfig.CLIA)
 "@
                     $txtDetails.Text = $detailsText
-                    
+
                     # Show original text
                     $txtOriginalText.Text = $case.TextLines -join "`r`n"
-                    
+
                     # Generate HL7 preview for this case
                     $isSJH = $cmbFacility.SelectedItem.ToString() -eq 'SJH'
-                    
+
                     if ($isSJH) {
                         # SJH: BirthDate is already in HL7 format (YYYY9999), SpecimenDateObj has the DateTime
                         $birthDateHL7 = if ($case.PatientData.BirthDate) { $case.PatientData.BirthDate } else { '99999999' }
@@ -320,7 +320,7 @@ Facility: $($cmbFacility.SelectedItem)
                                 }
                             } catch { '99999999' }
                         } else { '99999999' }
-                        
+
                         $specimenDateHL7 = if ($case.SpecimenDate) {
                             try {
                                 if ($case.SpecimenDate -match '^\d{2}/\d{2}/\d{2}$') {
@@ -331,51 +331,51 @@ Facility: $($cmbFacility.SelectedItem)
                             } catch { '99999999' }
                         } else { '99999999' }
                     }
-                    
+
                     $hl7Lines = @()
                     $hl7Lines += "MSH|^~\&|E-Path Case=$($case.CaseNumber)|$($script:previewData.FacilityConfig.CLIA)|E-Path|NHSCR|99999999||ORU^R01^ORU_R01||P|2.5.1|||||USA||ENG||VOL_V_40_ORU_R01^NAACCR_CP"
                     $hl7Lines += "PID|1||$($case.PatientData.MedicalRecordNumber)^^^^MR^~^^^^SS||$($case.PatientData.NameLast)^$($case.PatientData.NameFirst)^$($case.PatientData.NameMiddle)||$birthDateHL7|$($case.PatientData.Sex)|||Unknown^^Unknown^ZZ^99999|||"
                     $hl7Lines += "OBR|1||$($case.PathReportID)||||$specimenDateHL7||||||||||||||||||F||||||||"
-                    
+
                     # Add all text lines as OBX segments
                     for ($i = 0; $i -lt $case.TextLines.Count; $i++) {
                         $hl7Lines += "OBX|$($i + 1)|TX|||$($case.TextLines[$i])"
                     }
-                    
+
                     $txtHL7.Text = $hl7Lines -join "`r`n"
                 }
             })
-            
+
             $btnConvert.Add_Click({
                 if ($null -eq $script:previewData) {
                     [System.Windows.Forms.MessageBox]::Show("No file loaded. Please select a file first.", "No Data", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
                     return
                 }
-                
+
                 $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
                 $saveFileDialog.Filter = "HL7 files (*.hl7)|*.hl7|All files (*.*)|*.*"
                 $saveFileDialog.Title = "Save HL7 Output File"
                 $saveFileDialog.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
-                
+
                 # Suggest default filename based on input
                 $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($txtInput.Text)
                 $facilityNum = $script:previewData.FacilityConfig.FacilityNum
                 $defaultName = "${inputFileName}_${facilityNum}.hl7"
                 $saveFileDialog.FileName = $defaultName
-                
+
                 if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                     try {
                         $lblConverterStatus.Text = "Converting..."
                         $lblConverterStatus.ForeColor = [System.Drawing.Color]::Blue
                         $converterForm.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
                         [System.Windows.Forms.Application]::DoEvents()
-                        
+
                         # Run actual conversion
                         $result = Convert-PathologyTextToHL7 -InputPath $txtInput.Text -OutputPath $saveFileDialog.FileName -FacilityName $cmbFacility.SelectedItem.ToString()
-                        
+
                         $lblConverterStatus.Text = "Conversion complete: $($result.Cases.Count) cases written to HL7"
                         $lblConverterStatus.ForeColor = [System.Drawing.Color]::Green
-                        
+
                         $message = @"
 Text conversion complete!
 
@@ -384,13 +384,13 @@ Output file: $($saveFileDialog.FileName)
 
 Open the output file location?
 "@
-                        
+
                         $dialogResult = [System.Windows.Forms.MessageBox]::Show($message, "Conversion Complete", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-                        
+
                         if ($dialogResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                             Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
                         }
-                        
+
                     } catch {
                         [System.Windows.Forms.MessageBox]::Show("Error during conversion: $($_.Exception.Message)", "Conversion Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                         $lblConverterStatus.Text = "Conversion failed"
@@ -400,9 +400,9 @@ Open the output file location?
                     }
                 }
             })
-            
+
             [void]$converterForm.ShowDialog()
-            
+
         } catch {
             [System.Windows.Forms.MessageBox]::Show(
                 "Error opening txt converter: $($_.Exception.Message)",

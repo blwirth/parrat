@@ -2,7 +2,7 @@ function Get-BtnExportAllHl7CsvHandler {
     param(
         [hashtable]$Controls
     )
-    
+
     return {
         if ($script:Hl7Messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Export All")
@@ -13,7 +13,7 @@ function Get-BtnExportAllHl7CsvHandler {
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*"
         $saveFileDialog.Title = "Save Exported CSV File"
-        
+
         # Suggest default filename based on current file
         if ($script:CurrentFilePath) {
             $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
@@ -35,7 +35,7 @@ function Get-BtnExportAllHl7CsvHandler {
                     if ($result.Errors.Count -gt 0) {
                         $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
                     }
-                    
+
                     $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                         $message,
                         "Export Complete",

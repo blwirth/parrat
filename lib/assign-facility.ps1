@@ -5,18 +5,18 @@
 
 function Get-FacilityFromFilename {
     param([string]$FilePath)
-    
+
     $fileName = [System.IO.Path]::GetFileNameWithoutExtension($FilePath)
-    
+
     # Look for 7-digit number in filename
     $match = [regex]::Match($fileName, '(?<![0-9])\d{7}(?![0-9])')
-    
+
     if ($match.Success) {
         $facilityNum = $match.Value
         # Left-pad to 10 digits
         return $facilityNum.PadLeft(10, '0')
     }
-    
+
     return $null
 }
 
@@ -128,7 +128,7 @@ function Write-FacilityAssignedXml {
 
         # Process tumors
         $tumorsInPatient = $patientNode.SelectNodes("./n:Tumor", $NsMgr)
-        
+
         foreach ($tumor in $tumorsInPatient) {
             # Find this tumor's index in the global list
             $tumorIndex = -1
@@ -145,7 +145,7 @@ function Write-FacilityAssignedXml {
             # Apply facility assignment if this tumor has one
             if ($tumorIndex -ge 0 -and $Assignments.ContainsKey($tumorIndex)) {
                 $facilityNum = $Assignments[$tumorIndex]
-                
+
                 $facilityNode = $newTumor.SelectSingleNode("./n:Item[@naaccrId='reportingFacility']", $NsMgr)
                 if ($facilityNode) {
                     $facilityNode.InnerText = $facilityNum

@@ -2,7 +2,7 @@ function Get-BtnExportSelectedCsvHandler {
     param(
         [hashtable]$Controls
     )
-    
+
     return {
         if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export Selected")
@@ -16,14 +16,14 @@ function Get-BtnExportSelectedCsvHandler {
 
         # Commit any pending edits to the grid (important for checkboxes)
         $Controls['gridNav'].EndEdit()
-        
+
         # Get checked tumor indices from the grid rows
         $checkedIndices = @()
         foreach ($row in $Controls['gridNav'].Rows) {
             # Use the cell's EditedFormattedValue which reflects the current visual state
             $cell = $row.Cells["Selected"]
             $isChecked = $cell.EditedFormattedValue -eq $true
-            
+
             if ($isChecked) {
                 $indexVal = $row.Cells["Index"].Value
                 if ($null -ne $indexVal -and $indexVal -ne [System.DBNull]::Value) {
@@ -88,7 +88,7 @@ function Get-BtnExportSelectedCsvHandler {
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*"
         $saveFileDialog.Title = "Save Exported CSV File"
-        
+
         # Suggest default filename based on current file
         if ($script:CurrentFilePath) {
             $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
@@ -114,7 +114,7 @@ function Get-BtnExportSelectedCsvHandler {
                     if ($result.Errors.Count -gt 0) {
                         $message += "`n`nErrors:`n" + ($result.Errors -join "`n")
                     }
-                    
+
                     $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                         $message,
                         "Export Complete",

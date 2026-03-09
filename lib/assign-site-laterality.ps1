@@ -142,7 +142,7 @@ function Read-LateralityExcel {
                 $digits = $digits.PadRight(3, '0')
                 $code = "C$digits"
             }
-            
+
             $codes[$code] = $true
         }
     }
@@ -160,19 +160,19 @@ function Read-LateralityExcel {
 # Fast JSON loading functions (much faster than Excel COM objects)
 function Read-TopographyJson {
     param([string]$Path)
-    
+
     $items = @()
-    
+
     if (-not (Test-Path $Path)) {
         throw "JSON file not found: $Path"
     }
-    
+
     # Read all lines at once for better performance
     $lines = [System.IO.File]::ReadAllLines($Path)
-    
+
     foreach ($line in $lines) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
-        
+
         try {
             $item = $line | ConvertFrom-Json
             if ($item.Code -and $item.SearchPhrase) {
@@ -183,7 +183,7 @@ function Read-TopographyJson {
             Write-Warning "Failed to parse JSON line: $line"
         }
     }
-    
+
     return $items
 }
 
@@ -407,7 +407,7 @@ function Get-CachedMaps {
     )
 
     $dictDir = $script:DictionaryDir
-    
+
     # Prefer JSON files (much faster), fallback to Excel
     $topoJson    = Join-Path $dictDir "Topography.jsonl"
     $melTopoJson = Join-Path $dictDir "TopographyMelanoma.jsonl"
@@ -420,7 +420,7 @@ function Get-CachedMaps {
     $useTopoJson = Test-Path $topoJson
     $useMelTopoJson = Test-Path $melTopoJson
     $useLatJson = Test-Path $latJson
-    
+
     # Validate that at least one format exists for each file
     if (-not $useTopoJson -and -not (Test-Path $topoXlsx)) {
         throw "Missing Topography file (neither .jsonl nor .xlsx found) in dictionary folder: $dictDir"
@@ -435,11 +435,11 @@ function Get-CachedMaps {
     $loadStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $needsReload = $false
     $sourceType = @()
-    
+
     # Check if we need to reload Topography map
     $topoFile = if ($useTopoJson) { $topoJson } else { $topoXlsx }
     $topoFileTime = (Get-Item $topoFile).LastWriteTime
-    
+
     if ($null -eq $script:TopoMapCache -or $null -eq $script:TopoMapCacheTime -or $topoFileTime -gt $script:TopoMapCacheTime) {
         if ($useTopoJson) {
             Write-Host "Loading Topography.jsonl..." -ForegroundColor Cyan
@@ -455,11 +455,11 @@ function Get-CachedMaps {
         $script:TopoMapCacheTime = $topoFileTime
         $needsReload = $true
     }
-    
+
     # Check if we need to reload Melanoma Topography map
     $melTopoFile = if ($useMelTopoJson) { $melTopoJson } else { $melTopoXlsx }
     $melTopoFileTime = (Get-Item $melTopoFile).LastWriteTime
-    
+
     if ($null -eq $script:MelTopoMapCache -or $null -eq $script:MelTopoMapCacheTime -or $melTopoFileTime -gt $script:MelTopoMapCacheTime) {
         if ($useMelTopoJson) {
             Write-Host "Loading TopographyMelanoma.jsonl..." -ForegroundColor Cyan
@@ -475,11 +475,11 @@ function Get-CachedMaps {
         $script:MelTopoMapCacheTime = $melTopoFileTime
         $needsReload = $true
     }
-    
+
     # Check if we need to reload Laterality codes
     $latFile = if ($useLatJson) { $latJson } else { $latXlsx }
     $latFileTime = (Get-Item $latFile).LastWriteTime
-    
+
     if ($null -eq $script:LateralityCodesCache -or $null -eq $script:LateralityCodesCacheTime -or $latFileTime -gt $script:LateralityCodesCacheTime) {
         if ($useLatJson) {
             Write-Host "Loading Laterality.json..." -ForegroundColor Cyan
@@ -553,7 +553,7 @@ function Get-MissingFields {
     $assignments = @{}
     $tumorsWithExistingSite = 0
     $tumorsWithoutSiteNotCoded = 0
-    
+
     Write-Host "Processing $($Tumors.Count) tumors..." -ForegroundColor Cyan
     $processStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -577,12 +577,12 @@ function Get-MissingFields {
         # Skip if both site and laterality already exist
         $hasSite = -not [string]::IsNullOrWhiteSpace($currentSite)
         $hasLat = -not [string]::IsNullOrWhiteSpace($currentLat)
-        
+
         # Track tumors with existing site
         if ($hasSite) {
             $tumorsWithExistingSite++
         }
-        
+
         # Still include in report even if both exist (for comparison purposes)
         # But skip processing if both exist
         $skipProcessing = $hasSite -and $hasLat
@@ -765,7 +765,7 @@ function Get-MissingFields {
             }
         }
     }
-    
+
     $processStopwatch.Stop()
     Write-Host ("Processed {0} tumors in {1:F2} seconds ({2:F3} seconds per tumor)." -f $Tumors.Count, $processStopwatch.Elapsed.TotalSeconds, ($processStopwatch.Elapsed.TotalSeconds / $Tumors.Count)) -ForegroundColor Cyan
 
@@ -837,7 +837,7 @@ function Write-AssignedXml {
 
         # Process tumors
         $tumorsInPatient = $patientNode.SelectNodes("./n:Tumor", $NsMgr)
-        
+
         foreach ($tumor in $tumorsInPatient) {
             # Find this tumor's index in the global list
             $tumorIndex = -1
@@ -854,7 +854,7 @@ function Write-AssignedXml {
             # Apply assignments if this tumor has them
             if ($tumorIndex -ge 0 -and $Assignments.ContainsKey($tumorIndex)) {
                 $assignment = $Assignments[$tumorIndex]
-                
+
                 # Set primary site if proposed
                 if ($assignment.PrimarySite) {
                     $siteNode = $newTumor.SelectSingleNode("./n:Item[@naaccrId='primarySite']", $NsMgr)
@@ -1017,9 +1017,9 @@ function Show-AssignmentReport {
             $null = $_.Exception
         }
     }
-    
+
     $grid.Add_DataBindingComplete($hideCategoryColumn)
-    
+
     # Also try to hide it after form loads
     $reportForm.Add_Load({
         & $hideCategoryColumn
@@ -1028,7 +1028,7 @@ function Show-AssignmentReport {
     # Filter function
     $updateFilter = {
         $filterParts = @()
-        
+
         if ($chkWillUpdate.Checked) {
             $filterParts += "Category = 'WillUpdate'"
         }
@@ -1038,7 +1038,7 @@ function Show-AssignmentReport {
         if ($chkHasSiteNoUpdate.Checked) {
             $filterParts += "Category = 'HasSite_NoUpdate'"
         }
-        
+
         if ($filterParts.Count -eq 0) {
             $dataView.RowFilter = "1=0"  # Show nothing
         } else {
@@ -1087,7 +1087,7 @@ function Show-AssignmentReport {
     # Grid selection handler - show text fields
     $grid.Add_SelectionChanged({
         if ($grid.SelectedRows.Count -eq 0) { return }
-        
+
         $selectedRow = $grid.SelectedRows[0]
         $tumorIndex = [int]$selectedRow.Cells["TumorIndex"].Value - 1
 

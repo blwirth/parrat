@@ -2,7 +2,7 @@ function Get-BtnDiffHandler {
     param(
         [hashtable]$Controls
     )
-    
+
     return {
         try {
             $fileType = $script:FileType

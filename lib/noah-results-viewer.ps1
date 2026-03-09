@@ -37,7 +37,7 @@ function Get-NoahResultFile {
 
     # Look for *_result.json files in the reports folder
     $resultFiles = @(Get-ChildItem -LiteralPath $ReportsFolder -Filter "*_result.json" -File -ErrorAction SilentlyContinue)
-    
+
     if ($resultFiles.Count -eq 0) {
         return $null
     }
@@ -92,8 +92,8 @@ function Show-NoahResultsWindow {
     $splitMain.Orientation = 'Vertical'
     $splitMain.Panel1MinSize = 250
     $splitMain.Panel2MinSize = 300
-    $splitMain.SplitterDistance = 400 
-    
+    $splitMain.SplitterDistance = 400
+
     $form.Add_Shown({
         if ($splitMain.Width -gt 400) {
             $splitMain.SplitterDistance = 400
@@ -168,7 +168,7 @@ function Show-NoahResultsWindow {
                 default { "Type$($entity.EntityType)" }
             }
             $entityLine = "{0}: '{1}' (Code: {2}){3}" -f $typeLabel, $entity.EntityPhrase, $entity.Code, $negatedMarker
-            
+
             # Color based on entity type
             $backColor = $null
             if ($entity.IsNegated) {
@@ -293,7 +293,7 @@ function New-HighlightedOBXText {
 
     # Process each OBX text field in order
     $segmentOrder = @(0, 1, 2, 3, 4, 5, 6, 7, 8)
-    
+
     foreach ($segNum in $segmentOrder) {
         $fieldName = $script:OBXSegmentMap[$segNum]
         if (-not $fieldName) { continue }
@@ -310,7 +310,7 @@ function New-HighlightedOBXText {
 
         # Add section header
         Add-ColoredTextToRichTextBox -Box $RichTextBox -Text "=== $fieldName (Segment $segNum) ===" -Bold $true
-        
+
         # Get entities for this segment, sorted by offset
         $segmentEntities = @()
         if ($entitiesBySegment.ContainsKey($segNum)) {
@@ -331,7 +331,7 @@ function New-HighlightedOBXText {
             # Build text with entity highlighting
             # Record position BEFORE adding text (after header and its newline)
             $startPos = $RichTextBox.TextLength
-            
+
             # First, add the entire text as plain (without trailing newline yet)
             $RichTextBox.SelectionStart = $RichTextBox.TextLength
             $RichTextBox.SelectionLength = 0
@@ -416,7 +416,7 @@ function New-HighlightedOBXText {
                 $RichTextBox.SelectionLength = $highlightLength
                 $RichTextBox.SelectionBackColor = $backColor
             }
-            
+
             # Add the trailing newline after all highlighting is applied
             $RichTextBox.AppendText("`n")
         }

@@ -16,13 +16,13 @@ function Show-Hl7Message {
         $Controls = $script:Controls
     }
 
-    if ($null -eq $Messages -or $Messages.Count -eq 0) { 
+    if ($null -eq $Messages -or $Messages.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show("No HL7 messages loaded!", "Error")
-        return 
+        return
     }
-    if ($Index -lt 0 -or $Index -ge $Messages.Count) { 
+    if ($Index -lt 0 -or $Index -ge $Messages.Count) {
         [System.Windows.Forms.MessageBox]::Show("Index out of range! Index: $Index, Count: $($Messages.Count)", "Error")
-        return 
+        return
     }
 
     $script:CurrentIndex = $Index
@@ -89,7 +89,7 @@ function Show-Hl7Message {
     Add-LineToRichTextBox $rtbItems ("Sex: {0}" -f $message.Sex)
     Add-LineToRichTextBox $rtbItems ""
 
-    if (-not [string]::IsNullOrWhiteSpace($message.OrderDateTime) -or 
+    if (-not [string]::IsNullOrWhiteSpace($message.OrderDateTime) -or
         -not [string]::IsNullOrWhiteSpace($message.OrderingProvider)) {
         Add-LineToRichTextBox $rtbItems "=== ORDER INFO ===" $true
         Add-LineToRichTextBox $rtbItems ("Order Date/Time: {0}" -f (Format-Hl7DateTime $message.OrderDateTime))
@@ -173,7 +173,7 @@ function Format-Hl7SegmentForDisplay {
 
     $fields = $Segment -split '\|'
     $segType = $fields[0]
-    
+
     $result = "$segType"
     for ($i = 1; $i -lt $fields.Count; $i++) {
         $fieldValue = $fields[$i]
@@ -184,7 +184,7 @@ function Format-Hl7SegmentForDisplay {
             $result += "|"
         }
     }
-    
+
     return $result
 }
 

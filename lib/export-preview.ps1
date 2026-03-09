@@ -1,4 +1,4 @@
-# export-preview.ps1
+﻿# export-preview.ps1
 # Preview function for CSV exports with integrated field selector
 
 function Show-ExportPreview {
@@ -20,15 +20,15 @@ function Show-ExportPreview {
 
     # Initialize dictionary if needed
     Initialize-NaaccrDictionary | Out-Null
-    
+
     # Track selected fields and custom fields
     $selectedFields = [System.Collections.ArrayList]@()
     $customFieldParents = @{}
     $script:isPopulatingFields = $false  # Flag to prevent recursive event handling (script scope for event access)
-    
+
     # Copy TumorIndices to script scope for access from scriptblocks
     $script:previewTumorIndices = @($TumorIndices)
-    
+
     # Initialize with provided field list
     foreach ($fieldId in $FieldList) {
         [void]$selectedFields.Add($fieldId)
@@ -179,7 +179,7 @@ function Show-ExportPreview {
     # Function to extract XmlId from display text
     $extractXmlId = {
         param([string]$DisplayText)
-        
+
         if ($DisplayText -match '\(([^)]+)\)$') {
             return $matches[1]
         }
@@ -192,15 +192,15 @@ function Show-ExportPreview {
     # Function to populate the field list
     $populateFieldList = {
         param([string]$SearchFilter = "")
-        
+
         # Set flag to prevent ItemCheck events from firing during population
         $script:isPopulatingFields = $true
-        
+
         try {
             $lstFields.BeginUpdate()
             $lstFields.Items.Clear()
             $allItems = Get-NaaccrDictionary
-            
+
             # Filter if search text provided
             if (-not [string]::IsNullOrWhiteSpace($SearchFilter)) {
                 $searchLower = $SearchFilter.ToLower()
@@ -210,15 +210,15 @@ function Show-ExportPreview {
                     $_.Number -eq $SearchFilter
                 }
             }
-            
+
             # Add selected fields first (pinned to top)
             $addedIds = @{}
-            
+
             # Section header for selected
             if ($selectedFields.Count -gt 0 -and [string]::IsNullOrWhiteSpace($SearchFilter)) {
                 [void]$lstFields.Items.Add("== SELECTED FIELDS ==")
             }
-            
+
             foreach ($fieldId in $selectedFields) {
                 $item = Get-NaaccrItemByXmlId -XmlId $fieldId
                 if ($null -ne $item) {
@@ -228,21 +228,21 @@ function Show-ExportPreview {
                     # Custom field
                     $displayText = "CUSTOM - $fieldId"
                 }
-                
+
                 # Only show if matches filter or no filter
-                if ([string]::IsNullOrWhiteSpace($SearchFilter) -or 
+                if ([string]::IsNullOrWhiteSpace($SearchFilter) -or
                     $displayText.ToLower().Contains($SearchFilter.ToLower())) {
                     $index = $lstFields.Items.Add($displayText)
                     $lstFields.SetItemChecked($index, $true)
                     $addedIds[$fieldId] = $true
                 }
             }
-            
+
             # Section header for available
             if ([string]::IsNullOrWhiteSpace($SearchFilter) -and $allItems.Count -gt 0) {
                 [void]$lstFields.Items.Add("== AVAILABLE FIELDS ==")
             }
-            
+
             # Add remaining items (not yet selected)
             foreach ($item in $allItems) {
                 if (-not $addedIds.ContainsKey($item.XmlId)) {
@@ -251,7 +251,7 @@ function Show-ExportPreview {
                     # Not checked - it's available but not selected
                 }
             }
-            
+
             $lstFields.EndUpdate()
         }
         finally {
@@ -263,16 +263,16 @@ function Show-ExportPreview {
     $updatePreview = {
         $errors = @()
         $rows = @()
-        
+
         # Get current field list from selected fields
         $currentFields = [array]$selectedFields
-        
+
         if ($currentFields.Count -eq 0) {
             $lblSummary.Text = "No fields selected"
             $grid.DataSource = $null
             return
         }
-        
+
         try {
             # Build preview rows - use script-scoped variable for proper access
             foreach ($tumorIndex in $script:previewTumorIndices) {
@@ -291,13 +291,13 @@ function Show-ExportPreview {
 
                 # Build row data
                 $row = @{}
-                
+
                 foreach ($fieldId in $currentFields) {
                     $value = ""
-                    
+
                     # Get parent element from dictionary or custom fields
                     $parentElement = Get-NaaccrParentElement -XmlId $fieldId -CustomFields $customFieldParents
-                    
+
                     if ($parentElement -eq "Patient") {
                         $node = $patient.SelectSingleNode("./n:Item[@naaccrId='$fieldId']", $NsMgr)
                         if ($null -ne $node) {
@@ -311,17 +311,17 @@ function Show-ExportPreview {
                             $value = $node.InnerText
                         }
                     }
-                    
+
                     $row[$fieldId] = $value
                 }
-                
+
                 $rows += $row
             }
         }
         catch {
             $errors += "Error building preview: $($_.Exception.Message)"
         }
-        
+
         # Update summary
         $lblSummary.Text = "Preview: $($rows.Count) row(s) with $($currentFields.Count) column(s)"
         if ($errors.Count -gt 0) {
@@ -331,10 +331,10 @@ function Show-ExportPreview {
         else {
             $lblErrors.Text = ""
         }
-        
+
         # Build DataTable
         $table = New-Object System.Data.DataTable
-        
+
         foreach ($fieldId in $currentFields) {
             [void]$table.Columns.Add($fieldId, [string])
         }
@@ -382,21 +382,21 @@ function Show-ExportPreview {
         if ($script:isPopulatingFields) {
             return
         }
-        
+
         $itemText = $lstFields.Items[$e.Index]
-        
+
         # Ignore section headers
         if ($itemText -match "^==") {
             $e.NewValue = $e.CurrentValue
             return
         }
-        
+
         $xmlId = & $extractXmlId $itemText
-        
+
         if ($null -eq $xmlId) {
             return
         }
-        
+
         if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
             if (-not $selectedFields.Contains($xmlId)) {
                 [void]$selectedFields.Add($xmlId)
@@ -405,7 +405,7 @@ function Show-ExportPreview {
         else {
             $selectedFields.Remove($xmlId)
         }
-        
+
         # Update the preview after field selection changes
         & $updatePreview
     })
@@ -481,21 +481,21 @@ function Show-ExportPreview {
 
         if ($openFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             $result = Get-ExportConfig -FilePath $openFileDialog.FileName
-            
+
             if ($result.Success) {
                 $selectedFields.Clear()
                 $customFieldParents.Clear()
-                
+
                 foreach ($field in $result.Config.Fields) {
                     [void]$selectedFields.Add($field.XmlId)
                     if ($field.IsCustom -eq $true -and $field.ContainsKey("ParentElement")) {
                         $customFieldParents[$field.XmlId] = $field.ParentElement
                     }
                 }
-                
+
                 & $populateFieldList $txtSearch.Text
                 & $updatePreview
-                
+
                 [System.Windows.Forms.MessageBox]::Show(
                     "Loaded configuration: $($result.Config.Name)`nFields: $($selectedFields.Count)",
                     "Configuration Loaded",
@@ -593,13 +593,13 @@ function Show-ExportPreview {
     $btnMoveUp.Add_Click({
         $selectedIndex = $lstFields.SelectedIndex
         if ($selectedIndex -le 0) { return }
-        
+
         $itemText = $lstFields.Items[$selectedIndex]
         if ($itemText -match "^══") { return }
-        
+
         $xmlId = & $extractXmlId $itemText
         if ($null -eq $xmlId) { return }
-        
+
         $currentIndex = $selectedFields.IndexOf($xmlId)
         if ($currentIndex -gt 0) {
             $selectedFields.RemoveAt($currentIndex)
@@ -613,13 +613,13 @@ function Show-ExportPreview {
     $btnMoveDown.Add_Click({
         $selectedIndex = $lstFields.SelectedIndex
         if ($selectedIndex -lt 0) { return }
-        
+
         $itemText = $lstFields.Items[$selectedIndex]
         if ($itemText -match "^══") { return }
-        
+
         $xmlId = & $extractXmlId $itemText
         if ($null -eq $xmlId) { return }
-        
+
         $currentIndex = $selectedFields.IndexOf($xmlId)
         if ($currentIndex -ge 0 -and $currentIndex -lt ($selectedFields.Count - 1)) {
             $selectedFields.RemoveAt($currentIndex)
@@ -754,49 +754,49 @@ function Show-XmlExportPreview {
     # Populate table with patient and tumor info
     foreach ($patientNode in $patientsMap.Keys) {
         $tumorIndicesForPatient = $patientsMap[$patientNode]
-        
+
         # Get patient info
         $patientId = ""
         $nameLast = ""
         $nameFirst = ""
-        
+
         $patientIdNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $NsMgr)
         if ($null -ne $patientIdNode) {
             $patientId = $patientIdNode.InnerText
         }
-        
+
         $nameLastNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
         if ($null -ne $nameLastNode) {
             $nameLast = $nameLastNode.InnerText
         }
-        
+
         $nameFirstNode = $patientNode.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
         if ($null -ne $nameFirstNode) {
             $nameFirst = $nameFirstNode.InnerText
         }
-        
+
         # Get tumor info (show first tumor's key fields, or combine if multiple)
         $tumorIndicesStr = ($tumorIndicesForPatient | ForEach-Object { ($_ + 1).ToString() }) -join ", "
         $datesOfDiagnosis = @()
         $pathReportNumbers = @()
-        
+
         foreach ($tumorIndex in $tumorIndicesForPatient) {
             $tumor = $script:Tumors[$tumorIndex]
-            
+
             $dateNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", $NsMgr)
             if ($null -ne $dateNode) {
                 $datesOfDiagnosis += $dateNode.InnerText
             }
-            
+
             $pathNode = $tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", $NsMgr)
             if ($null -ne $pathNode) {
                 $pathReportNumbers += $pathNode.InnerText
             }
         }
-        
+
         $dateOfDiagnosis = ($datesOfDiagnosis | Where-Object { $_ -ne "" }) -join ", "
         $pathReportNumber1 = ($pathReportNumbers | Where-Object { $_ -ne "" }) -join ", "
-        
+
         $row = $table.NewRow()
         $row["PatientID"] = $patientId
         $row["NameLast"] = $nameLast

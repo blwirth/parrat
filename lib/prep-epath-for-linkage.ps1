@@ -234,7 +234,7 @@ function Set-Laterality {
     if ([string]::IsNullOrWhiteSpace($site)) { return }
 
     if ($site -eq "C449") {
-        Set-ItemValue $Tumor "laterality" "0"
+        Set-ItemValue -Context $Tumor -Id "laterality" -Value "0"
         return
     }
 
@@ -252,7 +252,7 @@ function Set-Laterality {
     $lat = Get-Laterality $TextLow
     if ([string]::IsNullOrEmpty($lat)) { return }
 
-    Set-ItemValue $Tumor "laterality" $lat
+    Set-ItemValue -Context $Tumor -Id "laterality" -Value $lat
 }
 
 $tumors    = $xml.SelectNodes("//*[local-name()='Tumor']")
@@ -265,7 +265,7 @@ foreach ($tumor in $tumors) {
     # Set reportingFacility from filename IF existing value is all zeros
     $rfCurrent = (Get-ItemValue $tumor "reportingFacility").Trim()
     if ($rfCurrent -and $rfCurrent -match '^[0]+$') {
-        Set-ItemValue $tumor "reportingFacility" $repHosp
+        Set-ItemValue -Context $tumor -Id "reportingFacility" -Value $repHosp
     }
 
     # ONLY assign primarySite when it is missing/blank
@@ -301,7 +301,7 @@ foreach ($tumor in $tumors) {
     }
 
     if ($code -ne "") {
-        Set-ItemValue $tumor "primarySite" $code
+        Set-ItemValue -Context $tumor -Id "primarySite" -Value $code
         $updated++
         Set-Laterality $tumor $low
     }
