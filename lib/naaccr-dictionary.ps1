@@ -22,7 +22,7 @@ function Initialize-NaaccrDictionary {
         return $true
     }
 
-    $basePath = Join-Path $PSScriptRoot "..\data\dictionaries"
+    $basePath = $script:DictionaryDir
     $jsonPath = Join-Path $basePath "naaccr-items-v$Version.json"
     $xmlPath = Join-Path $basePath "naaccr-data-dictionary-v$Version.xml"
 

@@ -1,6 +1,9 @@
 # syntax-helpers.ps1
 # Shared utilities for NAACCR XML processing
 
+# Central dictionary directory path (data/dictionaries relative to project root)
+$script:DictionaryDir = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries"
+
 function Get-ItemValue {
     param(
         [System.Xml.XmlNode]$Context,

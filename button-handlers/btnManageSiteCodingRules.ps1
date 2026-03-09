@@ -1,7 +1,7 @@
 # btnManageSiteCodingRules.ps1
 # Site Coding Rules Editor - Manage site coding heuristics with AND/OR logic support
 
-$script:SiteCodingRulesFilePath = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries\SiteCodingRules.jsonl"
+$script:SiteCodingRulesFilePath = Join-Path $script:DictionaryDir "SiteCodingRules.jsonl"
 
 function Read-SiteCodingRulesFile {
     param([string]$Path)
@@ -653,7 +653,7 @@ function Show-PatternEditDialog {
     # Load TopoMap for topo-template testing
     $script:TestTopoMap = $null
     try {
-        $maps = Get-CachedMaps -ScriptDir (Join-Path (Split-Path $PSScriptRoot -Parent) "lib")
+        $maps = Get-CachedMaps
         $script:TestTopoMap = $maps.TopoMap
     } catch {
         # TopoMap not available; topo-template tests will be skipped

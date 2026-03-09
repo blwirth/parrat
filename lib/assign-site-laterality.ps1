@@ -403,11 +403,10 @@ function Get-Laterality {
 
 function Get-CachedMaps {
     param(
-        [string]$ScriptDir
+        [string]$ScriptDir  # Kept for backward compatibility but no longer used
     )
-    
-    # Dictionary files are in data/dictionaries (one level up from lib/)
-    $dictDir = Join-Path (Split-Path $ScriptDir -Parent) "data\dictionaries"
+
+    $dictDir = $script:DictionaryDir
     
     # Prefer JSON files (much faster), fallback to Excel
     $topoJson    = Join-Path $dictDir "Topography.jsonl"

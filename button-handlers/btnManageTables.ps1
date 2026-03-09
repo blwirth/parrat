@@ -1,11 +1,10 @@
 # btnManageTables.ps1
 # Coding Table Editor - Manage Laterality, Topography, and Skin Topography lookup tables
 
-# Compute dictionary paths at load time (when dot-sourced from main.ps1)
-$script:DictDir = Join-Path (Split-Path $PSScriptRoot -Parent) "data\dictionaries"
-$script:LateralityFilePath = Join-Path $script:DictDir "Laterality.json"
-$script:TopographyFilePath = Join-Path $script:DictDir "Topography.jsonl"
-$script:SkinTopoFilePath = Join-Path $script:DictDir "TopographyMelanoma.jsonl"
+# Compute dictionary paths at load time (uses $script:DictionaryDir from syntax-helpers.ps1)
+$script:LateralityFilePath = Join-Path $script:DictionaryDir "Laterality.json"
+$script:TopographyFilePath = Join-Path $script:DictionaryDir "Topography.jsonl"
+$script:SkinTopoFilePath = Join-Path $script:DictionaryDir "TopographyMelanoma.jsonl"
 
 function Read-CodingTableFile {
     <#
