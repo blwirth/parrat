@@ -170,7 +170,7 @@ function Get-XmlHeaderInfo {
     }
 }
 
-function Validate-XmlHeaders {
+function Test-XmlHeaders {
     param(
         [array]$XmlFiles
     )
@@ -249,7 +249,7 @@ function Validate-XmlHeaders {
     }
 }
 
-function Validate-XmlHeaderAgainstReference {
+function Test-XmlHeaderAgainstReference {
     param(
         [hashtable]$NewInfo,
         [hashtable]$ReferenceInfo
@@ -335,7 +335,7 @@ function Show-ConcatenationPreview {
     )
 
     # Validate headers
-    $validation = Validate-XmlHeaders -XmlFiles $XmlFiles
+    $validation = Test-XmlHeaders -XmlFiles $XmlFiles
     if (-not $validation.Success) {
         [System.Windows.Forms.MessageBox]::Show(
             "Cannot concatenate XMLs:`n`n$($validation.Error)",
@@ -480,7 +480,7 @@ function Show-ConcatenationPreview {
                 }
                 
                 # Validate headers match reference
-                $headerValidation = Validate-XmlHeaderAgainstReference -NewInfo $info -ReferenceInfo $script:xmlRefInfo
+                $headerValidation = Test-XmlHeaderAgainstReference -NewInfo $info -ReferenceInfo $script:xmlRefInfo
                 if (-not $headerValidation.Success) {
                     $addErrors += "File '$([System.IO.Path]::GetFileName($file))' headers don't match:`n$($headerValidation.Error)"
                     continue
