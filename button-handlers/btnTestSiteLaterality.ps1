@@ -60,9 +60,6 @@ function Invoke-TestSiteLatCurrent {
     )
 
     $fileType = $script:FileType
-    if ([string]::IsNullOrEmpty($fileType)) {
-        $fileType = $global:FileType
-    }
 
     if ($fileType -ne 'xml' -and $fileType -ne 'hl7') {
         [System.Windows.Forms.MessageBox]::Show(
@@ -77,7 +74,7 @@ function Invoke-TestSiteLatCurrent {
     # Get current index
     $idx = $ScriptVars['CurrentIndex']
     if ($null -eq $idx -or $idx -lt 0) {
-        $idx = $global:CurrentIndex
+        $idx = $script:CurrentIndex
     }
     $idx = [int]$idx
 
@@ -189,7 +186,7 @@ function Invoke-TestSiteLatCurrentHl7 {
 
     $messages = $ScriptVars['Hl7Messages']
     if (-not $messages) {
-        $messages = $global:Hl7Messages
+        $messages = $script:Hl7Messages
     }
 
     if (-not $messages -or $messages.Count -eq 0) {

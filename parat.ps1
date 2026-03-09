@@ -504,11 +504,6 @@ $script:IsLoadingData   = $false   # Flag to prevent event recursion during data
 $script:IsShowingTumor  = $false   # Flag to prevent Show-Tumor re-entry
 $script:SearchIndex     = @()
 
-# Global state (for cross-file access)
-$global:Hl7Messages     = @()
-$global:CurrentIndex    = -1
-$global:FileType        = $null
-$global:IsLoadingData   = $false
 
 # Create hashtables for passing context to button handlers
 $script:Controls = @{
@@ -549,8 +544,6 @@ $script:Controls = @{
     'pnlSearch'       = $pnlSearch
 }
 
-# Global controls reference for cross-file access
-$global:AppControls = $script:Controls
 
 $script:ScriptVars = @{
     'Tumors' = $script:Tumors
@@ -601,7 +594,6 @@ function Show-Tumor {
 
     $script:CurrentIndex = $Index
     $script:ScriptVars['CurrentIndex'] = $Index
-    $global:CurrentIndex = $Index
     $tumor = $script:Tumors[$Index]
 
     # Clear text boxes
@@ -700,24 +692,20 @@ $mnuOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $s
 # Grid row selection -> show record based on file type (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
     # Skip event handling during data loading or when Show-Tumor is running to prevent recursion
-    if ($global:IsLoadingData -eq $true -or $script:IsLoadingData -eq $true) { return }
+    if ($script:IsLoadingData -eq $true) { return }
     if ($script:IsShowingTumor -eq $true) { return }
     
     # Determine which data source to use based on file type
     $recordCount = 0
-    # Use global variables for cross-file access
-    $fileType = $global:FileType
-    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
-    
+    $fileType = $script:FileType
+
     if ($fileType -eq 'hl7') {
-        $messages = $global:Hl7Messages
-        if ($null -eq $messages) { $messages = $script:Hl7Messages }
-        $recordCount = if ($null -ne $messages) { $messages.Count } else { 0 }
+        $recordCount = if ($null -ne $script:Hl7Messages) { $script:Hl7Messages.Count } else { 0 }
     }
     else {
         $recordCount = $script:Tumors.Count
     }
-    
+
     if ($recordCount -eq 0) { return }
 
     # Only navigate when exactly one row is selected.
@@ -731,14 +719,12 @@ $gridNav.Add_SelectionChanged({
     $recordIndex = [int]$indexValObj - 1
 
     if ($recordIndex -lt 0 -or $recordIndex -ge $recordCount) { return }
-    
-    $currentIdx = $global:CurrentIndex
-    if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
-    if ($recordIndex -eq $currentIdx) { return }
+
+    if ($recordIndex -eq $script:CurrentIndex) { return }
 
     # Dispatch to appropriate viewer based on file type
     if ($fileType -eq 'hl7') {
-        Show-Hl7Message -Index $recordIndex -Messages $global:Hl7Messages -Controls $script:Controls
+        Show-Hl7Message -Index $recordIndex -Messages $script:Hl7Messages -Controls $script:Controls
     }
     else {
         Show-Tumor -Index $recordIndex
@@ -773,15 +759,10 @@ $gridNav.Add_KeyDown({
         $script:SpaceBatchToggling = $false
         # Update the selected count label once
         $selectedCount = @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count
-        $fileType = $global:FileType
-        if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+        $fileType = $script:FileType
         if ($fileType -eq 'hl7') {
-            $messages = $global:Hl7Messages
-            if ($null -eq $messages) { $messages = $script:Hl7Messages }
-            $totalCount = if ($null -ne $messages) { $messages.Count } else { 0 }
-            $currentIdx = $global:CurrentIndex
-            if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
-            $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($currentIdx + 1), $totalCount, $selectedCount
+            $totalCount = if ($null -ne $script:Hl7Messages) { $script:Hl7Messages.Count } else { 0 }
+            $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $totalCount, $selectedCount
         } else {
             $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $script:Tumors.Count, $selectedCount
         }
@@ -802,23 +783,18 @@ $gridNav.Add_CellValueChanged({
 
     # Only handle changes to the "Selected" column (column 0)
     if ($e.ColumnIndex -ne 0) { return }
-    if ($global:IsLoadingData -eq $true -or $script:IsLoadingData -eq $true) { return }
+    if ($script:IsLoadingData -eq $true) { return }
     if ($script:SpaceBatchToggling) { return }
 
     $dataTable = $gridNav.DataSource
     if ($null -eq $dataTable) { return }
 
     $selectedCount = @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count
-    $fileType = $global:FileType
-    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+    $fileType = $script:FileType
 
     if ($fileType -eq 'hl7') {
-        $messages = $global:Hl7Messages
-        if ($null -eq $messages) { $messages = $script:Hl7Messages }
-        $totalCount = if ($null -ne $messages) { $messages.Count } else { 0 }
-        $currentIdx = $global:CurrentIndex
-        if ($null -eq $currentIdx) { $currentIdx = $script:CurrentIndex }
-        $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($currentIdx + 1), $totalCount, $selectedCount
+        $totalCount = if ($null -ne $script:Hl7Messages) { $script:Hl7Messages.Count } else { 0 }
+        $lblIndex.Text = "Message {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $totalCount, $selectedCount
     }
     else {
         $lblIndex.Text = "Tumor {0} of {1} ({2} selected)" -f ($script:CurrentIndex + 1), $script:Tumors.Count, $selectedCount
@@ -867,8 +843,7 @@ $mnuObxSkipCodes.Add_Click({
 })
 
 $mnuTools.Add_DropDownOpening({
-    $fileType = $global:FileType
-    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+    $fileType = $script:FileType
     $mnuFilterCurrentHl7.Enabled = ($fileType -eq 'hl7')
     # Site/Lat testing works with both XML and HL7 files
     $mnuTestSiteLatCurrent.Enabled = ($fileType -eq 'xml' -or $fileType -eq 'hl7')

@@ -8,12 +8,12 @@ function Show-Hl7Message {
         [hashtable]$Controls = $null
     )
 
-    # Use passed parameters or fall back to global variables
+    # Use passed parameters or fall back to script-scope variables
     if ($null -eq $Messages) {
-        $Messages = $global:Hl7Messages
+        $Messages = $script:Hl7Messages
     }
     if ($null -eq $Controls) {
-        $Controls = $global:AppControls
+        $Controls = $script:Controls
     }
 
     if ($null -eq $Messages -or $Messages.Count -eq 0) { 
@@ -25,7 +25,6 @@ function Show-Hl7Message {
         return 
     }
 
-    $global:CurrentIndex = $Index
     $script:CurrentIndex = $Index
     # Also update ScriptVars hashtable so button handlers can read it
     if ($null -ne $script:ScriptVars) {

@@ -6,10 +6,9 @@ function Get-BtnNoahReportabilityHandler {
 
     return {
         $fileType = $script:FileType
-        # Try ScriptVars first, fall back to global (HL7 viewer updates global)
         $idx = $ScriptVars['CurrentIndex']
         if ($null -eq $idx -or $idx -lt 0) {
-            $idx = $global:CurrentIndex
+            $idx = $script:CurrentIndex
         }
         $idx = [int]$idx
         

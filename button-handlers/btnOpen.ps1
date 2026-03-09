@@ -145,7 +145,6 @@ function Import-XmlFile {
             
             # Temporarily disable event handling while loading data
             $script:IsLoadingData = $true
-            $global:IsLoadingData = $true
             $Controls['gridNav'].DataSource = $table
 
             # Configure columns after data binding
@@ -182,7 +181,6 @@ function Import-XmlFile {
 
             # Re-enable event handling
             $script:IsLoadingData = $false
-            $global:IsLoadingData = $false
             
             Show-Tumor -Index 0
 
@@ -230,18 +228,15 @@ function Import-Hl7File {
             return
         }
         
-        # Set state (both script and global scope for cross-file access)
+        # Set state
         $ScriptVars['Hl7Messages'] = $messages
         $script:Hl7Messages = $messages
-        $global:Hl7Messages = $messages
         $ScriptVars['CurrentFilePath'] = $FilePath
         $script:CurrentFilePath = $FilePath
         $ScriptVars['FileType'] = 'hl7'
         $script:FileType = 'hl7'
-        $global:FileType = 'hl7'
         $ScriptVars['CurrentIndex'] = -1
         $script:CurrentIndex = -1
-        $global:CurrentIndex = -1
         
         # Clear XML data
         $ScriptVars['XmlDoc'] = $null
@@ -292,7 +287,6 @@ function Import-Hl7File {
         
         # Temporarily disable event handling while loading data
         $script:IsLoadingData = $true
-        $global:IsLoadingData = $true
         $Controls['gridNav'].DataSource = $table
         
         # Configure columns after data binding
@@ -329,7 +323,6 @@ function Import-Hl7File {
         
         # Re-enable event handling
         $script:IsLoadingData = $false
-        $global:IsLoadingData = $false
         
         # Select first row and show first message
         if ($Controls['gridNav'].Rows.Count -gt 0) {

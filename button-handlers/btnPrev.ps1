@@ -5,17 +5,15 @@ function Get-BtnPrevHandler {
     
     return {
         try {
-            $currentIdx = $global:CurrentIndex
-            if ($null -eq $currentIdx -or $currentIdx -lt 0) { $currentIdx = $script:CurrentIndex }
+            $currentIdx = $script:CurrentIndex
 
             if ($currentIdx -gt 0) {
                 $newIndex = $currentIdx - 1
 
-                $fileType = $global:FileType
-                if ([string]::IsNullOrEmpty($fileType)) { $fileType = $script:FileType }
+                $fileType = $script:FileType
 
                 if ($fileType -eq 'hl7') {
-                    Show-Hl7Message -Index $newIndex -Messages $global:Hl7Messages -Controls $global:AppControls
+                    Show-Hl7Message -Index $newIndex -Messages $script:Hl7Messages -Controls $script:Controls
                 }
                 else {
                     Show-Tumor -Index $newIndex
