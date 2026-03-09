@@ -3,17 +3,16 @@
 
 function Get-BtnAssignUnifiedHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Unified Assignment")
             return
         }
 
-        if (-not $ScriptVars['CurrentFilePath']) {
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Unified Assignment")
             return
         }
@@ -22,8 +21,8 @@ function Get-BtnAssignUnifiedHandler {
             # Count unique patients
             $patientCount = 0
             $processedPatients = @{}
-            foreach ($tumor in $ScriptVars['Tumors']) {
-                $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $ScriptVars['NsMgr'])
+            foreach ($tumor in $script:Tumors) {
+                $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
                 if ($patient -ne $null -and -not $processedPatients.ContainsKey($patient)) {
                     $processedPatients[$patient] = $true
                     $patientCount++
@@ -32,11 +31,11 @@ function Get-BtnAssignUnifiedHandler {
 
             # Show unified options dialog
             $options = Show-UnifiedAssignDialog `
-                -FilePath $ScriptVars['CurrentFilePath'] `
-                -TumorCount $ScriptVars['Tumors'].Count `
+                -FilePath $script:CurrentFilePath `
+                -TumorCount $script:Tumors.Count `
                 -PatientCount $patientCount `
-                -Tumors $ScriptVars['Tumors'] `
-                -NsMgr $ScriptVars['NsMgr']
+                -Tumors $script:Tumors `
+                -NsMgr $script:NsMgr
 
             if ($null -eq $options) {
                 # User cancelled
@@ -65,15 +64,15 @@ function Get-BtnAssignUnifiedHandler {
             if ($options.AssignFacility) { $optionsList += "Facility" }
             if ($options.AssignPid) { $optionsList += "PID" }
             $optionsDesc = $optionsList -join ", "
-            Write-ParatLog -Level INFO -Message "Starting unified assignment analysis ($optionsDesc) for $($ScriptVars['Tumors'].Count) tumors" -Action "ASSIGN"
+            Write-ParatLog -Level INFO -Message "Starting unified assignment analysis ($optionsDesc) for $($script:Tumors.Count) tumors" -Action "ASSIGN"
 
             # Measure execution time
             $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
             # Run combined analysis
             $result = Get-UnifiedAssignments `
-                -Tumors $ScriptVars['Tumors'] `
-                -NsMgr $ScriptVars['NsMgr'] `
+                -Tumors $script:Tumors `
+                -NsMgr $script:NsMgr `
                 -Options $options
 
             $stopwatch.Stop()
@@ -88,11 +87,11 @@ function Get-BtnAssignUnifiedHandler {
             }
 
             Write-Host "Analysis completed in $elapsedFormatted" -ForegroundColor Green
-            Write-Host "  - Tumors processed: $($ScriptVars['Tumors'].Count)" -ForegroundColor Cyan
+            Write-Host "  - Tumors processed: $($script:Tumors.Count)" -ForegroundColor Cyan
             Write-Host "  - Tumor assignments: $($result.TumorAssignments.Count)" -ForegroundColor Cyan
             Write-Host "  - Patient ID assignments: $($result.PatientAssignments.Count)" -ForegroundColor Cyan
 
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1}) | Analysis: {2}" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count, $elapsedFormatted
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1}) | Analysis: {2}" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count, $elapsedFormatted
 
             # Check if any changes found
             $changesFound = ($result.Report | Where-Object { $_.HasChanges }).Count
@@ -114,11 +113,10 @@ function Get-BtnAssignUnifiedHandler {
                     -TumorAssignments $result.TumorAssignments `
                     -PatientAssignments $result.PatientAssignments `
                     -Options $options `
-                    -OriginalFilePath $ScriptVars['CurrentFilePath'] `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors'] `
-                    -Controls $Controls `
-                    -ScriptVars $ScriptVars
+                    -OriginalFilePath $script:CurrentFilePath `
+                    -XmlDoc $script:XmlDoc `
+                    -Tumors $script:Tumors `
+                    -Controls $Controls
             }
         }
         catch {

@@ -84,8 +84,7 @@ function Get-Hl7MessagePreview {
 function Show-Hl7ConcatenationPreview {
     param(
         [array]$Hl7Files,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     # Use ArrayList for mutable file list that can be modified in event handlers
@@ -468,8 +467,8 @@ function Show-Hl7ConcatenationPreview {
 
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
-                if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Import-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                if ($Controls -ne $null) {
+                    Import-Hl7File -FilePath $outputPath -Controls $Controls
                 }
             }
         }
@@ -618,8 +617,7 @@ function Write-ConcatenatedHl7FromPaths {
 
 function Start-ConcatenateHl7 {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Open file dialog for multiple file selection
@@ -653,22 +651,21 @@ function Start-ConcatenateHl7 {
             }
 
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                Start-FastConcatenateHl7 -FilePaths $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
+                Start-FastConcatenateHl7 -FilePaths $ofd.FileNames -Controls $Controls
                 return
             }
         }
 
-        Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
+        Show-Hl7ConcatenationPreview -Hl7Files $ofd.FileNames -Controls $Controls
     }
 }
 
 function Start-FastConcatenateHl7 {
     param(
         [string[]]$FilePaths,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     # Get output directory
     $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
     $folderDialog.Description = "Select output directory for concatenated HL7 file"
@@ -762,8 +759,8 @@ function Start-FastConcatenateHl7 {
 
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
-                if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Import-Hl7File -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                if ($Controls -ne $null) {
+                    Import-Hl7File -FilePath $outputPath -Controls $Controls
                 }
             }
         }

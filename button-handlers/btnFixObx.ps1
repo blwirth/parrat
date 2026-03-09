@@ -1,29 +1,28 @@
 function Get-BtnFixObx3Handler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     return {
         # Validate HL7 file is loaded
-        if ($null -eq $ScriptVars['Hl7Messages'] -or $ScriptVars['Hl7Messages'].Count -eq 0) {
+        if ($null -eq $script:Hl7Messages -or $script:Hl7Messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Fix OBX3.1")
             return
         }
-        
-        if (-not $ScriptVars['CurrentFilePath']) {
+
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Fix OBX3.1")
             return
         }
-        
+
         try {
             $Controls['lblStatus'].Text = "Fixing OBX segments..."
             $Controls['form'].Refresh()
 
-            Write-ParatLog -Level INFO -Message "Starting Fix OBX 3.1 for $($ScriptVars['Hl7Messages'].Count) messages" -Action "MODIFY_HL7"
+            Write-ParatLog -Level INFO -Message "Starting Fix OBX 3.1 for $($script:Hl7Messages.Count) messages" -Action "MODIFY_HL7"
 
             # Read the raw file content directly for maximum performance
-            $rawContent = [System.IO.File]::ReadAllText($ScriptVars['CurrentFilePath'])
+            $rawContent = [System.IO.File]::ReadAllText($script:CurrentFilePath)
 
             # Process using high-performance raw content function
             $result = Fix-ObxInRawContent -RawContent $rawContent
@@ -36,14 +35,14 @@ function Get-BtnFixObx3Handler {
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Information
                 )
-                $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
+                $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Hl7Messages.Count
                 return
             }
 
             # Generate output path with -obx suffix
-            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
-            $extension = [System.IO.Path]::GetExtension($ScriptVars['CurrentFilePath'])
-            $directory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
+            $extension = [System.IO.Path]::GetExtension($script:CurrentFilePath)
+            $directory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
             $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-obx$extension")
 
             # Write the fixed content using .NET for speed
@@ -52,7 +51,7 @@ function Get-BtnFixObx3Handler {
             $outputFileName = [System.IO.Path]::GetFileName($outputPath)
             Write-ParatLog -Level INFO -Message "Fix OBX 3.1: fixed $($result.FixedCount) of $($result.TotalObxCount) segments, saved to $outputFileName" -Action "MODIFY_HL7"
 
-            $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Hl7Messages.Count
 
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 "Fixed $($result.FixedCount) of $($result.TotalObxCount) OBX segments.`n`nSaved to:`n$outputPath`n`nOpen containing folder?",
@@ -80,35 +79,34 @@ function Get-BtnFixObx3Handler {
 
 function Get-BtnFixObxHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     # Return handler that shows the context menu
     return {
         param($sender, $e)
-        
+
         # Create context menu for dropdown (create fresh each time to ensure proper scoping)
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-        
+
         # Menu item 1: Fix OBX3.1
         $menuItemFixObx3 = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemFixObx3.Text = "Fix OBX3.1"
-        $menuItemFixObx3.Add_Click((Get-BtnFixObx3Handler -Controls $Controls -ScriptVars $ScriptVars))
+        $menuItemFixObx3.Add_Click((Get-BtnFixObx3Handler -Controls $Controls))
         [void]$contextMenu.Items.Add($menuItemFixObx3)
-        
+
         # Menu item 2: Remove Empty OBX5
         $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX5"
-        $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $Controls -ScriptVars $ScriptVars))
+        $menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $Controls))
         [void]$contextMenu.Items.Add($menuItemRemoveEmptyObx5)
-        
+
         # Show context menu at button location (use sender which is the button)
         $button = $sender
         if ($null -eq $button) {
             $button = $Controls['btnFixObx']
         }
-        
+
         if ($null -ne $button -and $null -ne $button.Owner) {
             # Convert button position to screen coordinates for ToolStripItem
             $screenPoint = $button.Owner.PointToScreen([System.Drawing.Point]::new($button.Bounds.Left, $button.Bounds.Bottom))

@@ -188,7 +188,7 @@ $menuItemConcatenateHl7.Add_Click({ Start-ConcatenateHl7 })
 
 $menuItemConcatenateXml = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemConcatenateXml.Text = "Concatenate XML"
-$menuItemConcatenateXml.Add_Click({ Start-ConcatenateXml -Controls $script:Controls -ScriptVars $script:ScriptVars })
+$menuItemConcatenateXml.Add_Click({ Start-ConcatenateXml -Controls $script:Controls })
 [void]$mnuConcatenate.DropDownItems.Add($menuItemConcatenateXml)
 
 $menuItemConcatenateTxt = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -545,17 +545,6 @@ $script:Controls = @{
 }
 
 
-$script:ScriptVars = @{
-    'Tumors' = $script:Tumors
-    'CurrentIndex' = $script:CurrentIndex
-    'NsMgr' = $script:NsMgr
-    'NavTable' = $script:NavTable
-    'XmlDoc' = $script:XmlDoc
-    'CurrentFilePath' = $script:CurrentFilePath
-    'FileType' = $script:FileType
-    'Hl7Messages' = $script:Hl7Messages
-}
-
 function Update-ButtonStatesForFileType {
     param(
         [hashtable]$Controls,
@@ -593,7 +582,6 @@ function Show-Tumor {
     $script:IsShowingTumor = $true
 
     $script:CurrentIndex = $Index
-    $script:ScriptVars['CurrentIndex'] = $Index
     $tumor = $script:Tumors[$Index]
 
     # Clear text boxes
@@ -687,7 +675,7 @@ function Show-Tumor {
     $script:IsShowingTumor = $false
 }
 
-$mnuOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuOpen.Add_Click((Get-BtnOpenHandler -Controls $script:Controls))
 
 # Grid row selection -> show record based on file type (using Index column, not row position)
 $gridNav.Add_SelectionChanged({
@@ -801,42 +789,39 @@ $gridNav.Add_CellValueChanged({
     }
 })
 
-$mnuRawRecord.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$mnuDiffRecords.Add_Click((Get-BtnDiffHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuRawRecord.Add_Click((Get-BtnShowRawHandler -Controls $script:Controls))
+$mnuDiffRecords.Add_Click((Get-BtnDiffHandler -Controls $script:Controls))
 $mnuDiffFiles.Add_Click((Get-BtnDiffFilesHandler))
 $mnuConvertTxt.Add_Click((Get-BtnConvertTxtHandler))
 
-$mnuAssign.Add_Click((Get-BtnAssignUnifiedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuAssign.Add_Click((Get-BtnAssignUnifiedHandler -Controls $script:Controls))
 
 $menuItemFixObx31 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemFixObx31.Text = "Fix OBX 3.1"
-$menuItemFixObx31.Add_Click((Get-BtnFixObx3Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$menuItemFixObx31.Add_Click((Get-BtnFixObx3Handler -Controls $script:Controls))
 [void]$mnuModifyHl7.DropDownItems.Add($menuItemFixObx31)
 
 $menuItemRemoveEmptyObx5 = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemRemoveEmptyObx5.Text = "Remove Empty OBX 5"
-$menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$menuItemRemoveEmptyObx5.Add_Click((Get-BtnRemoveEmptyObx5Handler -Controls $script:Controls))
 [void]$mnuModifyHl7.DropDownItems.Add($menuItemRemoveEmptyObx5)
 
 $menuItemRemoveVariable = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuItemRemoveVariable.Text = "Remove Variable..."
-$menuItemRemoveVariable.Add_Click((Get-BtnRemoveVariableHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$menuItemRemoveVariable.Add_Click((Get-BtnRemoveVariableHandler -Controls $script:Controls))
 [void]$mnuModifyXml.DropDownItems.Add($menuItemRemoveVariable)
 
-$mnuTestSiteLatCurrent.Add_Click((Get-BtnTestSiteLatCurrentHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$mnuTestSiteLatCustom.Add_Click((Get-BtnTestSiteLatCustomHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuTestSiteLatCurrent.Add_Click((Get-BtnTestSiteLatCurrentHandler -Controls $script:Controls))
+$mnuTestSiteLatCustom.Add_Click((Get-BtnTestSiteLatCustomHandler -Controls $script:Controls))
 
 $mnuFilterCurrentHl7.Add_Click({
-    Invoke-PostSelectedHL7 -Controls $script:Controls -ScriptVars $script:ScriptVars
-})
+    Invoke-PostSelectedHL7 -Controls $script:Controls})
 
 $mnuFilterCustomPayload.Add_Click({
-    Invoke-PostCustomPayload -Controls $script:Controls -ScriptVars $script:ScriptVars
-})
+    Invoke-PostCustomPayload -Controls $script:Controls})
 
 $mnuNoahConfig.Add_Click({
-    Invoke-NoahSettings -Controls $script:Controls -ScriptVars $script:ScriptVars
-})
+    Invoke-NoahSettings -Controls $script:Controls})
 
 $mnuObxSkipCodes.Add_Click({
     Show-ObxSkipConfigDialog
@@ -875,11 +860,9 @@ $mnuOpenRecent.Add_DropDownOpening({
                     param($clickSender, $clickArgs)
                     $info = $clickSender.Tag
                     if ($info.FileType -eq 'hl7') {
-                        Import-Hl7File -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
-                    }
+                        Import-Hl7File -FilePath $info.Path -Controls $script:Controls                    }
                     else {
-                        Import-XmlFile -FilePath $info.Path -Controls $script:Controls -ScriptVars $script:ScriptVars
-                    }
+                        Import-XmlFile -FilePath $info.Path -Controls $script:Controls                    }
                 })
             }
             else {
@@ -901,9 +884,9 @@ $mnuOpenRecent.Add_DropDownOpening({
     [void]$menuSender.DropDownItems.Add($clearItem)
 })
 
-$menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
-$menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$menuItemTrueMatches.Add_Click((Get-BtnDedupTrueMatchesHandler -Controls $script:Controls))
+$menuItemPathReport.Add_Click((Get-BtnDedupPathReportHandler -Controls $script:Controls))
+$menuItemPrimaryKey.Add_Click((Get-BtnDedupPrimaryKeyHandler -Controls $script:Controls))
 
 $mnuExport.Add_DropDownOpening({
     param($toolStripButton, $e)
@@ -917,13 +900,13 @@ $mnuExport.Add_DropDownOpening({
     $menuItemXml = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemXml.Text = "Export Selected as XML"
     $menuItemXml.Enabled = $isXml
-    $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    $menuItemXml.Add_Click((Get-BtnExportSelectedXmlHandler -Controls $script:Controls))
     [void]$toolStripButton.DropDownItems.Add($menuItemXml)
     
     $menuItemHl7 = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuItemHl7.Text = "Export Selected as HL7"
     $menuItemHl7.Enabled = $isHl7
-    $menuItemHl7.Add_Click((Get-BtnExportSelectedHl7Handler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+    $menuItemHl7.Add_Click((Get-BtnExportSelectedHl7Handler -Controls $script:Controls))
     [void]$toolStripButton.DropDownItems.Add($menuItemHl7)
     
     [void]$toolStripButton.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
@@ -933,9 +916,9 @@ $mnuExport.Add_DropDownOpening({
     $menuItemAllCsv.Text = "Export All as CSV"
     $menuItemAllCsv.Enabled = ($isXml -or $isHl7)
     if ($isXml) {
-        $menuItemAllCsv.Add_Click((Get-BtnExportAllCsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+        $menuItemAllCsv.Add_Click((Get-BtnExportAllCsvHandler -Controls $script:Controls))
     } elseif ($isHl7) {
-        $menuItemAllCsv.Add_Click((Get-BtnExportAllHl7CsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+        $menuItemAllCsv.Add_Click((Get-BtnExportAllHl7CsvHandler -Controls $script:Controls))
     }
     [void]$toolStripButton.DropDownItems.Add($menuItemAllCsv)
     
@@ -943,21 +926,21 @@ $mnuExport.Add_DropDownOpening({
     $menuItemSelectedCsv.Text = "Export Selected as CSV"
     $menuItemSelectedCsv.Enabled = ($isXml -or $isHl7)
     if ($isXml) {
-        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedCsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedCsvHandler -Controls $script:Controls))
     } elseif ($isHl7) {
-        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedHl7CsvHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+        $menuItemSelectedCsv.Add_Click((Get-BtnExportSelectedHl7CsvHandler -Controls $script:Controls))
     }
     [void]$toolStripButton.DropDownItems.Add($menuItemSelectedCsv)
 })
 
-$mnuManageCodingTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$mnuManageCodingTables.Add_DropDownOpening((Get-BtnManageTablesHandler -Controls $script:Controls))
 
 $mnuSplit.Add_Click((Get-BtnSplitHandler))
 
-$btnPrev.Add_Click((Get-BtnPrevHandler -ScriptVars $script:ScriptVars))
-$btnNext.Add_Click((Get-BtnNextHandler -ScriptVars $script:ScriptVars))
+$btnPrev.Add_Click((Get-BtnPrevHandler))
+$btnNext.Add_Click((Get-BtnNextHandler))
 
-$txtSearch.Add_TextChanged((Get-SearchTextChangedHandler -Controls $script:Controls -ScriptVars $script:ScriptVars))
+$txtSearch.Add_TextChanged((Get-SearchTextChangedHandler -Controls $script:Controls))
 $btnClearSearch.Add_Click((Get-SearchClearHandler -Controls $script:Controls))
 
 # Keyboard shortcuts

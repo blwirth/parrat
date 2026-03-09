@@ -1,29 +1,28 @@
 function Get-BtnExportSelectedXmlHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export Selected")
             return
         }
 
-        if (-not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
+        if (-not $script:XmlDoc -or -not $script:NsMgr) {
             [System.Windows.Forms.MessageBox]::Show("No XML document loaded.", "Export Selected")
             return
         }
 
         # Commit any pending edits to the grid (important for checkboxes)
         $Controls['gridNav'].EndEdit()
-        
+
         # Get checked tumor indices
         $checkedIndices = @()
         foreach ($row in $Controls['gridNav'].Rows) {
             $cell = $row.Cells["Selected"]
             $isChecked = $cell.EditedFormattedValue -eq $true
-            
+
             if ($isChecked) {
                 $indexVal = $row.Cells["Index"].Value
                 if ($null -ne $indexVal -and $indexVal -ne [System.DBNull]::Value) {
@@ -45,8 +44,8 @@ function Get-BtnExportSelectedXmlHandler {
         # Show preview first
         $previewResult = Show-XmlExportPreview `
             -TumorIndices $checkedIndices `
-            -XmlDoc $ScriptVars['XmlDoc'] `
-            -NsMgr $ScriptVars['NsMgr'] `
+            -XmlDoc $script:XmlDoc `
+            -NsMgr $script:NsMgr `
             -Title "Export Selected as XML - Preview"
 
         if ($previewResult -ne [System.Windows.Forms.DialogResult]::OK) {
@@ -57,12 +56,12 @@ function Get-BtnExportSelectedXmlHandler {
         $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveFileDialog.Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*"
         $saveFileDialog.Title = "Save Exported XML File"
-        
+
         # Suggest default filename based on current file
-        if ($ScriptVars['CurrentFilePath']) {
-            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
+        if ($script:CurrentFilePath) {
+            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
             $saveFileDialog.FileName = "${inputFileName}_exported.xml"
-            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
         }
 
         if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -72,8 +71,8 @@ function Get-BtnExportSelectedXmlHandler {
 
                 $result = Export-SelectedXml `
                     -TumorIndices $checkedIndices `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -NsMgr $ScriptVars['NsMgr'] `
+                    -XmlDoc $script:XmlDoc `
+                    -NsMgr $script:NsMgr `
                     -OutputPath $saveFileDialog.FileName
 
                 if ($result.Success) {
@@ -96,7 +95,7 @@ function Get-BtnExportSelectedXmlHandler {
                         Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
                     }
 
-                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
                 }
                 else {
                     Write-ParatLog -Level WARN -Message "XML export completed with errors" -Action "EXPORT"
@@ -123,4 +122,3 @@ function Get-BtnExportSelectedXmlHandler {
         }
     }
 }
-

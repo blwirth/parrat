@@ -1,29 +1,28 @@
 function Get-BtnRemoveEmptyObx5Handler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     return {
         # Validate HL7 file is loaded
-        if ($null -eq $ScriptVars['Hl7Messages'] -or $ScriptVars['Hl7Messages'].Count -eq 0) {
+        if ($null -eq $script:Hl7Messages -or $script:Hl7Messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Remove Empty OBX5")
             return
         }
-        
-        if (-not $ScriptVars['CurrentFilePath']) {
+
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Remove Empty OBX5")
             return
         }
-        
+
         try {
             $Controls['lblStatus'].Text = "Removing empty OBX5 segments..."
             $Controls['form'].Refresh()
 
-            Write-ParatLog -Level INFO -Message "Starting Remove Empty OBX5 for $($ScriptVars['Hl7Messages'].Count) messages" -Action "MODIFY_HL7"
+            Write-ParatLog -Level INFO -Message "Starting Remove Empty OBX5 for $($script:Hl7Messages.Count) messages" -Action "MODIFY_HL7"
 
             # Read the raw file content directly for maximum performance
-            $rawContent = [System.IO.File]::ReadAllText($ScriptVars['CurrentFilePath'])
+            $rawContent = [System.IO.File]::ReadAllText($script:CurrentFilePath)
 
             # Process using high-performance raw content function
             $result = Remove-EmptyObx5FromRawContent -RawContent $rawContent
@@ -36,14 +35,14 @@ function Get-BtnRemoveEmptyObx5Handler {
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Information
                 )
-                $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
+                $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Hl7Messages.Count
                 return
             }
 
             # Generate output path with -no-empty-obx5 suffix
-            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
-            $extension = [System.IO.Path]::GetExtension($ScriptVars['CurrentFilePath'])
-            $directory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
+            $extension = [System.IO.Path]::GetExtension($script:CurrentFilePath)
+            $directory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
             $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-no-empty-obx5$extension")
 
             # Write the modified content using .NET for speed
@@ -52,7 +51,7 @@ function Get-BtnRemoveEmptyObx5Handler {
             $outputFileName = [System.IO.Path]::GetFileName($outputPath)
             Write-ParatLog -Level INFO -Message "Remove Empty OBX5: removed $($result.RemovedCount) of $($result.TotalObxCount) segments, saved to $outputFileName" -Action "MODIFY_HL7"
 
-            $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Hl7Messages.Count
 
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 "Removed $($result.RemovedCount) of $($result.TotalObxCount) OBX segments with empty OBX5 values.`n`nSaved to:`n$outputPath`n`nOpen containing folder?",
@@ -77,4 +76,3 @@ function Get-BtnRemoveEmptyObx5Handler {
         }
     }
 }
-

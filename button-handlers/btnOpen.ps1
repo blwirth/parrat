@@ -1,9 +1,8 @@
 function Get-BtnOpenHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     return {
         $ofd = New-Object System.Windows.Forms.OpenFileDialog
         $ofd.Filter = "NAACCR/HL7 Files (*.xml;*.hl7)|*.xml;*.hl7|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*"
@@ -16,12 +15,12 @@ function Get-BtnOpenHandler {
 
         if ($ofd.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             $extension = [System.IO.Path]::GetExtension($ofd.FileName).ToLower()
-            
+
             if ($extension -eq ".hl7") {
-                Import-Hl7File -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
+                Import-Hl7File -FilePath $ofd.FileName -Controls $Controls
             }
             else {
-                Import-XmlFile -FilePath $ofd.FileName -Controls $Controls -ScriptVars $ScriptVars
+                Import-XmlFile -FilePath $ofd.FileName -Controls $Controls
             }
         }
     }
@@ -30,24 +29,19 @@ function Get-BtnOpenHandler {
 function Import-XmlFile {
     param(
         [string]$FilePath,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     try {
         $xml = New-Object System.Xml.XmlDocument
         $xml.XmlResolver = $null
         $xml.Load($FilePath)
 
-        $ScriptVars['XmlDoc'] = $xml
         $script:XmlDoc = $xml
-        $ScriptVars['CurrentFilePath'] = $FilePath
         $script:CurrentFilePath = $FilePath
-        $ScriptVars['FileType'] = 'xml'
         $script:FileType = 'xml'
-        
+
         # Clear HL7 data
-        $ScriptVars['Hl7Messages'] = @()
         $script:Hl7Messages = @()
         
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'xml'
@@ -56,15 +50,12 @@ function Import-XmlFile {
         $nsMgr = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
         $nsMgr.AddNamespace("n", $nsUri)
 
-        $ScriptVars['NsMgr'] = $nsMgr
         $script:NsMgr = $nsMgr
         $tumors = $xml.SelectNodes("//n:Tumor", $nsMgr)
-        $ScriptVars['Tumors'] = $tumors
         $script:Tumors = $tumors
-        $ScriptVars['CurrentIndex'] = -1
         $script:CurrentIndex = -1
 
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No <Tumor> elements found in this file.", "No Tumors")
             $fileName = [System.IO.Path]::GetFileName($FilePath)
             $Controls['lblStatus'].Text = "No tumors found"
@@ -79,10 +70,10 @@ function Import-XmlFile {
         }
         else {
             $fileName = [System.IO.Path]::GetFileName($FilePath)
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $ScriptVars['Tumors'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f $fileName, $script:Tumors.Count
             $Controls['lblFileName'].Text = "File: $FilePath"
 
-            Write-ParatLog -Level INFO -Message "Loaded $fileName with $($ScriptVars['Tumors'].Count) tumors" -Action "OPEN_FILE"
+            Write-ParatLog -Level INFO -Message "Loaded $fileName with $($script:Tumors.Count) tumors" -Action "OPEN_FILE"
 
             Add-RecentFile -FilePath $FilePath -FileType 'xml'
 
@@ -115,8 +106,8 @@ function Import-XmlFile {
             }
 
             $table.BeginLoadData()
-            for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
-                $tumor = $ScriptVars['Tumors'][$i]
+            for ($i = 0; $i -lt $script:Tumors.Count; $i++) {
+                $tumor = $script:Tumors[$i]
                 $patient = $tumor.ParentNode
                 # Navigate up to Patient if not direct parent
                 while ($null -ne $patient -and $patient.LocalName -ne "Patient") {
@@ -141,8 +132,8 @@ function Import-XmlFile {
             }
             $table.EndLoadData()
 
-            $ScriptVars['NavTable'] = $table
-            
+            $script:NavTable = $table
+
             # Temporarily disable event handling while loading data
             $script:IsLoadingData = $true
             $Controls['gridNav'].DataSource = $table
@@ -184,7 +175,7 @@ function Import-XmlFile {
             
             Show-Tumor -Index 0
 
-            $script:SearchIndex = Build-SearchIndex -FileType 'xml' -ScriptVars $ScriptVars
+            $script:SearchIndex = Build-SearchIndex -FileType 'xml'
             $Controls['pnlSearch'].Visible = $true
             $Controls['txtSearch'].Text = ""
             $Controls['lblSearchCount'].Text = ""
@@ -199,10 +190,9 @@ function Import-XmlFile {
 function Import-Hl7File {
     param(
         [string]$FilePath,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     try {
         $content = Get-Content -Path $FilePath -Raw -Encoding ASCII
         
@@ -229,21 +219,14 @@ function Import-Hl7File {
         }
         
         # Set state
-        $ScriptVars['Hl7Messages'] = $messages
         $script:Hl7Messages = $messages
-        $ScriptVars['CurrentFilePath'] = $FilePath
         $script:CurrentFilePath = $FilePath
-        $ScriptVars['FileType'] = 'hl7'
         $script:FileType = 'hl7'
-        $ScriptVars['CurrentIndex'] = -1
         $script:CurrentIndex = -1
-        
+
         # Clear XML data
-        $ScriptVars['XmlDoc'] = $null
         $script:XmlDoc = $null
-        $ScriptVars['Tumors'] = @()
         $script:Tumors = @()
-        $ScriptVars['NsMgr'] = $null
         $script:NsMgr = $null
         
         Update-ButtonStatesForFileType -Controls $Controls -FileType 'hl7'
@@ -283,8 +266,8 @@ function Import-Hl7File {
         }
         $table.EndLoadData()
         
-        $ScriptVars['NavTable'] = $table
-        
+        $script:NavTable = $table
+
         # Temporarily disable event handling while loading data
         $script:IsLoadingData = $true
         $Controls['gridNav'].DataSource = $table
@@ -331,7 +314,7 @@ function Import-Hl7File {
         }
         Show-Hl7Message -Index 0 -Messages $messages -Controls $Controls
 
-        $script:SearchIndex = Build-SearchIndex -FileType 'hl7' -ScriptVars $ScriptVars
+        $script:SearchIndex = Build-SearchIndex -FileType 'hl7'
         $Controls['pnlSearch'].Visible = $true
         $Controls['txtSearch'].Text = ""
         $Controls['lblSearchCount'].Text = ""

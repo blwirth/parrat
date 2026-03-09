@@ -848,8 +848,7 @@ function Show-UnifiedPreviewReport {
         [string]$OriginalFilePath,
         [System.Xml.XmlDocument]$XmlDoc,
         [System.Xml.XmlNodeList]$Tumors,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Count changes
@@ -1088,8 +1087,8 @@ function Show-UnifiedPreviewReport {
                 $reportForm.Close()
 
                 # Load the newly created file
-                if ($null -ne $Controls -and $null -ne $ScriptVars) {
-                    Import-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                if ($null -ne $Controls) {
+                    Import-XmlFile -FilePath $outputPath -Controls $Controls
                 }
             }
         }

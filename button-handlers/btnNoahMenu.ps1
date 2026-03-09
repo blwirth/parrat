@@ -1,15 +1,10 @@
 function Invoke-PostSelectedHL7 {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     $fileType = $script:FileType
-    $idx = $ScriptVars['CurrentIndex']
-    if ($null -eq $idx -or $idx -lt 0) {
-        $idx = $script:CurrentIndex
-    }
-    $idx = [int]$idx
+    $idx = [int]$script:CurrentIndex
     
     # Check for HL7 file (NOAH only accepts HL7 inputs)
     if ($fileType -ne 'hl7') {
@@ -22,7 +17,7 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
-    if ($ScriptVars['Hl7Messages'].Count -eq 0) {
+    if ($script:Hl7Messages.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show(
             "No HL7 messages loaded.",
             "NOAH Reportability",
@@ -32,7 +27,7 @@ function Invoke-PostSelectedHL7 {
         return
     }
 
-    if ($idx -lt 0 -or $idx -ge $ScriptVars['Hl7Messages'].Count) {
+    if ($idx -lt 0 -or $idx -ge $script:Hl7Messages.Count) {
         [System.Windows.Forms.MessageBox]::Show(
             "Select a message first (click a row in the left grid).",
             "NOAH Reportability",
@@ -59,13 +54,13 @@ function Invoke-PostSelectedHL7 {
         # Run CLI-based filter (no server needed)
         $result = Invoke-NoahReportabilityFilterForMessage `
             -MessageIndex $idx `
-            -Hl7Messages $ScriptVars['Hl7Messages'] `
+            -Hl7Messages $script:Hl7Messages `
             -Config $config `
             -ModelId $selection.ModelId `
             -OutputFormat $selection.OutputFormat
 
         $recordLabel = "Message"
-        $recordCount = $ScriptVars['Hl7Messages'].Count
+        $recordCount = $script:Hl7Messages.Count
 
         if ($result.Success) {
             Write-ParatLog -Level INFO -Message "NOAH filter completed: $($result.Classification)" -Action "NOAH_API"
@@ -90,8 +85,7 @@ function Invoke-PostSelectedHL7 {
 
 function Invoke-PostCustomPayload {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Show dialog to get custom text
@@ -236,8 +230,7 @@ function Invoke-NoahSettings {
     Open NOAH Settings dialog
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     $config = Get-NoahConfig
@@ -251,8 +244,7 @@ function Invoke-NoahSettings {
 
 function Get-BtnNoahMenuHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
@@ -263,14 +255,14 @@ function Get-BtnNoahMenuHandler {
         $menuItemSelected = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemSelected.Text = "Test current HL7"
         $menuItemSelected.Add_Click({
-            Invoke-PostSelectedHL7 -Controls $Controls -ScriptVars $ScriptVars
+            Invoke-PostSelectedHL7 -Controls $Controls
         })
 
         # Menu item 2: Test custom payload
         $menuItemCustom = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemCustom.Text = "Test custom payload"
         $menuItemCustom.Add_Click({
-            Invoke-PostCustomPayload -Controls $Controls -ScriptVars $ScriptVars
+            Invoke-PostCustomPayload -Controls $Controls
         })
 
         # Separator
@@ -280,7 +272,7 @@ function Get-BtnNoahMenuHandler {
         $menuItemSettings = New-Object System.Windows.Forms.ToolStripMenuItem
         $menuItemSettings.Text = "Settings..."
         $menuItemSettings.Add_Click({
-            Invoke-NoahSettings -Controls $Controls -ScriptVars $ScriptVars
+            Invoke-NoahSettings -Controls $Controls
         })
 
         $contextMenu.Items.AddRange(@($menuItemSelected, $menuItemCustom, $separator, $menuItemSettings))

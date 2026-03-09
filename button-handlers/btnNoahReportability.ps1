@@ -1,20 +1,15 @@
 function Get-BtnNoahReportabilityHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
         $fileType = $script:FileType
-        $idx = $ScriptVars['CurrentIndex']
-        if ($null -eq $idx -or $idx -lt 0) {
-            $idx = $script:CurrentIndex
-        }
-        $idx = [int]$idx
+        $idx = [int]$script:CurrentIndex
         
         # Check for XML file
         if ($fileType -eq 'xml' -or $fileType -eq $null) {
-            if ($ScriptVars['Tumors'].Count -eq 0 -or -not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
+            if ($script:Tumors.Count -eq 0 -or -not $script:XmlDoc -or -not $script:NsMgr) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "No XML document loaded.",
                     "NOAH Reportability",
@@ -24,7 +19,7 @@ function Get-BtnNoahReportabilityHandler {
                 return
             }
 
-            if ($idx -lt 0 -or $idx -ge $ScriptVars['Tumors'].Count) {
+            if ($idx -lt 0 -or $idx -ge $script:Tumors.Count) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "Select a tumor first (click a row in the left grid).",
                     "NOAH Reportability",
@@ -41,12 +36,12 @@ function Get-BtnNoahReportabilityHandler {
                 $config = Get-NoahConfig
                 $result = Invoke-NoahReportabilityFilterForTumor `
                     -TumorIndex $idx `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -NsMgr $ScriptVars['NsMgr'] `
+                    -XmlDoc $script:XmlDoc `
+                    -NsMgr $script:NsMgr `
                     -Config $config
 
                 $recordLabel = "Tumor"
-                $recordCount = $ScriptVars['Tumors'].Count
+                $recordCount = $script:Tumors.Count
             }
             catch {
                 [System.Windows.Forms.MessageBox]::Show(
@@ -61,7 +56,7 @@ function Get-BtnNoahReportabilityHandler {
         }
         # Check for HL7 file
         elseif ($fileType -eq 'hl7') {
-            if ($ScriptVars['Hl7Messages'].Count -eq 0) {
+            if ($script:Hl7Messages.Count -eq 0) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "No HL7 messages loaded.",
                     "NOAH Reportability",
@@ -71,7 +66,7 @@ function Get-BtnNoahReportabilityHandler {
                 return
             }
 
-            if ($idx -lt 0 -or $idx -ge $ScriptVars['Hl7Messages'].Count) {
+            if ($idx -lt 0 -or $idx -ge $script:Hl7Messages.Count) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "Select a message first (click a row in the left grid).",
                     "NOAH Reportability",
@@ -88,11 +83,11 @@ function Get-BtnNoahReportabilityHandler {
                 $config = Get-NoahConfig
                 $result = Invoke-NoahReportabilityFilterForMessage `
                     -MessageIndex $idx `
-                    -Hl7Messages $ScriptVars['Hl7Messages'] `
+                    -Hl7Messages $script:Hl7Messages `
                     -Config $config
 
                 $recordLabel = "Message"
-                $recordCount = $ScriptVars['Hl7Messages'].Count
+                $recordCount = $script:Hl7Messages.Count
             }
             catch {
                 [System.Windows.Forms.MessageBox]::Show(

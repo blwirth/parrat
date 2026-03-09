@@ -1,8 +1,4 @@
 function Get-BtnPrevHandler {
-    param(
-        [hashtable]$ScriptVars
-    )
-    
     return {
         try {
             $currentIdx = $script:CurrentIndex

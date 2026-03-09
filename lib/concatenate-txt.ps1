@@ -57,8 +57,7 @@ function Get-TxtFilePreview {
 function Show-TxtConcatenationPreview {
     param(
         [array]$TxtFiles,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     # Use ArrayList for mutable file list that can be modified in event handlers
@@ -498,8 +497,7 @@ function Write-ConcatenatedTxt {
 
 function Start-ConcatenateTxt {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Open file dialog for multiple file selection
@@ -519,6 +517,6 @@ function Start-ConcatenateTxt {
             return
         }
 
-        Show-TxtConcatenationPreview -TxtFiles $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
+        Show-TxtConcatenationPreview -TxtFiles $ofd.FileNames -Controls $Controls
     }
 }

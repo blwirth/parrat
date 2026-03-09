@@ -331,10 +331,9 @@ function Get-TumorPreview {
 function Show-ConcatenationPreview {
     param(
         [array]$XmlFiles,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     # Validate headers
     $validation = Validate-XmlHeaders -XmlFiles $XmlFiles
     if (-not $validation.Success) {
@@ -356,9 +355,8 @@ function Show-ConcatenationPreview {
     # Store reference info for header validation when adding new files
     $script:xmlRefInfo = $validation.ReferenceInfo
 
-    # Store Controls and ScriptVars for access in event handlers
+    # Store Controls for access in event handlers
     $script:concatControls = $Controls
-    $script:concatScriptVars = $ScriptVars
 
     # Store output path for loading after form closes
     $script:concatOutputPath = $null
@@ -750,8 +748,8 @@ function Show-ConcatenationPreview {
 
     # Load file after form closes if user requested
     if ($script:concatShouldOpen -and $script:concatOutputPath) {
-        if ($script:concatControls -ne $null -and $script:concatScriptVars -ne $null) {
-            Import-XmlFile -FilePath $script:concatOutputPath -Controls $script:concatControls -ScriptVars $script:concatScriptVars
+        if ($script:concatControls -ne $null) {
+            Import-XmlFile -FilePath $script:concatOutputPath -Controls $script:concatControls
         }
     }
 
@@ -760,7 +758,6 @@ function Show-ConcatenationPreview {
     $script:xmlRefInfo = $null
     $script:UpdateXmlPreviewUI = $null
     $script:concatControls = $null
-    $script:concatScriptVars = $null
     $script:concatOutputPath = $null
     $script:concatShouldOpen = $false
 }
@@ -985,8 +982,7 @@ function Write-ConcatenatedXmlFromPaths {
 
 function Start-ConcatenateXml {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Open file dialog for multiple file selection
@@ -1020,22 +1016,21 @@ function Start-ConcatenateXml {
             }
 
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                Start-FastConcatenateXml -FilePaths $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
+                Start-FastConcatenateXml -FilePaths $ofd.FileNames -Controls $Controls
                 return
             }
         }
 
-        Show-ConcatenationPreview -XmlFiles $ofd.FileNames -Controls $Controls -ScriptVars $ScriptVars
+        Show-ConcatenationPreview -XmlFiles $ofd.FileNames -Controls $Controls
     }
 }
 
 function Start-FastConcatenateXml {
     param(
         [string[]]$FilePaths,
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
-    
+
     # Get output directory
     $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
     $folderDialog.Description = "Select output directory for concatenated XML"
@@ -1143,8 +1138,8 @@ function Start-FastConcatenateXml {
 
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
-                if ($Controls -ne $null -and $ScriptVars -ne $null) {
-                    Import-XmlFile -FilePath $outputPath -Controls $Controls -ScriptVars $ScriptVars
+                if ($Controls -ne $null) {
+                    Import-XmlFile -FilePath $outputPath -Controls $Controls
                 }
             }
         }

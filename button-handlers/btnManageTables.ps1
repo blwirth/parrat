@@ -555,8 +555,7 @@ function Get-BtnManageTablesHandler {
     Returns a handler that populates the Manage Coding Tables dropdown menu
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {

@@ -8,17 +8,13 @@ function Get-BtnTestSiteLatCurrentHandler {
 
     .PARAMETER Controls
     Hashtable of UI controls
-
-    .PARAMETER ScriptVars
-    Hashtable of script variables
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
-        Invoke-TestSiteLatCurrent -Controls $Controls -ScriptVars $ScriptVars
+        Invoke-TestSiteLatCurrent -Controls $Controls
     }
 }
 
@@ -29,17 +25,13 @@ function Get-BtnTestSiteLatCustomHandler {
 
     .PARAMETER Controls
     Hashtable of UI controls
-
-    .PARAMETER ScriptVars
-    Hashtable of script variables
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
-        Invoke-TestSiteLatCustom -Controls $Controls -ScriptVars $ScriptVars
+        Invoke-TestSiteLatCustom -Controls $Controls
     }
 }
 
@@ -50,13 +42,9 @@ function Invoke-TestSiteLatCurrent {
 
     .PARAMETER Controls
     Hashtable of UI controls
-
-    .PARAMETER ScriptVars
-    Hashtable of script variables
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     $fileType = $script:FileType
@@ -72,17 +60,13 @@ function Invoke-TestSiteLatCurrent {
     }
 
     # Get current index
-    $idx = $ScriptVars['CurrentIndex']
-    if ($null -eq $idx -or $idx -lt 0) {
-        $idx = $script:CurrentIndex
-    }
-    $idx = [int]$idx
+    $idx = [int]$script:CurrentIndex
 
     if ($fileType -eq 'hl7') {
-        Invoke-TestSiteLatCurrentHl7 -Controls $Controls -ScriptVars $ScriptVars -Index $idx
+        Invoke-TestSiteLatCurrentHl7 -Controls $Controls -Index $idx
     }
     else {
-        Invoke-TestSiteLatCurrentXml -Controls $Controls -ScriptVars $ScriptVars -Index $idx
+        Invoke-TestSiteLatCurrentXml -Controls $Controls -Index $idx
     }
 }
 
@@ -93,11 +77,10 @@ function Invoke-TestSiteLatCurrentXml {
     #>
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars,
         [int]$Index
     )
 
-    if ($ScriptVars['Tumors'].Count -eq 0 -or -not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
+    if ($script:Tumors.Count -eq 0 -or -not $script:XmlDoc -or -not $script:NsMgr) {
         [System.Windows.Forms.MessageBox]::Show(
             "No XML document loaded.",
             "Test Site/Laterality",
@@ -107,7 +90,7 @@ function Invoke-TestSiteLatCurrentXml {
         return
     }
 
-    if ($Index -lt 0 -or $Index -ge $ScriptVars['Tumors'].Count) {
+    if ($Index -lt 0 -or $Index -ge $script:Tumors.Count) {
         [System.Windows.Forms.MessageBox]::Show(
             "Select a tumor first (click a row in the left grid).",
             "Test Site/Laterality",
@@ -121,8 +104,8 @@ function Invoke-TestSiteLatCurrentXml {
         $Controls['lblStatus'].Text = "Testing site/laterality on current record..."
         $Controls['form'].Refresh()
 
-        $tumor = $ScriptVars['Tumors'][$Index]
-        $nsMgr = $ScriptVars['NsMgr']
+        $tumor = $script:Tumors[$Index]
+        $nsMgr = $script:NsMgr
 
         # Extract text from the tumor's text fields (same fields used in assign-site-laterality.ps1)
         # May need to re-evaluate this at some point--NOAH puts some path info in Lab Tests for instance
@@ -150,7 +133,7 @@ function Invoke-TestSiteLatCurrentXml {
 
         $result = Test-SiteLateralityHeuristics -Text $textCombined
 
-        $result.SourceInfo = "Tumor $($Index + 1) of $($ScriptVars['Tumors'].Count)"
+        $result.SourceInfo = "Tumor $($Index + 1) of $($script:Tumors.Count)"
         $result.TextLength = $textCombined.Length
 
         Show-TestSiteLateralityResults -Result $result -SourceText $textCombined
@@ -180,14 +163,10 @@ function Invoke-TestSiteLatCurrentHl7 {
     #>
     param(
         [hashtable]$Controls,
-        [hashtable]$ScriptVars,
         [int]$Index
     )
 
-    $messages = $ScriptVars['Hl7Messages']
-    if (-not $messages) {
-        $messages = $script:Hl7Messages
-    }
+    $messages = $script:Hl7Messages
 
     if (-not $messages -or $messages.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show(
@@ -281,13 +260,9 @@ function Invoke-TestSiteLatCustom {
 
     .PARAMETER Controls
     Hashtable of UI controls
-
-    .PARAMETER ScriptVars
-    Hashtable of script variables
     #>
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     # Show input dialog

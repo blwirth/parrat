@@ -1,16 +1,15 @@
 function Get-BtnExportAllCsvHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Export All")
             return
         }
 
-        if (-not $ScriptVars['XmlDoc'] -or -not $ScriptVars['NsMgr']) {
+        if (-not $script:XmlDoc -or -not $script:NsMgr) {
             [System.Windows.Forms.MessageBox]::Show("No XML document loaded.", "Export All")
             return
         }
@@ -32,15 +31,15 @@ function Get-BtnExportAllCsvHandler {
 
         # Build list of all tumor indices
         $allIndices = @()
-        for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
+        for ($i = 0; $i -lt $script:Tumors.Count; $i++) {
             $allIndices += $i
         }
 
         # Show preview with integrated field selector
         $previewResult = Show-ExportPreview `
             -TumorIndices $allIndices `
-            -XmlDoc $ScriptVars['XmlDoc'] `
-            -NsMgr $ScriptVars['NsMgr'] `
+            -XmlDoc $script:XmlDoc `
+            -NsMgr $script:NsMgr `
             -FieldList $fieldList `
             -Title "Export All as CSV - Configure Fields & Preview"
 
@@ -69,20 +68,20 @@ function Get-BtnExportAllCsvHandler {
         $saveFileDialog.Title = "Save Exported CSV File"
         
         # Suggest default filename based on current file
-        if ($ScriptVars['CurrentFilePath']) {
-            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
+        if ($script:CurrentFilePath) {
+            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
             $saveFileDialog.FileName = "${inputFileName}_all_exported.csv"
-            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
         }
 
         if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             try {
-                $Controls['lblStatus'].Text = "Exporting all {0} tumor(s) to CSV..." -f $ScriptVars['Tumors'].Count
+                $Controls['lblStatus'].Text = "Exporting all {0} tumor(s) to CSV..." -f $script:Tumors.Count
                 $Controls['form'].Refresh()
 
                 $result = Export-AllCsv `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -NsMgr $ScriptVars['NsMgr'] `
+                    -XmlDoc $script:XmlDoc `
+                    -NsMgr $script:NsMgr `
                     -OutputPath $saveFileDialog.FileName `
                     -FieldList $configuredFieldList `
                     -CustomFields $customFields
@@ -104,7 +103,7 @@ function Get-BtnExportAllCsvHandler {
                         Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
                     }
 
-                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
                 }
                 else {
                     $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")

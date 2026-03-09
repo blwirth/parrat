@@ -1,23 +1,22 @@
 function Get-BtnFacilityHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Assign Facility")
             return
         }
         
-        if (-not $ScriptVars['CurrentFilePath']) {
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Assign Facility")
             return
         }
         
         try {
             # Try to extract facility number from filename
-            $facilityNum = Get-FacilityFromFilename -FilePath $ScriptVars['CurrentFilePath']
+            $facilityNum = Get-FacilityFromFilename -FilePath $script:CurrentFilePath
             
             # Track whether to overwrite existing values
             $overwriteExisting = $false
@@ -134,9 +133,9 @@ function Get-BtnFacilityHandler {
             $Controls['form'].Refresh()
             
             # Run analysis
-            $result = Get-FacilityAssignments -Tumors $ScriptVars['Tumors'] -NsMgr $ScriptVars['NsMgr'] -FacilityNumber $facilityNum -OverwriteExisting $overwriteExisting
+            $result = Get-FacilityAssignments -Tumors $script:Tumors -NsMgr $script:NsMgr -FacilityNumber $facilityNum -OverwriteExisting $overwriteExisting
             
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
             
             if ($result.Report.Count -eq 0) {
                 [System.Windows.Forms.MessageBox]::Show(
@@ -152,9 +151,9 @@ function Get-BtnFacilityHandler {
                     -Report $result.Report `
                     -Assignments $result.Assignments `
                     -FacilityNumber $facilityNum `
-                    -OriginalFilePath $ScriptVars['CurrentFilePath'] `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors'] `
+                    -OriginalFilePath $script:CurrentFilePath `
+                    -XmlDoc $script:XmlDoc `
+                    -Tumors $script:Tumors `
                     -OverwriteExisting $overwriteExisting
             }
         }

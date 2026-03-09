@@ -1,7 +1,6 @@
 function Get-BtnDiffHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
@@ -13,7 +12,7 @@ function Get-BtnDiffHandler {
                 $recordCount = $script:Hl7Messages.Count
             }
             else {
-                $recordCount = $ScriptVars['Tumors'].Count
+                $recordCount = $script:Tumors.Count
             }
 
             if ($recordCount -eq 0) {

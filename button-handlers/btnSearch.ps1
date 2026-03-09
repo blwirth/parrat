@@ -1,7 +1,6 @@
 function Get-SearchTextChangedHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
@@ -15,7 +14,7 @@ function Get-SearchTextChangedHandler {
                         $script:SearchTimer.Stop()
 
                         $searchText = $Controls['txtSearch'].Text
-                        $navTable = $ScriptVars['NavTable']
+                        $navTable = $script:NavTable
                         $searchIndex = $script:SearchIndex
 
                         if ($null -eq $navTable) { return }

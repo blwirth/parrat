@@ -1,8 +1,4 @@
 function Get-BtnNextHandler {
-    param(
-        [hashtable]$ScriptVars
-    )
-    
     return {
         try {
             $fileType = $script:FileType

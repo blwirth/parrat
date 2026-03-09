@@ -253,22 +253,21 @@ function Show-VariableSelectionDialog {
 
 function Get-BtnRemoveVariableHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
 
     return {
-        if ($null -eq $ScriptVars['XmlDoc']) {
+        if ($null -eq $script:XmlDoc) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Remove Variable")
             return
         }
 
-        if ($null -eq $ScriptVars['Tumors'] -or $ScriptVars['Tumors'].Count -eq 0) {
+        if ($null -eq $script:Tumors -or $script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No records found in the loaded file.", "Remove Variable")
             return
         }
 
-        if (-not $ScriptVars['CurrentFilePath']) {
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Remove Variable")
             return
         }
@@ -277,15 +276,15 @@ function Get-BtnRemoveVariableHandler {
             $Controls['lblStatus'].Text = "Scanning variables..."
             $Controls['form'].Refresh()
 
-            $variables = Get-UniqueNaaccrIds -XmlDoc $ScriptVars['XmlDoc'] -NsMgr $ScriptVars['NsMgr']
+            $variables = Get-UniqueNaaccrIds -XmlDoc $script:XmlDoc -NsMgr $script:NsMgr
 
             if ($null -eq $variables -or @($variables).Count -eq 0) {
                 [System.Windows.Forms.MessageBox]::Show("No variables found in the loaded file.", "Remove Variable")
-                $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+                $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
                 return
             }
 
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
 
             $selectedIds = Show-VariableSelectionDialog -Variables @($variables)
 
@@ -323,22 +322,22 @@ function Get-BtnRemoveVariableHandler {
             $Controls['lblStatus'].Text = "Removing $($selectedIds.Count) $varWord..."
             $Controls['form'].Refresh()
 
-            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
-            $extension = [System.IO.Path]::GetExtension($ScriptVars['CurrentFilePath'])
-            $directory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $originalFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
+            $extension = [System.IO.Path]::GetExtension($script:CurrentFilePath)
+            $directory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
             $suffix = "$($selectedIds.Count)v"
 
             $outputPath = [System.IO.Path]::Combine($directory, "$originalFileName-rm$suffix$extension")
 
             $idsJoined = $selectedIds -join ', '
-            Write-ParatLog -Level INFO -Message "Removing $($selectedIds.Count) $varWord ($idsJoined) totaling $totalOccurrences occurrences from $([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath']))" -Action "MODIFY_XML"
+            Write-ParatLog -Level INFO -Message "Removing $($selectedIds.Count) $varWord ($idsJoined) totaling $totalOccurrences occurrences from $([System.IO.Path]::GetFileName($script:CurrentFilePath))" -Action "MODIFY_XML"
 
-            $result = Remove-XmlVariable -XmlDoc $ScriptVars['XmlDoc'] -NaaccrIds $selectedIds -OutputPath $outputPath
+            $result = Remove-XmlVariable -XmlDoc $script:XmlDoc -NaaccrIds $selectedIds -OutputPath $outputPath
 
             $outputFileName = [System.IO.Path]::GetFileName($outputPath)
             Write-ParatLog -Level INFO -Message "Remove Variable: removed $($result.RemovedCount) occurrences of $($selectedIds.Count) $varWord, saved to $outputFileName" -Action "MODIFY_XML"
 
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
 
             $dialogResult = [System.Windows.Forms.MessageBox]::Show(
                 "Removed $($result.RemovedCount) total occurrences of $($selectedIds.Count) $($varWord).`n`nSaved to:`n$outputPath`n`nOpen containing folder?",

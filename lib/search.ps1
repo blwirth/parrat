@@ -1,13 +1,12 @@
 function Build-SearchIndex {
     param(
-        [string]$FileType,
-        [hashtable]$ScriptVars
+        [string]$FileType
     )
 
     try {
         if ($FileType -eq 'xml') {
-            $tumors = $ScriptVars['Tumors']
-            $nsMgr = $ScriptVars['NsMgr']
+            $tumors = $script:Tumors
+            $nsMgr = $script:NsMgr
             if (-not $tumors -or $tumors.Count -eq 0) { return @() }
 
             $index = New-Object string[] $tumors.Count
@@ -46,7 +45,7 @@ function Build-SearchIndex {
             return $index
         }
         elseif ($FileType -eq 'hl7') {
-            $messages = $ScriptVars['Hl7Messages']
+            $messages = $script:Hl7Messages
             if (-not $messages -or $messages.Count -eq 0) { return @() }
 
             $index = New-Object string[] $messages.Count

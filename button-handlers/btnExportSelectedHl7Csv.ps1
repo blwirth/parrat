@@ -1,11 +1,10 @@
 function Get-BtnExportSelectedHl7CsvHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
-        if ($ScriptVars['Hl7Messages'].Count -eq 0) {
+        if ($script:Hl7Messages.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Export Selected")
             return
         }
@@ -43,10 +42,10 @@ function Get-BtnExportSelectedHl7CsvHandler {
         $saveFileDialog.Title = "Save Exported CSV File"
         
         # Suggest default filename based on current file
-        if ($ScriptVars['CurrentFilePath']) {
-            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($ScriptVars['CurrentFilePath'])
+        if ($script:CurrentFilePath) {
+            $inputFileName = [System.IO.Path]::GetFileNameWithoutExtension($script:CurrentFilePath)
             $saveFileDialog.FileName = "${inputFileName}_exported.csv"
-            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($ScriptVars['CurrentFilePath'])
+            $saveFileDialog.InitialDirectory = [System.IO.Path]::GetDirectoryName($script:CurrentFilePath)
         }
 
         if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -56,7 +55,7 @@ function Get-BtnExportSelectedHl7CsvHandler {
 
                 $result = Export-SelectedHl7Csv `
                     -MessageIndices $checkedIndices `
-                    -Hl7Messages $ScriptVars['Hl7Messages'] `
+                    -Hl7Messages $script:Hl7Messages `
                     -OutputPath $saveFileDialog.FileName
 
                 if ($result.Success) {
@@ -76,7 +75,7 @@ function Get-BtnExportSelectedHl7CsvHandler {
                         Start-Process "explorer.exe" -ArgumentList "/select,`"$($saveFileDialog.FileName)`""
                     }
 
-                    $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Hl7Messages'].Count
+                    $Controls['lblStatus'].Text = "Loaded: {0} (Messages: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Hl7Messages.Count
                 }
                 else {
                     $errorMessage = "Export completed with errors:`n" + ($result.Errors -join "`n")

@@ -1,16 +1,15 @@
 function Get-BtnAddPidHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
-        if ($ScriptVars['Tumors'].Count -eq 0) {
+        if ($script:Tumors.Count -eq 0) {
             [System.Windows.Forms.MessageBox]::Show("No XML file loaded.", "Add Patient ID")
             return
         }
         
-        if (-not $ScriptVars['CurrentFilePath']) {
+        if (-not $script:CurrentFilePath) {
             [System.Windows.Forms.MessageBox]::Show("No file path available.", "Add Patient ID")
             return
         }
@@ -23,16 +22,16 @@ function Get-BtnAddPidHandler {
             $processedPatients = @{}
             $allHaveIds = $true
             
-            for ($i = 0; $i -lt $ScriptVars['Tumors'].Count; $i++) {
-                $tumor = $ScriptVars['Tumors'][$i]
-                $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $ScriptVars['NsMgr'])
+            for ($i = 0; $i -lt $script:Tumors.Count; $i++) {
+                $tumor = $script:Tumors[$i]
+                $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
                 
                 if ($null -eq $patient) { continue }
                 
                 if (-not $processedPatients.ContainsKey($patient)) {
                     $processedPatients[$patient] = $true
                     
-                    $idNode = $patient.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $ScriptVars['NsMgr'])
+                    $idNode = $patient.SelectSingleNode("./n:Item[@naaccrId='patientIdNumber']", $script:NsMgr)
                     $currentId = if ($idNode) { $idNode.InnerText } else { "" }
                     
                     if ([string]::IsNullOrWhiteSpace($currentId)) {
@@ -93,15 +92,15 @@ function Get-BtnAddPidHandler {
                 }
                 else {
                     # User cancelled
-                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+                    $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
                     return
                 }
             }
             
             # Run analysis with selected mode
-            $result = Get-PatientIdAssignments -Tumors $ScriptVars['Tumors'] -NsMgr $ScriptVars['NsMgr'] -Mode $mode
+            $result = Get-PatientIdAssignments -Tumors $script:Tumors -NsMgr $script:NsMgr -Mode $mode
             
-            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($ScriptVars['CurrentFilePath'])), $ScriptVars['Tumors'].Count
+            $Controls['lblStatus'].Text = "Loaded: {0} (Tumors: {1})" -f ([System.IO.Path]::GetFileName($script:CurrentFilePath)), $script:Tumors.Count
             
             if ($result.Report.Count -eq 0) {
                 [System.Windows.Forms.MessageBox]::Show(
@@ -116,9 +115,9 @@ function Get-BtnAddPidHandler {
                 Show-PatientIdReport `
                     -Report $result.Report `
                     -Assignments $result.Assignments `
-                    -OriginalFilePath $ScriptVars['CurrentFilePath'] `
-                    -XmlDoc $ScriptVars['XmlDoc'] `
-                    -Tumors $ScriptVars['Tumors']
+                    -OriginalFilePath $script:CurrentFilePath `
+                    -XmlDoc $script:XmlDoc `
+                    -Tumors $script:Tumors
             }
         }
         catch {

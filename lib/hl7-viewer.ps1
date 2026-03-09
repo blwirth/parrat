@@ -26,10 +26,6 @@ function Show-Hl7Message {
     }
 
     $script:CurrentIndex = $Index
-    # Also update ScriptVars hashtable so button handlers can read it
-    if ($null -ne $script:ScriptVars) {
-        $script:ScriptVars['CurrentIndex'] = $Index
-    }
     $message = $Messages[$Index]
 
     $rtbPath = $Controls['rtbPath']
@@ -197,13 +193,7 @@ function Show-RawHl7ForMessage {
         [int]$Index
     )
 
-    # Get messages from ScriptVars if script variable is empty (scope issue)
     $messages = $script:Hl7Messages
-    if ($null -eq $messages -or $messages.Count -eq 0) {
-        if ($null -ne $script:ScriptVars -and $null -ne $script:ScriptVars['Hl7Messages']) {
-            $messages = $script:ScriptVars['Hl7Messages']
-        }
-    }
 
     if ($null -eq $messages -or $messages.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show("No HL7 file loaded.", "Show HL7")

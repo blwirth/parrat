@@ -1,7 +1,6 @@
 function Get-BtnShowRawHandler {
     param(
-        [hashtable]$Controls,
-        [hashtable]$ScriptVars
+        [hashtable]$Controls
     )
     
     return {
