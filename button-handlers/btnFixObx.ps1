@@ -25,7 +25,7 @@ function Get-BtnFixObx3Handler {
             $rawContent = [System.IO.File]::ReadAllText($script:CurrentFilePath)
 
             # Process using high-performance raw content function
-            $result = Fix-ObxInRawContent -RawContent $rawContent
+            $result = Repair-ObxInRawContent -RawContent $rawContent
 
             if ($result.FixedCount -eq 0) {
                 Write-ParatLog -Level INFO -Message "Fix OBX 3.1: no truncated segments found in $($result.TotalObxCount) OBX segments" -Action "MODIFY_HL7"

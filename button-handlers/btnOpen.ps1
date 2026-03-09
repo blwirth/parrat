@@ -175,7 +175,7 @@ function Import-XmlFile {
             
             Show-Tumor -Index 0
 
-            $script:SearchIndex = Build-SearchIndex -FileType 'xml'
+            $script:SearchIndex = New-SearchIndex -FileType 'xml'
             $Controls['pnlSearch'].Visible = $true
             $Controls['txtSearch'].Text = ""
             $Controls['lblSearchCount'].Text = ""
@@ -314,7 +314,7 @@ function Import-Hl7File {
         }
         Show-Hl7Message -Index 0 -Messages $messages -Controls $Controls
 
-        $script:SearchIndex = Build-SearchIndex -FileType 'hl7'
+        $script:SearchIndex = New-SearchIndex -FileType 'hl7'
         $Controls['pnlSearch'].Visible = $true
         $Controls['txtSearch'].Text = ""
         $Controls['lblSearchCount'].Text = ""

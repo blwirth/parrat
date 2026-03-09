@@ -196,7 +196,7 @@ function Show-NoahResultsWindow {
     $rtbText.ScrollBars = "Both"
 
     # Build the text content with entity highlighting
-    Build-HighlightedOBXText -RichTextBox $rtbText -ResultJson $resultJson
+    New-HighlightedOBXText -RichTextBox $rtbText -ResultJson $resultJson
 
     $splitMain.Panel2.Controls.Add($rtbText)
 
@@ -265,7 +265,7 @@ function Add-ColoredTextToRichTextBox {
     $Box.AppendText($Text + "`r`n")
 }
 
-function Build-HighlightedOBXText {
+function New-HighlightedOBXText {
     param(
         [System.Windows.Forms.RichTextBox]$RichTextBox,
         [psobject]$ResultJson

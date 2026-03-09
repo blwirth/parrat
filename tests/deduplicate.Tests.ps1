@@ -271,7 +271,7 @@ Describe 'Get-PatientTumorGroups' {
     }
 }
 
-Describe 'Apply-TiebreakerRules' {
+Describe 'Invoke-TiebreakerRules' {
     BeforeEach {
         # Build a doc with 3 duplicate tumors using different tiebreaker fields
         $script:testDoc = New-TestNaaccrXml @(
@@ -291,7 +291,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 0; Tumor = $script:testTumors[0]; Patient = $script:testPatient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $script:testNsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $script:testNsMgr
 
         $winner.Index | Should -Be 0
     }
@@ -302,7 +302,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 1; Tumor = $script:testTumors[1]; Patient = $script:testPatient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $script:testNsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $script:testNsMgr
 
         # Tumor 1 has dateCaseReportLoaded = 20240101 (earlier than 20240301)
         $winner.Index | Should -Be 1
@@ -325,7 +325,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 1; Tumor = $tumors[1]; Patient = $patient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
 
         $winner.Index | Should -Be 1
     }
@@ -346,7 +346,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 1; Tumor = $tumors[1]; Patient = $patient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
 
         $winner.Index | Should -Be 1
     }
@@ -367,7 +367,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 1; Tumor = $tumors[1]; Patient = $patient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
 
         $winner.Index | Should -Be 0
     }
@@ -388,7 +388,7 @@ Describe 'Apply-TiebreakerRules' {
             @{ Index = 1; Tumor = $tumors[1]; Patient = $patient }
         )
 
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $nsMgr
 
         $winner.Index | Should -Be 1
     }

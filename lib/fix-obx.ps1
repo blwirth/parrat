@@ -1,7 +1,7 @@
 # fix-obx.ps1
 # Utility to fix truncated OBX segments in HL7 messages by padding with pipes
 
-function Fix-ObxInMessages {
+function Repair-ObxInMessages {
     param(
         [array]$Hl7Messages,
         [int]$MinFields = 5  # Minimum number of fields (pipe separators) for OBX
@@ -64,7 +64,7 @@ function Fix-ObxInMessages {
     }
 }
 
-function Fix-ObxInRawContent {
+function Repair-ObxInRawContent {
     <#
     .SYNOPSIS
     High-performance version that processes raw file content directly.

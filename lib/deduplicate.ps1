@@ -127,7 +127,7 @@ function Get-TiebreakerValue {
     return ""
 }
 
-function Apply-TiebreakerRules {
+function Invoke-TiebreakerRules {
     param(
         [array]$DuplicateGroup,
         [System.Xml.XmlNamespaceManager]$NsMgr
@@ -278,10 +278,10 @@ function Get-Duplicates {
             }
             else {
                 # True duplicates: apply tiebreaker
-                $winner = Apply-TiebreakerRules -DuplicateGroup $dupGroup -NsMgr $NsMgr
+                $winner = Invoke-TiebreakerRules -DuplicateGroup $dupGroup -NsMgr $NsMgr
 
                 if ($null -eq $winner) {
-                    Write-Warning "  Patient ${key}: Apply-TiebreakerRules returned null; keeping all entries in this dupGroup."
+                    Write-Warning "  Patient ${key}: Invoke-TiebreakerRules returned null; keeping all entries in this dupGroup."
                     foreach ($item in $dupGroup) {
                         if ($null -eq $item) { continue }
                         if ($null -eq $item.Index) {
@@ -411,10 +411,10 @@ function Get-DuplicatesByPrimaryKey {
         }
 
         # Multiple tumors share this primary key - apply tiebreaker
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
 
         if ($null -eq $winner -or $null -eq $winner.Index) {
-            Write-Warning "PrimaryKey $key : Apply-TiebreakerRules returned null or invalid winner; keeping all entries."
+            Write-Warning "PrimaryKey $key : Invoke-TiebreakerRules returned null or invalid winner; keeping all entries."
             foreach ($item in $group) {
                 if ($null -ne $item -and $null -ne $item.Index) {
                     $indicesToKeep[$item.Index] = $true
@@ -505,10 +505,10 @@ function Get-DuplicatesByPathReport {
         }
         
         # Multiple tumors with same pathReportNumber1 - apply tiebreaker
-        $winner = Apply-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
+        $winner = Invoke-TiebreakerRules -DuplicateGroup $group -NsMgr $NsMgr
         
         if ($null -eq $winner -or $null -eq $winner.Index) {
-            Write-Warning "PathReport $pathReport : Apply-TiebreakerRules returned null or invalid winner; keeping all entries."
+            Write-Warning "PathReport $pathReport : Invoke-TiebreakerRules returned null or invalid winner; keeping all entries."
             foreach ($item in $group) {
                 if ($null -ne $item -and $null -ne $item.Index) {
                     $indicesToKeep[$item.Index] = $true

@@ -222,7 +222,7 @@ function Get-Laterality {
     return "1"
 }
 
-function Apply-Laterality {
+function Set-Laterality {
     param($Tumor, $TextLow)
 
     $latNode = Get-ItemNode -Context $Tumor -Id "laterality"
@@ -303,7 +303,7 @@ foreach ($tumor in $tumors) {
     if ($code -ne "") {
         Set-ItemValue $tumor "primarySite" $code
         $updated++
-        Apply-Laterality $tumor $low
+        Set-Laterality $tumor $low
     }
 }
 

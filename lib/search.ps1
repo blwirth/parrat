@@ -1,4 +1,4 @@
-function Build-SearchIndex {
+function New-SearchIndex {
     param(
         [string]$FileType
     )
