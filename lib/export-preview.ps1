@@ -376,8 +376,8 @@ function Show-ExportPreview {
 
     # Item check changed - only process if not during population
     $lstFields.Add_ItemCheck({
-        param($sender, $e)
-        
+        param($eventSender, $e)
+
         # Skip if we're populating the list programmatically
         if ($script:isPopulatingFields) {
             return
@@ -642,9 +642,9 @@ function Show-ExportPreview {
 
     # Form closing handler
     $previewForm.Add_FormClosing({
-        param($sender, $e)
-        if ($sender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
-            $sender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        param($eventSender, $e)
+        if ($eventSender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
+            $eventSender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
         }
     })
 
@@ -831,9 +831,9 @@ function Show-XmlExportPreview {
 
     # Handle form closing (X button) to ensure DialogResult is set
     $previewForm.Add_FormClosing({
-        param($sender, $e)
-        if ($sender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
-            $sender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        param($eventSender, $e)
+        if ($eventSender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
+            $eventSender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
         }
     })
 

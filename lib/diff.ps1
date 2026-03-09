@@ -93,7 +93,7 @@ function Get-TumorLabel {
     $dxDate            = ""
     $pathReportNumber1 = ""
 
-    if ($patient -ne $null) {
+    if ($null -ne $patient) {
         $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']",  $script:NsMgr)
         $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $script:NsMgr)
         if ($nlNode) { $nameLast  = $nlNode.InnerText }

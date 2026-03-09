@@ -210,6 +210,7 @@ function Get-AvailableExportConfigs {
         }
         catch {
             # Skip invalid config files
+            $null = $_.Exception
         }
     }
     

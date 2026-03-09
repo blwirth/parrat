@@ -325,6 +325,7 @@ function Format-Hl7DateTime {
     }
     catch {
         # Return original if parsing fails
+        $null = $_.Exception
     }
     
     return $Hl7DateTime

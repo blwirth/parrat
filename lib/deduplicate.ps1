@@ -21,7 +21,7 @@ function Get-PatientTumorGroups {
         $dateOfDiagnosis = ""
 		$pathReportNumber1 = ""
 
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
             $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
             $dobNode = $patient.SelectSingleNode("./n:Item[@naaccrId='dateOfBirth']", $NsMgr)
@@ -364,7 +364,7 @@ function Get-DuplicatesByPrimaryKey {
         $primarySite  = ""
         $laterality   = ""
 
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
             $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
             $dobNode = $patient.SelectSingleNode("./n:Item[@naaccrId='dateOfBirth']", $NsMgr)
@@ -740,9 +740,9 @@ function Show-DeduplicationPreview {
 
     # Handle form closing (X button) to ensure DialogResult is set
     $previewForm.Add_FormClosing({
-        param($sender, $e)
-        if ($sender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
-            $sender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        param($eventSender, $e)
+        if ($eventSender.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
+            $eventSender.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
         }
     })
 

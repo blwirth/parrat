@@ -702,7 +702,7 @@ $gridNav.Add_SelectionChanged({
 
     $selectedRow  = $gridNav.SelectedRows[0]
     $indexValObj  = $selectedRow.Cells["Index"].Value
-    if ($indexValObj -eq $null) { return }
+    if ($null -eq $indexValObj) { return }
 
     $recordIndex = [int]$indexValObj - 1
 
@@ -722,28 +722,28 @@ $gridNav.Add_SelectionChanged({
 # Space toggles the Selected checkbox on all selected rows
 $script:SpaceBatchToggling = $false
 $gridNav.Add_KeyDown({
-    param($sender, $e)
+    param($eventSender, $e)
     if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Space) {
         $e.Handled = $true
         $e.SuppressKeyPress = $true
-        if ($sender.SelectedRows.Count -eq 0) { return }
-        $dataTable = $sender.DataSource
+        if ($eventSender.SelectedRows.Count -eq 0) { return }
+        $dataTable = $eventSender.DataSource
         if ($null -eq $dataTable) { return }
         # Move current cell off the checkbox column so the grid's
         # built-in Space handling has no checkbox to toggle
-        if ($sender.CurrentCell -and $sender.CurrentCell.ColumnIndex -eq 0 -and $sender.ColumnCount -gt 1) {
-            $sender.CurrentCell = $sender.Rows[$sender.CurrentCell.RowIndex].Cells[1]
+        if ($eventSender.CurrentCell -and $eventSender.CurrentCell.ColumnIndex -eq 0 -and $eventSender.ColumnCount -gt 1) {
+            $eventSender.CurrentCell = $eventSender.Rows[$eventSender.CurrentCell.RowIndex].Cells[1]
         }
         # Use first selected row to determine toggle direction
-        $firstIdx = $sender.SelectedRows[0].Index
+        $firstIdx = $eventSender.SelectedRows[0].Index
         $newVal = -not [bool]$dataTable.Rows[$firstIdx]["Selected"]
         # Batch update: suppress per-row events and grid repaints
         $script:SpaceBatchToggling = $true
-        $sender.SuspendLayout()
-        foreach ($gridRow in $sender.SelectedRows) {
+        $eventSender.SuspendLayout()
+        foreach ($gridRow in $eventSender.SelectedRows) {
             $dataTable.Rows[$gridRow.Index]["Selected"] = $newVal
         }
-        $sender.ResumeLayout()
+        $eventSender.ResumeLayout()
         $script:SpaceBatchToggling = $false
         # Update the selected count label once
         $selectedCount = @($dataTable.Rows | Where-Object { $_["Selected"] -eq $true }).Count

@@ -526,8 +526,8 @@ function Show-CodingTableEditor {
     
     # Form closing handler
     $form.Add_FormClosing({
-        param($sender, $e)
-        
+        param($eventSender, $e)
+
         if ($script:IsDirty) {
             $result = [System.Windows.Forms.MessageBox]::Show(
                 "You have unsaved changes. Discard them?",

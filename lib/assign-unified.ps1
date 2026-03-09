@@ -968,7 +968,7 @@ function Show-UnifiedPreviewReport {
                 $grid.Columns["HasChanges"].Visible = $false
             }
         }
-        catch { }
+        catch { $null = $_.Exception }
     }
 
     $grid.Add_DataBindingComplete($hideHasChangesColumn)

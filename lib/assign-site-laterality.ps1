@@ -564,7 +564,7 @@ function Get-MissingFields {
         # Get patient name for display
         $nameLast = ""
         $nameFirst = ""
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nameLast = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameLast"
             $nameFirst = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameFirst"
         }
@@ -1008,12 +1008,13 @@ function Show-AssignmentReport {
     # Hide Category column (after grid is bound)
     $hideCategoryColumn = {
         try {
-            if ($grid.Columns["Category"] -ne $null) {
+            if ($null -ne $grid.Columns["Category"]) {
                 $grid.Columns["Category"].Visible = $false
             }
         }
         catch {
             # Column not available yet, will be hidden by DataBindingComplete event
+            $null = $_.Exception
         }
     }
     
@@ -1109,7 +1110,7 @@ function Show-AssignmentReport {
 
         foreach ($textId in $textFieldIds) {
             $node = $tumor.SelectSingleNode("./n:Item[@naaccrId='$textId']", $nsMgr)
-            if ($node -ne $null) {
+            if ($null -ne $node) {
                 $rtbPreview.SelectionFont = Get-BoldFont $rtbPreview.Font
                 $rtbPreview.AppendText("=== $textId ===`r`n")
                 $rtbPreview.SelectionFont = $rtbPreview.Font

@@ -467,7 +467,7 @@ function Show-Hl7ConcatenationPreview {
 
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
-                if ($Controls -ne $null) {
+                if ($null -ne $Controls) {
                     Import-Hl7File -FilePath $outputPath -Controls $Controls
                 }
             }
@@ -759,7 +759,7 @@ function Start-FastConcatenateHl7 {
 
             if ($openResult -eq [System.Windows.Forms.DialogResult]::Yes) {
                 # Load the newly created file
-                if ($Controls -ne $null) {
+                if ($null -ne $Controls) {
                     Import-Hl7File -FilePath $outputPath -Controls $Controls
                 }
             }

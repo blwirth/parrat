@@ -84,7 +84,7 @@ function Get-BtnFixObxHandler {
 
     # Return handler that shows the context menu
     return {
-        param($sender, $e)
+        param($eventSender, $e)
 
         # Create context menu for dropdown (create fresh each time to ensure proper scoping)
         $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip

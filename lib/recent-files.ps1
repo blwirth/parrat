@@ -158,6 +158,7 @@ function Get-LastOpenedDirectory {
     }
     catch {
         # Ignore path errors
+        $null = $_.Exception
     }
 
     return $null

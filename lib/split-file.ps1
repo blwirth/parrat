@@ -489,9 +489,9 @@ function Show-SplitOptionsDialog {
     
     # Wire up radio button events
     $radioHandler = {
-        param($sender, $e)
-        if ($sender.Checked) {
-            $script:selectedSplitCount = [int]$sender.Tag
+        param($eventSender, $e)
+        if ($eventSender.Checked) {
+            $script:selectedSplitCount = [int]$eventSender.Tag
             & $updatePreview $script:selectedSplitCount
         }
     }
@@ -875,7 +875,7 @@ function Start-SplitFile {
         }
         
         # Show success message
-        $ranges = Get-AlphabetRanges -SplitCount $options.SplitCount
+        $null = Get-AlphabetRanges -SplitCount $options.SplitCount
         $successLines = @("File split successfully!")
         $successLines += ""
         $successLines += "Created files:"

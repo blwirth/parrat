@@ -47,6 +47,7 @@ function Write-ParatLog {
         }
     } catch {
         # Silent fail - don't crash app for logging failure
+        $null = $_.Exception
     } finally {
         if ($acquired) {
             $script:LogMutex.ReleaseMutex()

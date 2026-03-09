@@ -8,7 +8,7 @@ function Get-BtnNoahReportabilityHandler {
         $idx = [int]$script:CurrentIndex
         
         # Check for XML file
-        if ($fileType -eq 'xml' -or $fileType -eq $null) {
+        if ($fileType -eq 'xml' -or $null -eq $fileType) {
             if ($script:Tumors.Count -eq 0 -or -not $script:XmlDoc -or -not $script:NsMgr) {
                 [System.Windows.Forms.MessageBox]::Show(
                     "No XML document loaded.",

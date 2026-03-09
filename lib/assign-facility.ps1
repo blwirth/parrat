@@ -38,7 +38,7 @@ function Get-FacilityAssignments {
         # Get patient name for display
         $nameLast = ""
         $nameFirst = ""
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nameLast = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameLast"
             $nameFirst = Get-ItemValue -Context $patient -NsMgr $NsMgr -Id "nameFirst"
         }

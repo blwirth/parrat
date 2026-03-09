@@ -136,7 +136,7 @@ function Get-XmlHeaderInfo {
         
         # Get NaaccrData attributes
         $root = $xml.DocumentElement
-        if ($root -eq $null -or $root.LocalName -ne "NaaccrData") {
+        if ($null -eq $root -or $root.LocalName -ne "NaaccrData") {
             throw "Root element is not NaaccrData"
         }
         
@@ -302,7 +302,7 @@ function Get-TumorPreview {
         $dateOfDiagnosis = ""
         $pathReportNumber1 = ""
         
-        if ($patient -ne $null) {
+        if ($null -ne $patient) {
             $nlNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", $NsMgr)
             $nfNode = $patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", $NsMgr)
             
@@ -923,7 +923,7 @@ function Write-ConcatenatedXmlFromPaths {
             $xml.Load($filePath)
             
             $root = $xml.DocumentElement
-            if ($root -eq $null -or $root.LocalName -ne "NaaccrData") {
+            if ($null -eq $root -or $root.LocalName -ne "NaaccrData") {
                 $errors += "Skipped '$([System.IO.Path]::GetFileName($filePath))': Not a valid NAACCR XML"
                 continue
             }

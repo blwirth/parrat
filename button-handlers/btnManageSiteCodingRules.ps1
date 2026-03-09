@@ -657,6 +657,7 @@ function Show-PatternEditDialog {
         $script:TestTopoMap = $maps.TopoMap
     } catch {
         # TopoMap not available; topo-template tests will be skipped
+        $null = $_.Exception
     }
 
     $btnTest.Add_Click({
@@ -966,7 +967,7 @@ function Show-SiteCodingRulesEditor {
 
     # Double-click to edit
     $grid.Add_CellDoubleClick({
-        param($sender, $e)
+        param($eventSender, $e)
         if ($e.RowIndex -lt 0) { return }
 
         $pattern = $script:CurrentPatterns[$e.RowIndex]
@@ -1109,7 +1110,7 @@ function Show-SiteCodingRulesEditor {
 
     # Form closing handler
     $form.Add_FormClosing({
-        param($sender, $e)
+        param($eventSender, $e)
         if ($script:IsDirty) {
             $result = [System.Windows.Forms.MessageBox]::Show("You have unsaved changes. Discard them?", "Unsaved Changes", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
             if ($result -ne [System.Windows.Forms.DialogResult]::Yes) {

@@ -67,6 +67,7 @@ function Get-NoahConfig {
         }
         catch {
             # ignore and fall back to defaults
+            $null = $_.Exception
         }
     }
 
@@ -337,11 +338,12 @@ function Start-NoahServer {
             "accept" = "*/*"
             "api-version" = "2"
         }
-        $testResponse = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
+        $null = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
         return @{ Success = $true; Message = "Server is already running."; Process = $null }
     }
     catch {
         # Server not running, need to start it
+        $null = $_.Exception
     }
 
     # Start the server process
@@ -373,11 +375,12 @@ function Start-NoahServer {
                     "accept" = "*/*"
                     "api-version" = "2"
                 }
-                $testResponse = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
+                $null = Invoke-RestMethod -Uri "$apiServerUrl/Models" -Method Get -Headers $headers -TimeoutSec 2 -ErrorAction Stop
                 return @{ Success = $true; Message = "Server started successfully."; Process = $proc }
             }
             catch {
                 # Server not ready yet, keep waiting
+                $null = $_.Exception
             }
             $attempt++
         }
@@ -407,6 +410,7 @@ function Stop-NoahServer {
     }
     catch {
         # Ignore errors when stopping
+        $null = $_.Exception
     }
 }
 
@@ -605,7 +609,7 @@ function Resolve-NoahModelId {
     try {
         Add-Type -AssemblyName Microsoft.VisualBasic -ErrorAction SilentlyContinue | Out-Null
     }
-    catch { }
+    catch { $null = $_.Exception }
 
     $current = [string]$Config.modelId
     if (-not [string]::IsNullOrWhiteSpace($current)) {
@@ -615,20 +619,20 @@ function Resolve-NoahModelId {
         }
     }
 
-    $input = [Microsoft.VisualBasic.Interaction]::InputBox(
+    $userInput = [Microsoft.VisualBasic.Interaction]::InputBox(
         "Enter the NOAH model id (GUID).`nYou can copy this from the NOAH GUI (Update NLP Models).",
         "NOAH Model ID",
         $current
     )
 
-    if ([string]::IsNullOrWhiteSpace($input)) {
+    if ([string]::IsNullOrWhiteSpace($userInput)) {
         return $null
     }
 
     $g = [guid]::Empty
-    if (-not [guid]::TryParse($input.Trim(), [ref]$g)) {
+    if (-not [guid]::TryParse($userInput.Trim(), [ref]$g)) {
         [System.Windows.Forms.MessageBox]::Show(
-            "Model id must be a GUID. You entered:`n$input",
+            "Model id must be a GUID. You entered:`n$userInput",
             "Invalid Model ID",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Warning
@@ -765,7 +769,7 @@ function Invoke-NoahReportabilityApi {
     try {
         $requestBodyObj | ConvertTo-Json -Depth 10 | Set-Content -Path $debugFile -ErrorAction SilentlyContinue
     }
-    catch { }
+    catch { $null = $_.Exception }
 
     try {
         $headers = @{
@@ -830,6 +834,7 @@ function Invoke-NoahReportabilityApi {
             }
             catch {
                 # Ignore errors reading response stream
+                $null = $_.Exception
             }
             finally {
                 if ($null -ne $reader) { $reader.Dispose() }
@@ -1075,7 +1080,7 @@ function Invoke-NoahReportabilityFilter {
     $output = ([string]$OutputFormat).ToLowerInvariant()
     if ($output -ne "hl7" -and $output -ne "xml") { $output = "hl7" }
 
-    $args = @(
+    $cliArgs = @(
         "action=filter",
         "mode=batch",
         ("source={0}" -f $Folders.source),
@@ -1087,7 +1092,7 @@ function Invoke-NoahReportabilityFilter {
     )
 
     if ($Config.separateImpossiblesAndMets -eq $true) {
-        $args += "separateimpossiblesandmets=true"
+        $cliArgs += "separateimpossiblesandmets=true"
     }
 
     $exeDir = Split-Path -Parent $ExePath
@@ -1097,13 +1102,13 @@ function Invoke-NoahReportabilityFilter {
     try {
         # Write arguments to a debug file for troubleshooting
         $argsDebugPath = Join-Path $Folders.base "noah_args.txt"
-        $argsString = $args -join " "
+        $argsString = $cliArgs -join " "
         Set-Content -Path $argsDebugPath -Value $argsString -ErrorAction SilentlyContinue
         
         $proc = Start-Process `
             -FilePath $ExePath `
             -WorkingDirectory $exeDir `
-            -ArgumentList $args `
+            -ArgumentList $cliArgs `
             -PassThru `
             -WindowStyle Hidden `
             -RedirectStandardOutput $stdoutPath `
@@ -1115,7 +1120,7 @@ function Invoke-NoahReportabilityFilter {
                 Success = $false
                 Message = "Failed to start NOAH process (process object is null)"
                 WorkingFolder = $Folders.base
-                Args = $args
+                Args = $cliArgs
                 StdoutPath = $stdoutPath
                 StderrPath = $stderrPath
             }
@@ -1135,7 +1140,7 @@ function Invoke-NoahReportabilityFilter {
                 Message = "NOAH process exited immediately with code $exitCode"
                 ExitCode = $exitCode
                 WorkingFolder = $Folders.base
-                Args = $args
+                Args = $cliArgs
                 StdoutPath = $stdoutPath
                 StderrPath = $stderrPath
                 StdoutContent = $stdoutContent
@@ -1147,12 +1152,12 @@ function Invoke-NoahReportabilityFilter {
         $exited = $proc.WaitForExit($timeoutMs)
             
         if (-not $exited) {
-            try { $proc.Kill() } catch {}
+            try { $proc.Kill() } catch { $null = $_.Exception }
             return @{
                 Success = $false
                 Message = "NOAH did not exit within $($timeoutMs / 1000) seconds"
                 WorkingFolder = $Folders.base
-                Args = $args
+                Args = $cliArgs
                 StdoutPath = $stdoutPath
                 StderrPath = $stderrPath
             }
@@ -1165,7 +1170,7 @@ function Invoke-NoahReportabilityFilter {
             Success = $false
             Message = "Failed running NOAH CLI: $($_.Exception.Message)"
             WorkingFolder = $Folders.base
-            Args = $args
+            Args = $cliArgs
             ExePath = $ExePath
             WorkingDirectory = $exeDir
             ExceptionType = $_.Exception.GetType().FullName
@@ -1193,7 +1198,7 @@ function Invoke-NoahReportabilityFilter {
         WorkingFolder = $Folders.base
         ReportableCount = $reportableFiles.Count
         NonreportableCount = $nonreportableFiles.Count
-        Args = $args
+        Args = $cliArgs
         ExePath = $ExePath
         InputPath = $InputPath
         StdoutPath = $stdoutPath

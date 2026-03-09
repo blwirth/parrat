@@ -23,7 +23,7 @@ function Get-BtnAssignUnifiedHandler {
             $processedPatients = @{}
             foreach ($tumor in $script:Tumors) {
                 $patient = $tumor.SelectSingleNode("ancestor::n:Patient[1]", $script:NsMgr)
-                if ($patient -ne $null -and -not $processedPatients.ContainsKey($patient)) {
+                if ($null -ne $patient -and -not $processedPatients.ContainsKey($patient)) {
                     $processedPatients[$patient] = $true
                     $patientCount++
                 }
