@@ -138,24 +138,24 @@ function Apply-TiebreakerRules {
     }
 	
 	# New Rule 1: If there is any dateCaseReportLoaded, keep earliest
-    $withLoaded = $DuplicateGroup | Where-Object {
+    $withLoaded = @($DuplicateGroup | Where-Object {
         $loadDate = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
         -not [string]::IsNullOrWhiteSpace($loadDate)
     } | Sort-Object {
         Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportLoaded'
-    }
+    })
 
     if ($withLoaded.Count -gt 0) {
         return $withLoaded[0]
     }
 
     # Rule 2: Keep earliest dateCaseReportReceived (primary rule)
-    $withDates = $DuplicateGroup | Where-Object {
+    $withDates = @($DuplicateGroup | Where-Object {
         $date = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
         -not [string]::IsNullOrWhiteSpace($date)
     } | Sort-Object {
         Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'dateCaseReportReceived'
-    }
+    })
 
     if ($withDates.Count -gt 0) {
         $candidates = @($withDates[0])
@@ -174,10 +174,10 @@ function Apply-TiebreakerRules {
         # If multiple with same date, apply Rule 3
         if ($candidates.Count -gt 1) {
             # Rule 3: Prefer non-empty physician3
-            $withPhysician = $candidates | Where-Object {
+            $withPhysician = @($candidates | Where-Object {
                 $phys = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'physician3'
                 -not [string]::IsNullOrWhiteSpace($phys)
-            }
+            })
 
             if ($withPhysician.Count -gt 0) {
                 return $withPhysician[0]
@@ -188,10 +188,10 @@ function Apply-TiebreakerRules {
     }
 
     # No dates found, try Rule 3
-    $withPhysician = $DuplicateGroup | Where-Object {
+    $withPhysician = @($DuplicateGroup | Where-Object {
         $phys = Get-TiebreakerValue -Tumor $_.Tumor -NsMgr $NsMgr -FieldId 'physician3'
         -not [string]::IsNullOrWhiteSpace($phys)
-    }
+    })
 
     if ($withPhysician.Count -gt 0) {
         return $withPhysician[0]
