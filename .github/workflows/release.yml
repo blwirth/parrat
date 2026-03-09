@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p staging/docs staging/button-handlers staging/lib staging/config staging/data staging/logo
 
-          cp parat.ps1 staging/
+          cp parat.ps1 Run.bat staging/
           cp -r button-handlers/*.ps1 staging/button-handlers/
           cp -r lib/*.ps1 staging/lib/
           cp -r config/* staging/config/
@@ -49,10 +49,12 @@ jobs:
 
           echo "${{ github.ref_name }}" > staging/VERSION
 
-          cd staging && zip -r ../PARAT-${{ github.ref_name }}.zip .
+          TAG="${{ github.ref_name }}"
+          SAFE_TAG="${TAG//./-}"
+          cd staging && zip -r ../PARAT-${SAFE_TAG}.zip .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: PARAT-${{ github.ref_name }}.zip
+          files: PARAT-*.zip
           generate_release_notes: true
