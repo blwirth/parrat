@@ -50,7 +50,7 @@ jobs:
           echo "${{ github.ref_name }}" > staging/VERSION
 
           TAG="${{ github.ref_name }}"
-          SAFE_TAG="${TAG//./-}"
+          SAFE_TAG="${TAG//./_}"
           cd staging && zip -r ../PARAT-${SAFE_TAG}.zip .
 
       - name: Create GitHub Release
