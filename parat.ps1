@@ -79,7 +79,9 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form = $form[0]  # ensure scalar type, not array
-$form.Text   = "PARAT"
+$versionFile = Join-Path $PSScriptRoot "VERSION"
+$appTitle = if (Test-Path $versionFile) { "PARAT $((Get-Content $versionFile -Raw).Trim())" } else { "PARAT" }
+$form.Text   = $appTitle
 $form.StartPosition = "CenterScreen"
 $form.WindowState   = "Maximized"
 $form.KeyPreview = $true
@@ -293,7 +295,19 @@ $mnuHelp.Text = "Help"
 
 $mnuUserManual = New-Object System.Windows.Forms.ToolStripMenuItem
 $mnuUserManual.Text = "User Manual"
-$mnuUserManual.Add_Click({ })  # no-op for now
+$mnuUserManual.Add_Click({
+    $pdfPath = Join-Path $PSScriptRoot "docs\PARAT - User Manual.pdf"
+    if (Test-Path $pdfPath) {
+        Start-Process $pdfPath
+    } else {
+        [System.Windows.Forms.MessageBox]::Show(
+            "User manual not found at:`n$pdfPath",
+            "Not Found",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        )
+    }
+})
 [void]$mnuHelp.DropDownItems.Add($mnuUserManual)
 
 [void]$mnuHelp.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))

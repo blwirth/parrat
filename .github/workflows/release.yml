@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install asciidoctor-pdf
+        run: sudo gem install asciidoctor-pdf
+
+      - name: Build user manual PDF
+        run: |
+          cd docs
+          asciidoctor-pdf "PARAT - User Manual.adoc" -o "PARAT - User Manual.pdf"
+
+      - name: Build release zip
+        run: |
+          mkdir -p staging/docs staging/button-handlers staging/lib staging/config staging/data staging/logo
+
+          cp parat.ps1 staging/
+          cp -r button-handlers/*.ps1 staging/button-handlers/
+          cp -r lib/*.ps1 staging/lib/
+          cp -r config/* staging/config/
+          cp -r data/* staging/data/
+          cp -r logo/* staging/logo/
+          cp "docs/PARAT - User Manual.pdf" staging/docs/
+
+          echo "${{ github.ref_name }}" > staging/VERSION
+
+          cd staging && zip -r ../PARAT-${{ github.ref_name }}.zip .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PARAT-${{ github.ref_name }}.zip
+          generate_release_notes: true
