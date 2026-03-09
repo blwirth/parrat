@@ -401,18 +401,6 @@ function Get-Laterality {
     return "1"
 }
 
-function Get-ItemValue {
-    param(
-        [System.Xml.XmlNode]$Context,
-        [System.Xml.XmlNamespaceManager]$NsMgr,
-        [string]$Id
-    )
-    
-    $node = $Context.SelectSingleNode("./n:Item[@naaccrId='$Id']", $NsMgr)
-    if ($node) { return $node.InnerText }
-    return ""
-}
-
 function Get-CachedMaps {
     param(
         [string]$ScriptDir

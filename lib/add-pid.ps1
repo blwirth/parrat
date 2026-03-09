@@ -3,18 +3,6 @@
 
 . "$PSScriptRoot\syntax-helpers.ps1"
 
-function Get-ItemValue {
-    param(
-        [System.Xml.XmlNode]$Context,
-        [System.Xml.XmlNamespaceManager]$NsMgr,
-        [string]$Id
-    )
-    
-    $node = $Context.SelectSingleNode("./n:Item[@naaccrId='$Id']", $NsMgr)
-    if ($node) { return $node.InnerText }
-    return ""
-}
-
 function Get-PatientIdAssignments {
     param(
         [System.Xml.XmlNodeList]$Tumors,
