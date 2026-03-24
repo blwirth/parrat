@@ -6,7 +6,7 @@ namespace Parat.UI.Services;
 /// <summary>
 /// Constructs the full menu structure for MainForm.
 /// Ported from the menu creation code in parat.ps1.
-/// Event handlers are placeholders to be wired in Phase 3.
+/// Click handlers are wired by MainForm.Handlers.cs via WireMenuHandlers().
 /// </summary>
 public class MenuBuilder
 {
@@ -103,21 +103,21 @@ public class MenuBuilder
         {
             ShortcutKeys = Keys.Control | Keys.O
         };
-        MnuOpen.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpen);
 
         MnuOpenRecent = new ToolStripMenuItem("Open Recent");
-        // TODO: Wire DropDownOpening in Phase 3 to populate recent files
+        // DropDownOpening handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpenRecent);
 
         MnuOpenFolder = new ToolStripMenuItem("Open Containing Folder") { Enabled = false };
-        MnuOpenFolder.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpenFolder);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuDiffFiles = new ToolStripMenuItem("Diff Files...");
-        MnuDiffFiles.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuDiffFiles);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
@@ -126,27 +126,27 @@ public class MenuBuilder
         MnuConcatenate = new ToolStripMenuItem("Concatenate...");
 
         MenuItemConcatenateHl7 = new ToolStripMenuItem("Concatenate HL7");
-        MenuItemConcatenateHl7.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuConcatenate.DropDownItems.Add(MenuItemConcatenateHl7);
 
         MenuItemConcatenateXml = new ToolStripMenuItem("Concatenate XML");
-        MenuItemConcatenateXml.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuConcatenate.DropDownItems.Add(MenuItemConcatenateXml);
 
         MenuItemConcatenateTxt = new ToolStripMenuItem("Concatenate TXT");
-        MenuItemConcatenateTxt.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuConcatenate.DropDownItems.Add(MenuItemConcatenateTxt);
 
         mnuFile.DropDownItems.Add(MnuConcatenate);
 
         MnuSplit = new ToolStripMenuItem("Split...");
-        MnuSplit.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuSplit);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuConvertTxt = new ToolStripMenuItem("Convert .txt");
-        MnuConvertTxt.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertTxt);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
@@ -155,7 +155,7 @@ public class MenuBuilder
         {
             ShortcutKeys = Keys.Control | Keys.Shift | Keys.R
         };
-        MnuRestart.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuRestart);
 
         return mnuFile;
@@ -168,11 +168,11 @@ public class MenuBuilder
         var mnuView = new ToolStripMenuItem("View");
 
         MnuRawRecord = new ToolStripMenuItem("Raw Record") { Enabled = false };
-        MnuRawRecord.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuView.DropDownItems.Add(MnuRawRecord);
 
         MnuDiffRecords = new ToolStripMenuItem("Diff Records") { Enabled = false };
-        MnuDiffRecords.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuView.DropDownItems.Add(MnuDiffRecords);
 
         return mnuView;
@@ -185,7 +185,7 @@ public class MenuBuilder
         var mnuEdit = new ToolStripMenuItem("Edit");
 
         MnuAssign = new ToolStripMenuItem("Assign...") { Enabled = false };
-        MnuAssign.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuEdit.DropDownItems.Add(MnuAssign);
 
         mnuEdit.DropDownItems.Add(new ToolStripSeparator());
@@ -194,11 +194,11 @@ public class MenuBuilder
         MnuModifyHl7 = new ToolStripMenuItem("Modify HL7") { Enabled = false };
 
         MenuItemFixObx31 = new ToolStripMenuItem("Fix OBX 3.1");
-        MenuItemFixObx31.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuModifyHl7.DropDownItems.Add(MenuItemFixObx31);
 
         MenuItemRemoveEmptyObx5 = new ToolStripMenuItem("Remove Empty OBX 5");
-        MenuItemRemoveEmptyObx5.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuModifyHl7.DropDownItems.Add(MenuItemRemoveEmptyObx5);
 
         mnuEdit.DropDownItems.Add(MnuModifyHl7);
@@ -207,7 +207,7 @@ public class MenuBuilder
         MnuModifyXml = new ToolStripMenuItem("Modify XML") { Enabled = false };
 
         MenuItemRemoveVariable = new ToolStripMenuItem("Remove Variable...");
-        MenuItemRemoveVariable.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuModifyXml.DropDownItems.Add(MenuItemRemoveVariable);
 
         mnuEdit.DropDownItems.Add(MnuModifyXml);
@@ -218,15 +218,15 @@ public class MenuBuilder
         MnuDeduplicate = new ToolStripMenuItem("Deduplicate...") { Enabled = false };
 
         MenuItemTrueMatches = new ToolStripMenuItem("Dedup true matches");
-        MenuItemTrueMatches.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuDeduplicate.DropDownItems.Add(MenuItemTrueMatches);
 
         MenuItemPathReport = new ToolStripMenuItem("Dedup by pathReportNumber1");
-        MenuItemPathReport.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuDeduplicate.DropDownItems.Add(MenuItemPathReport);
 
         MenuItemPrimaryKey = new ToolStripMenuItem("Dedup by primary key");
-        MenuItemPrimaryKey.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         MnuDeduplicate.DropDownItems.Add(MenuItemPrimaryKey);
 
         mnuEdit.DropDownItems.Add(MnuDeduplicate);
@@ -239,7 +239,7 @@ public class MenuBuilder
     private ToolStripMenuItem BuildExportMenu()
     {
         MnuExport = new ToolStripMenuItem("Export") { Enabled = false };
-        // TODO: Wire DropDownOpening in Phase 3 to build export items dynamically
+        // DropDownOpening handler wired by MainForm.Handlers.cs
         return MnuExport;
     }
 
@@ -250,21 +250,21 @@ public class MenuBuilder
         var mnuTools = new ToolStripMenuItem("Tools");
 
         MnuTestSiteLatCurrent = new ToolStripMenuItem("Test current record (Site/Lat)") { Enabled = false };
-        MnuTestSiteLatCurrent.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuTestSiteLatCurrent);
 
         MnuTestSiteLatCustom = new ToolStripMenuItem("Test custom text (Site/Lat)");
-        MnuTestSiteLatCustom.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuTestSiteLatCustom);
 
         mnuTools.DropDownItems.Add(new ToolStripSeparator());
 
         MnuFilterCurrentHl7 = new ToolStripMenuItem("Test current HL7 (NOAH)") { Enabled = false };
-        MnuFilterCurrentHl7.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuFilterCurrentHl7);
 
         MnuFilterCustomPayload = new ToolStripMenuItem("Test custom payload (NOAH)");
-        MnuFilterCustomPayload.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuFilterCustomPayload);
 
         // Dynamic enable/disable on dropdown opening
@@ -285,15 +285,15 @@ public class MenuBuilder
         var mnuSettings = new ToolStripMenuItem("Settings");
 
         MnuManageCodingTables = new ToolStripMenuItem("Manage Coding Tables");
-        // TODO: Wire DropDownOpening in Phase 3
+        // DropDownOpening handler wired by MainForm.Handlers.cs
         mnuSettings.DropDownItems.Add(MnuManageCodingTables);
 
         MnuNoahConfig = new ToolStripMenuItem("NOAH Configuration");
-        MnuNoahConfig.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuSettings.DropDownItems.Add(MnuNoahConfig);
 
         MnuObxSkipCodes = new ToolStripMenuItem("OBX Skip Codes...");
-        MnuObxSkipCodes.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuSettings.DropDownItems.Add(MnuObxSkipCodes);
 
         return mnuSettings;
@@ -306,13 +306,13 @@ public class MenuBuilder
         var mnuHelp = new ToolStripMenuItem("Help");
 
         MnuUserManual = new ToolStripMenuItem("User Manual");
-        MnuUserManual.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuHelp.DropDownItems.Add(MnuUserManual);
 
         mnuHelp.DropDownItems.Add(new ToolStripSeparator());
 
         MnuOpenLogs = new ToolStripMenuItem("Open Logs Folder");
-        MnuOpenLogs.Click += (s, e) => { /* TODO: Wire in Phase 3 */ };
+        // Click handler wired by MainForm.Handlers.cs
         mnuHelp.DropDownItems.Add(MnuOpenLogs);
 
         return mnuHelp;

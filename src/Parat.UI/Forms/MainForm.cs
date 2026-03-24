@@ -1,5 +1,6 @@
 using System.Data;
 using System.Windows.Forms;
+using Parat.Core.Interfaces;
 using Parat.UI.Services;
 
 namespace Parat.UI.Forms;
@@ -15,16 +16,22 @@ public partial class MainForm : Form
     private readonly AppState _state;
     private readonly MenuBuilder _menuBuilder;
     private readonly NavigationService _navigationService;
+    private readonly FileHandlers _fileHandlers;
+    private readonly IParatLogger _logger;
     private MenuStrip _menuStrip = null!;
 
     public MainForm(
         AppState state,
         MenuBuilder menuBuilder,
-        NavigationService navigationService)
+        NavigationService navigationService,
+        FileHandlers fileHandlers,
+        IParatLogger logger)
     {
         _state = state;
         _menuBuilder = menuBuilder;
         _navigationService = navigationService;
+        _fileHandlers = fileHandlers;
+        _logger = logger;
 
         InitializeComponent();
         InitializeMenu();
@@ -86,6 +93,16 @@ public partial class MainForm : Form
         _menuStrip = _menuBuilder.BuildMenuStrip();
         MainMenuStrip = _menuStrip;
         Controls.Add(_menuStrip);
+
+        // Wire file/navigation menu handlers
+        _menuBuilder.MnuOpen.Click += (s, e) => _fileHandlers.HandleOpen(this);
+
+        _menuBuilder.MnuOpenRecent.DropDownOpening += (s, e) =>
+            _fileHandlers.PopulateOpenRecentMenu(_menuBuilder.MnuOpenRecent, this);
+
+        _menuBuilder.MnuOpenFolder.Click += (s, e) => _fileHandlers.HandleOpenContainingFolder();
+
+        _menuBuilder.MnuRestart.Click += (s, e) => _fileHandlers.HandleRestart();
     }
 
     private void InitializeNavigation()
@@ -123,13 +140,9 @@ public partial class MainForm : Form
         _btnPrev.Click += (s, e) => _navigationService.NavigatePrevious();
         _btnNext.Click += (s, e) => _navigationService.NavigateNext();
 
-        // Search text changed — placeholder for Phase 3
-        _txtSearch.TextChanged += (s, e) => { /* TODO: Wire search in Phase 3 */ };
-        _btnClearSearch.Click += (s, e) =>
-        {
-            _txtSearch.Text = "";
-            /* TODO: Wire search clear in Phase 3 */
-        };
+        // Search text changed with debounce
+        _txtSearch.TextChanged += (s, e) => _fileHandlers.HandleSearchTextChanged(this);
+        _btnClearSearch.Click += (s, e) => _fileHandlers.HandleSearchClear(this);
 
         // Keyboard shortcuts
         KeyDown += OnFormKeyDown;
@@ -211,7 +224,15 @@ public partial class MainForm : Form
 
     private void OnFormKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Control && e.KeyCode == Keys.F)
+        // Ctrl+O — Open file
+        if (e.Control && !e.Shift && e.KeyCode == Keys.O)
+        {
+            _fileHandlers.HandleOpen(this);
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+        // Ctrl+F — Focus search
+        else if (e.Control && !e.Shift && e.KeyCode == Keys.F)
         {
             if (_pnlSearch.Visible)
             {
@@ -221,6 +242,14 @@ public partial class MainForm : Form
                 e.SuppressKeyPress = true;
             }
         }
+        // Ctrl+Shift+R — Restart
+        else if (e.Control && e.Shift && e.KeyCode == Keys.R)
+        {
+            _fileHandlers.HandleRestart();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+        // Escape — Clear search
         else if (e.KeyCode == Keys.Escape)
         {
             if (_txtSearch.Focused)
@@ -234,7 +263,7 @@ public partial class MainForm : Form
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
-        // TODO: Close logger in Phase 3
+        _logger.Close();
     }
 
     // ── Public helpers ───────────────────────────────────────────────────
