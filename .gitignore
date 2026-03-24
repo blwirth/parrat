@@ -1,2 +1,8 @@
 /logs/
 /logs/*
+
+# C# build artifacts
+src/**/bin/
+src/**/obj/
+src/**/.vs/
+*.user
