@@ -467,20 +467,71 @@ public class FileHandlers
     // ── Restart Application ──────────────────────────────────────────────
 
     /// <summary>
-    /// Restarts the application. Ported from btnRestart.ps1.
+    /// Restarts the application. Launches a new process and exits.
+    /// When running via dotnet run, re-invokes dotnet run so source changes are recompiled.
+    /// When running as a published exe, re-launches the executable directly.
     /// </summary>
     public void HandleRestart()
     {
         try
         {
             _logger.Log("INFO", "Application restart requested", "RESTART");
-            Application.Restart();
-            Environment.Exit(0);
+
+            var exePath = Environment.ProcessPath ?? Application.ExecutablePath;
+            var projectDir = FindProjectDir(exePath);
+
+            if (projectDir != null)
+            {
+                // Running via dotnet run — re-invoke so changes are recompiled
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"run --project \"{projectDir}\"",
+                    UseShellExecute = false
+                };
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            else
+            {
+                // Published exe — restart directly
+                System.Diagnostics.Process.Start(exePath);
+            }
+
+            Application.Exit();
         }
         catch (Exception ex)
         {
             _logger.LogError("Failed to restart application", "RESTART", ex);
             MessageBox.Show($"Error restarting: {ex.Message}", "Error");
         }
+    }
+
+    /// <summary>
+    /// Detects if we're running from a bin/Debug or bin/Release build output directory.
+    /// If so, walks up to find the project directory containing the .csproj.
+    /// Returns null for published/standalone executables not under a bin/ output path.
+    /// </summary>
+    private static string? FindProjectDir(string exePath)
+    {
+        // dotnet run builds to e.g. src/Parat.UI/bin/Debug/net8.0-windows/win-x64/Parat.UI.exe
+        // Only match if the path contains a bin/Debug or bin/Release segment
+        var normalized = exePath.Replace('\\', '/');
+        if (!normalized.Contains("/bin/Debug/") && !normalized.Contains("/bin/Release/"))
+            return null;
+
+        var dir = Path.GetDirectoryName(exePath);
+        while (dir != null)
+        {
+            if (Path.GetFileName(dir) == "bin")
+            {
+                // The parent of bin/ is the project directory
+                var projectDir = Path.GetDirectoryName(dir);
+                if (projectDir != null && Directory.GetFiles(projectDir, "*.csproj").Length > 0)
+                    return projectDir;
+                return null;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
+        return null;
     }
 }
