@@ -60,8 +60,20 @@ public partial class MainForm
         mb.MenuItemPrimaryKey.Click += (s, e) => OnDedupPrimaryKey();
         mb.MenuItemPathReport.Click += (s, e) => OnDedupPathReport();
 
-        // ── Export (built dynamically on dropdown opening) ────────────────
+        // ── Export ─────────────────────────────────────────────────────────
         mb.MnuExport.DropDownOpening += OnExportDropDownOpening;
+        mb.MnuExportSelectedXml.Click += (s, e) => OnExportSelectedXml();
+        mb.MnuExportSelectedHl7.Click += (s, e) => OnExportSelectedHl7();
+        mb.MnuExportAllCsv.Click += (s, e) =>
+        {
+            if (_state.FileType == "hl7") OnExportAllHl7Csv();
+            else OnExportAllCsv();
+        };
+        mb.MnuExportSelectedCsv.Click += (s, e) =>
+        {
+            if (_state.FileType == "hl7") OnExportSelectedHl7Csv();
+            else OnExportSelectedCsv();
+        };
 
         // ── Tools ─────────────────────────────────────────────────────────
         mb.MnuTestSiteLatCurrent.Click += (s, e) => OnTestSiteLatCurrent();
@@ -735,55 +747,18 @@ public partial class MainForm
     //  EXPORT HANDLERS
     // =====================================================================
 
-    /// <summary>Dynamically builds export menu items based on current file type.</summary>
+    /// <summary>Toggles export menu item enabled states based on current file type.</summary>
     private void OnExportDropDownOpening(object? sender, EventArgs e)
     {
-        var mnu = _menuBuilder.MnuExport;
-        mnu.DropDownItems.Clear();
-
         var fileType = _state.FileType;
-        if (string.IsNullOrEmpty(fileType)) return;
+        bool isXml = fileType == "xml";
+        bool isHl7 = fileType == "hl7";
 
-        if (fileType == "xml")
-        {
-            var mnuExportSelectedXml = new ToolStripMenuItem("Export Selected as XML");
-            mnuExportSelectedXml.Click += (s, ev) => OnExportSelectedXml();
-            mnu.DropDownItems.Add(mnuExportSelectedXml);
-
-            var mnuExportSelectedCsv = new ToolStripMenuItem("Export Selected as CSV");
-            mnuExportSelectedCsv.Click += (s, ev) => OnExportSelectedCsv();
-            mnu.DropDownItems.Add(mnuExportSelectedCsv);
-
-            mnu.DropDownItems.Add(new ToolStripSeparator());
-
-            var mnuExportAllXml = new ToolStripMenuItem("Export All as XML");
-            mnuExportAllXml.Click += (s, ev) => OnExportAllXml();
-            mnu.DropDownItems.Add(mnuExportAllXml);
-
-            var mnuExportAllCsv = new ToolStripMenuItem("Export All as CSV");
-            mnuExportAllCsv.Click += (s, ev) => OnExportAllCsv();
-            mnu.DropDownItems.Add(mnuExportAllCsv);
-        }
-        else if (fileType == "hl7")
-        {
-            var mnuExportSelectedHl7 = new ToolStripMenuItem("Export Selected as HL7");
-            mnuExportSelectedHl7.Click += (s, ev) => OnExportSelectedHl7();
-            mnu.DropDownItems.Add(mnuExportSelectedHl7);
-
-            var mnuExportSelectedHl7Csv = new ToolStripMenuItem("Export Selected as CSV");
-            mnuExportSelectedHl7Csv.Click += (s, ev) => OnExportSelectedHl7Csv();
-            mnu.DropDownItems.Add(mnuExportSelectedHl7Csv);
-
-            mnu.DropDownItems.Add(new ToolStripSeparator());
-
-            var mnuExportAllHl7 = new ToolStripMenuItem("Export All as HL7");
-            mnuExportAllHl7.Click += (s, ev) => OnExportAllHl7();
-            mnu.DropDownItems.Add(mnuExportAllHl7);
-
-            var mnuExportAllHl7Csv = new ToolStripMenuItem("Export All as CSV");
-            mnuExportAllHl7Csv.Click += (s, ev) => OnExportAllHl7Csv();
-            mnu.DropDownItems.Add(mnuExportAllHl7Csv);
-        }
+        var mb = _menuBuilder;
+        mb.MnuExportSelectedXml.Enabled = isXml;
+        mb.MnuExportSelectedHl7.Enabled = isHl7;
+        mb.MnuExportAllCsv.Enabled = isXml || isHl7;
+        mb.MnuExportSelectedCsv.Enabled = isXml || isHl7;
     }
 
     private int[] GetCheckedIndices()

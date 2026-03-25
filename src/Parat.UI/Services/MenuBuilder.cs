@@ -52,6 +52,11 @@ public class MenuBuilder
 
     // Export menu
     public ToolStripMenuItem MnuExport { get; private set; } = null!;
+    public ToolStripMenuItem MnuExportSelectedXml { get; private set; } = null!;
+    public ToolStripMenuItem MnuExportSelectedHl7 { get; private set; } = null!;
+    public ToolStripSeparator MnuExportSeparator { get; private set; } = null!;
+    public ToolStripMenuItem MnuExportAllCsv { get; private set; } = null!;
+    public ToolStripMenuItem MnuExportSelectedCsv { get; private set; } = null!;
 
     // Tools menu
     public ToolStripMenuItem MnuTestSiteLatCurrent { get; private set; } = null!;
@@ -239,7 +244,25 @@ public class MenuBuilder
     private ToolStripMenuItem BuildExportMenu()
     {
         MnuExport = new ToolStripMenuItem("Export") { Enabled = false };
-        // DropDownOpening handler wired by MainForm.Handlers.cs
+
+        // Pre-build all items — matches PowerShell pattern where all items
+        // are always present and enabled/disabled based on file type
+        MnuExportSelectedXml = new ToolStripMenuItem("Export Selected as XML");
+        MnuExport.DropDownItems.Add(MnuExportSelectedXml);
+
+        MnuExportSelectedHl7 = new ToolStripMenuItem("Export Selected as HL7");
+        MnuExport.DropDownItems.Add(MnuExportSelectedHl7);
+
+        MnuExportSeparator = new ToolStripSeparator();
+        MnuExport.DropDownItems.Add(MnuExportSeparator);
+
+        MnuExportAllCsv = new ToolStripMenuItem("Export All as CSV");
+        MnuExport.DropDownItems.Add(MnuExportAllCsv);
+
+        MnuExportSelectedCsv = new ToolStripMenuItem("Export Selected as CSV");
+        MnuExport.DropDownItems.Add(MnuExportSelectedCsv);
+
+        // DropDownOpening + Click handlers wired by MainForm.Handlers.cs
         return MnuExport;
     }
 
