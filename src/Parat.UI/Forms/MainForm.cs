@@ -25,7 +25,24 @@ public partial class MainForm : Form
         MenuBuilder menuBuilder,
         NavigationService navigationService,
         FileHandlers fileHandlers,
-        IParatLogger logger)
+        IParatLogger logger,
+        IDiffService diffService,
+        IXmlFileService xmlFileService,
+        IHl7FileService hl7FileService,
+        IDeduplicationService deduplicationService,
+        IUnifiedAssignmentService unifiedAssignmentService,
+        ISiteLateralityService siteLateralityService,
+        IFacilityAssignmentService facilityAssignmentService,
+        IObxService obxService,
+        IPidAssignmentService pidAssignmentService,
+        IRemoveVariableService removeVariableService,
+        IConvertTxtService convertTxtService,
+        IExportService exportService,
+        INoahService noahService,
+        ISplitFileService splitFileService,
+        IConcatenateService concatenateService,
+        IConfigService configService,
+        INaaccrDictionary naaccrDictionary)
     {
         _state = state;
         _menuBuilder = menuBuilder;
@@ -33,10 +50,30 @@ public partial class MainForm : Form
         _fileHandlers = fileHandlers;
         _logger = logger;
 
+        // Set handler services
+        _diffService = diffService;
+        _xmlFileService = xmlFileService;
+        _hl7FileService = hl7FileService;
+        _deduplicationService = deduplicationService;
+        _unifiedAssignmentService = unifiedAssignmentService;
+        _siteLateralityService = siteLateralityService;
+        _facilityAssignmentService = facilityAssignmentService;
+        _obxService = obxService;
+        _pidAssignmentService = pidAssignmentService;
+        _removeVariableService = removeVariableService;
+        _convertTxtService = convertTxtService;
+        _exportService = exportService;
+        _noahService = noahService;
+        _splitFileService = splitFileService;
+        _concatenateService = concatenateService;
+        _configService = configService;
+        _naaccrDictionary = naaccrDictionary;
+
         InitializeComponent();
         InitializeMenu();
         InitializeNavigation();
         WireEvents();
+        WireMenuHandlers();
 
         // Set initial title
         UpdateTitle();
