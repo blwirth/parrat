@@ -13,8 +13,7 @@ namespace Parat.UI.Forms;
 /// </summary>
 public partial class MainForm
 {
-    // ── DI-resolved services (set via InjectServices after construction) ──
-    // Note: _logger is already declared in MainForm.cs
+    // ── DI-resolved services (set via constructor) ──
     private IDiffService _diffService = null!;
     private IXmlFileService _xmlFileService = null!;
     private IHl7FileService _hl7FileService = null!;
@@ -32,50 +31,6 @@ public partial class MainForm
     private IConcatenateService _concatenateService = null!;
     private IConfigService _configService = null!;
     private INaaccrDictionary _naaccrDictionary = null!;
-
-    /// <summary>
-    /// Injects all service dependencies needed by the handler methods.
-    /// Call this after construction, before any handlers fire.
-    /// </summary>
-    public void InjectServices(
-        IDiffService diffService,
-        IXmlFileService xmlFileService,
-        IHl7FileService hl7FileService,
-        IDeduplicationService deduplicationService,
-        IUnifiedAssignmentService unifiedAssignmentService,
-        ISiteLateralityService siteLateralityService,
-        IFacilityAssignmentService facilityAssignmentService,
-        IObxService obxService,
-        IPidAssignmentService pidAssignmentService,
-        IRemoveVariableService removeVariableService,
-        IConvertTxtService convertTxtService,
-        IExportService exportService,
-        INoahService noahService,
-        ISplitFileService splitFileService,
-        IConcatenateService concatenateService,
-        IConfigService configService,
-        INaaccrDictionary naaccrDictionary)
-    {
-        _diffService = diffService;
-        _xmlFileService = xmlFileService;
-        _hl7FileService = hl7FileService;
-        _deduplicationService = deduplicationService;
-        _unifiedAssignmentService = unifiedAssignmentService;
-        _siteLateralityService = siteLateralityService;
-        _facilityAssignmentService = facilityAssignmentService;
-        _obxService = obxService;
-        _pidAssignmentService = pidAssignmentService;
-        _removeVariableService = removeVariableService;
-        _convertTxtService = convertTxtService;
-        _exportService = exportService;
-        _noahService = noahService;
-        _splitFileService = splitFileService;
-        _concatenateService = concatenateService;
-        _configService = configService;
-        _naaccrDictionary = naaccrDictionary;
-
-        WireMenuHandlers();
-    }
 
     /// <summary>
     /// Wires all menu item Click handlers to the appropriate handler methods.
