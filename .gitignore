@@ -7,3 +7,6 @@ src/**/bin/
 src/**/obj/
 src/**/.vs/
 *.user
+
+# Benchmark artifacts (lives on csharp-preview-bench branch)
+benchmarks/

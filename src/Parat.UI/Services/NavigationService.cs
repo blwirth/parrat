@@ -61,7 +61,7 @@ public class NavigationService
             // === PATH PANEL: Text field content ===
             foreach (var textId in SyntaxHighlightingHelper.TextFieldIds)
             {
-                var node = tumor.SelectSingleNode($"./n:Item[@naaccrId='{textId}']", nsMgr);
+                var node = tumor.SelectSingleNode($"./n:Item[@naaccrId='{textId}']", nsMgr!);
                 if (node != null)
                 {
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, $"=== {textId} ===", bold: true);
@@ -87,10 +87,10 @@ public class NavigationService
             SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
 
             // Patient items
-            var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr);
+            var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr!);
             if (patient != null)
             {
-                var patientItems = patient.SelectNodes("./n:Item", nsMgr);
+                var patientItems = patient.SelectNodes("./n:Item", nsMgr!);
                 if (patientItems != null && patientItems.Count > 0)
                 {
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== PATIENT ITEMS ===", bold: true);
@@ -106,7 +106,7 @@ public class NavigationService
             }
 
             // Tumor items (excluding text fields)
-            var tumorItemsAll = tumor.SelectNodes("./n:Item", nsMgr);
+            var tumorItemsAll = tumor.SelectNodes("./n:Item", nsMgr!);
             if (tumorItemsAll != null && tumorItemsAll.Count > 0)
             {
                 var tumorItems = new List<XmlNode>();

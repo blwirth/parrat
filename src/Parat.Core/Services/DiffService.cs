@@ -99,7 +99,7 @@ public class DiffService : IDiffService
             throw new ArgumentOutOfRangeException(nameof(index), $"Index {index} is out of range (0..{_tumors.Count - 1}).");
 
         var tumor = _tumors[index]!;
-        var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", _nsMgr);
+        var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", _nsMgr!);
 
         string nameLast = "";
         string nameFirst = "";
@@ -108,12 +108,12 @@ public class DiffService : IDiffService
 
         if (patient != null)
         {
-            nameLast = patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", _nsMgr)?.InnerText ?? "";
-            nameFirst = patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", _nsMgr)?.InnerText ?? "";
+            nameLast = patient.SelectSingleNode("./n:Item[@naaccrId='nameLast']", _nsMgr!)?.InnerText ?? "";
+            nameFirst = patient.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", _nsMgr!)?.InnerText ?? "";
         }
 
-        dxDate = tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", _nsMgr)?.InnerText ?? "";
-        pathReportNumber1 = tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", _nsMgr)?.InnerText ?? "";
+        dxDate = tumor.SelectSingleNode("./n:Item[@naaccrId='dateOfDiagnosis']", _nsMgr!)?.InnerText ?? "";
+        pathReportNumber1 = tumor.SelectSingleNode("./n:Item[@naaccrId='pathReportNumber1']", _nsMgr!)?.InnerText ?? "";
 
         return $"Idx {index + 1} - {nameLast}, {nameFirst} - Dx {dxDate} - Path Number {pathReportNumber1}";
     }
@@ -124,7 +124,7 @@ public class DiffService : IDiffService
             throw new InvalidOperationException("No tumors loaded.");
 
         var tumor = _tumors[index]!;
-        var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", _nsMgr);
+        var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", _nsMgr!);
         var nodeToFormat = patient ?? tumor;
 
         var settings = new XmlWriterSettings
