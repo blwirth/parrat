@@ -193,6 +193,9 @@ public partial class MainForm : Form
         foreach (var btn in _btnCopyFields)
             btn.Click += OnCopyFieldClick;
 
+        // Save column widths on resize
+        _gridNav.ColumnWidthChanged += OnGridColumnWidthChanged;
+
         // Keyboard shortcuts
         KeyDown += OnFormKeyDown;
 
@@ -207,8 +210,19 @@ public partial class MainForm : Form
         // Set min sizes and splitter distances after form has proper dimensions
         _splitOuter.Panel2MinSize = 400;
         _splitInner.Panel2MinSize = 200;
-        _splitOuter.SplitterDistance = (int)(_splitOuter.Width * 0.20);
-        _splitInner.SplitterDistance = (int)(_splitInner.Width * 0.55);
+
+        // Restore saved panel layout or use defaults
+        var layout = _fileHandlers.GridSettingsService.Load().Layout;
+        _splitOuter.SplitterDistance = layout.OuterSplitRatio > 0
+            ? (int)(_splitOuter.Width * layout.OuterSplitRatio)
+            : (int)(_splitOuter.Width * 0.20);
+        _splitInner.SplitterDistance = layout.InnerSplitRatio > 0
+            ? (int)(_splitInner.Width * layout.InnerSplitRatio)
+            : (int)(_splitInner.Width * 0.55);
+
+        // Save on splitter move
+        _splitOuter.SplitterMoved += OnSplitterMoved;
+        _splitInner.SplitterMoved += OnSplitterMoved;
     }
 
     private void OnGridSelectionChanged(object? sender, EventArgs e)
@@ -308,6 +322,23 @@ public partial class MainForm : Form
                 e.SuppressKeyPress = true;
             }
         }
+    }
+
+    private void OnSplitterMoved(object? sender, SplitterEventArgs e)
+    {
+        if (_splitOuter.Width == 0 || _splitInner.Width == 0) return;
+        var settings = _fileHandlers.GridSettingsService.Load();
+        settings.Layout.OuterSplitRatio = (double)_splitOuter.SplitterDistance / _splitOuter.Width;
+        settings.Layout.InnerSplitRatio = (double)_splitInner.SplitterDistance / _splitInner.Width;
+        _fileHandlers.GridSettingsService.Save(settings);
+    }
+
+    private void OnGridColumnWidthChanged(object? sender, DataGridViewColumnEventArgs e)
+    {
+        // Don't save during file load
+        if (_state.IsLoadingData) return;
+        if (e.Column.Name is "Selected" or "Index") return;
+        _fileHandlers.SaveGridColumnWidths(_gridNav);
     }
 
     private void OnCopyFieldClick(object? sender, EventArgs e)

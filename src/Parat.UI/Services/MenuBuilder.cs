@@ -68,6 +68,7 @@ public class MenuBuilder
     public ToolStripMenuItem MnuManageCodingTables { get; private set; } = null!;
     public ToolStripMenuItem MnuNoahConfig { get; private set; } = null!;
     public ToolStripMenuItem MnuObxSkipCodes { get; private set; } = null!;
+    public ToolStripMenuItem MnuGridColumns { get; private set; } = null!;
 
     // Help menu
     public ToolStripMenuItem MnuUserManual { get; private set; } = null!;
@@ -318,6 +319,12 @@ public class MenuBuilder
         MnuObxSkipCodes = new ToolStripMenuItem("OBX Skip Codes...");
         // Click handler wired by MainForm.Handlers.cs
         mnuSettings.DropDownItems.Add(MnuObxSkipCodes);
+
+        mnuSettings.DropDownItems.Add(new ToolStripSeparator());
+
+        MnuGridColumns = new ToolStripMenuItem("Grid Columns...");
+        // Click handler wired by MainForm.Handlers.cs
+        mnuSettings.DropDownItems.Add(MnuGridColumns);
 
         return mnuSettings;
     }

@@ -85,6 +85,7 @@ public partial class MainForm
         mb.MnuManageCodingTables.DropDownOpening += OnManageTablesDropDownOpening;
         mb.MnuNoahConfig.Click += (s, e) => OnNoahConfig();
         mb.MnuObxSkipCodes.Click += (s, e) => OnObxSkipCodes();
+        mb.MnuGridColumns.Click += (s, e) => OnGridColumns();
 
         // ── Help ──────────────────────────────────────────────────────────
         mb.MnuUserManual.Click += (s, e) => OnUserManual();
@@ -1522,6 +1523,35 @@ public partial class MainForm
         {
             _logger.LogError("OBX skip codes config failed", "SETTINGS", ex);
             MessageBox.Show($"Error opening OBX skip codes: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void OnGridColumns()
+    {
+        try
+        {
+            if (_state.FileType == "hl7")
+            {
+                MessageBox.Show("Grid column customization is only available for XML files.\nHL7 columns are fixed.",
+                    "Grid Columns", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var dialog = new GridColumnsDialog(
+                _fileHandlers.GridSettingsService,
+                _naaccrDictionary);
+
+            if (dialog.ShowDialog(this) == DialogResult.OK && dialog.SettingsChanged
+                && !string.IsNullOrEmpty(_state.CurrentFilePath))
+            {
+                _fileHandlers.OpenFile(_state.CurrentFilePath, this);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Grid columns config failed", "SETTINGS", ex);
+            MessageBox.Show($"Error opening grid columns: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

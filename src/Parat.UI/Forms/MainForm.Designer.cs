@@ -70,7 +70,7 @@ partial class MainForm
         _gridNav.ReadOnly = false;
         _gridNav.MultiSelect = true;
         _gridNav.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _gridNav.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+        // Column widths managed by ConfigureGridColumns based on saved settings
 
         // ── Search panel (docked above grid) ─────────────────────────────
         _pnlSearch = new Panel();

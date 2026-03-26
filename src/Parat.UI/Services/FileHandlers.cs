@@ -23,6 +23,7 @@ public class FileHandlers
     private readonly IParatLogger _logger;
     private readonly NavigationService _navigationService;
     private readonly MenuBuilder _menuBuilder;
+    private readonly IGridSettingsService _gridSettingsService;
 
     private System.Windows.Forms.Timer? _searchTimer;
 
@@ -33,7 +34,8 @@ public class FileHandlers
         IRecentFilesService recentFilesService,
         IParatLogger logger,
         NavigationService navigationService,
-        MenuBuilder menuBuilder)
+        MenuBuilder menuBuilder,
+        IGridSettingsService gridSettingsService)
     {
         _state = state;
         _xmlFileService = xmlFileService;
@@ -42,6 +44,7 @@ public class FileHandlers
         _logger = logger;
         _navigationService = navigationService;
         _menuBuilder = menuBuilder;
+        _gridSettingsService = gridSettingsService;
     }
 
     // ── Open File ────────────────────────────────────────────────────────
@@ -124,16 +127,15 @@ public class FileHandlers
             _logger.Log("INFO", $"Loaded {fileName} with {tumors.Count} tumors", "OPEN_FILE");
             _recentFilesService.AddRecentFile(filePath, "xml");
 
-            // Build navigation table
+            // Build navigation table using grid settings
+            var gridSettings = _gridSettingsService.Load();
+            var xmlCols = gridSettings.Xml.Columns;
+
             var table = new DataTable();
             table.Columns.Add("Selected", typeof(bool));
             table.Columns.Add("Index", typeof(int));
-            table.Columns.Add("nameLast", typeof(string));
-            table.Columns.Add("nameFirst", typeof(string));
-            table.Columns.Add("dateOfBirth", typeof(string));
-            table.Columns.Add("pathReportNumber1", typeof(string));
-            table.Columns.Add("primarySite", typeof(string));
-            table.Columns.Add("dateOfDiagnosis", typeof(string));
+            foreach (var col in xmlCols)
+                table.Columns.Add(col.Id, typeof(string));
 
             table.BeginLoadData();
             for (int i = 0; i < tumors.Count; i++)
@@ -144,12 +146,14 @@ public class FileHandlers
                 var row = table.NewRow();
                 row["Selected"] = false;
                 row["Index"] = i + 1;
-                row["nameLast"] = patient != null ? _xmlFileService.GetItemValue(patient, "nameLast", nsMgr) : "";
-                row["nameFirst"] = patient != null ? _xmlFileService.GetItemValue(patient, "nameFirst", nsMgr) : "";
-                row["dateOfBirth"] = patient != null ? _xmlFileService.GetItemValue(patient, "dateOfBirth", nsMgr) : "";
-                row["pathReportNumber1"] = _xmlFileService.GetItemValue(tumor, "pathReportNumber1", nsMgr);
-                row["primarySite"] = _xmlFileService.GetItemValue(tumor, "primarySite", nsMgr);
-                row["dateOfDiagnosis"] = _xmlFileService.GetItemValue(tumor, "dateOfDiagnosis", nsMgr);
+                foreach (var col in xmlCols)
+                {
+                    // Try tumor first, then patient
+                    var val = _xmlFileService.GetItemValue(tumor, col.Id, nsMgr);
+                    if (string.IsNullOrEmpty(val) && patient != null)
+                        val = _xmlFileService.GetItemValue(patient, col.Id, nsMgr);
+                    row[col.Id] = val;
+                }
 
                 table.Rows.Add(row);
             }
@@ -159,9 +163,11 @@ public class FileHandlers
 
             // Temporarily disable event handling while loading data
             _state.IsLoadingData = true;
+            form.GridNav.DataSource = null;
+            form.GridNav.Columns.Clear();
             form.GridNav.DataSource = table;
 
-            ConfigureGridColumns(form.GridNav);
+            ConfigureGridColumns(form.GridNav, xmlCols);
 
             _state.IsLoadingData = false;
 
@@ -227,7 +233,9 @@ public class FileHandlers
             _logger.Log("INFO", $"Loaded {fileName} with {messages.Count} messages", "OPEN_FILE");
             _recentFilesService.AddRecentFile(filePath, "hl7");
 
-            // Build navigation table for HL7
+            // Build navigation table for HL7 (fixed columns, widths from settings)
+            var gridSettings = _gridSettingsService.Load();
+
             var table = new DataTable();
             table.Columns.Add("Selected", typeof(bool));
             table.Columns.Add("Index", typeof(int));
@@ -259,9 +267,11 @@ public class FileHandlers
 
             // Temporarily disable event handling while loading data
             _state.IsLoadingData = true;
+            form.GridNav.DataSource = null;
+            form.GridNav.Columns.Clear();
             form.GridNav.DataSource = table;
 
-            ConfigureGridColumns(form.GridNav);
+            ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
 
             _state.IsLoadingData = false;
 
@@ -291,9 +301,17 @@ public class FileHandlers
 
     // ── Grid column configuration ────────────────────────────────────────
 
-    private static void ConfigureGridColumns(DataGridView grid)
+    private static void ConfigureGridColumns(DataGridView grid, List<GridColumnDef> columnDefs)
     {
         if (grid.Columns.Count == 0) return;
+
+        // Allow user resizing
+        grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+
+        // Build a lookup for saved widths
+        var widthLookup = new Dictionary<string, int>();
+        for (int i = 0; i < columnDefs.Count; i++)
+            widthLookup[columnDefs[i].Id] = columnDefs[i].Width;
 
         foreach (DataGridViewColumn col in grid.Columns)
         {
@@ -302,15 +320,65 @@ public class FileHandlers
                 col.ReadOnly = false;
                 col.Width = 60;
                 col.DisplayIndex = 0;
+                col.Resizable = DataGridViewTriState.False;
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
+            else if (col.Name == "Index")
+            {
+                col.ReadOnly = true;
+                col.DisplayIndex = 1;
+                col.Width = 55;
+                col.Resizable = DataGridViewTriState.False;
+                col.SortMode = DataGridViewColumnSortMode.Automatic;
             }
             else
             {
                 col.ReadOnly = true;
                 col.SortMode = DataGridViewColumnSortMode.Automatic;
+                col.Resizable = DataGridViewTriState.True;
+
+                // Apply saved width, or auto-fit once then allow manual resize
+                if (widthLookup.TryGetValue(col.Name, out var w) && w > 0)
+                {
+                    col.Width = w;
+                }
+                else
+                {
+                    // Auto-size to content, then switch back so user can drag
+                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                    int fitted = col.Width;
+                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    col.Width = fitted;
+                }
             }
         }
     }
+
+    // ── Grid settings persistence ───────────────────────────────────────
+
+    /// <summary>
+    /// Saves the current grid column widths to settings.
+    /// Called on column resize events.
+    /// </summary>
+    public void SaveGridColumnWidths(DataGridView grid)
+    {
+        var fileType = _state.FileType;
+        if (string.IsNullOrEmpty(fileType)) return;
+
+        var settings = _gridSettingsService.Load();
+        var config = fileType == "xml" ? settings.Xml : settings.Hl7;
+
+        foreach (var colDef in config.Columns)
+        {
+            if (grid.Columns.Contains(colDef.Id))
+                colDef.Width = grid.Columns[colDef.Id]!.Width;
+        }
+
+        _gridSettingsService.Save(settings);
+    }
+
+    /// <summary>Provides access to the grid settings service for dialogs.</summary>
+    public IGridSettingsService GridSettingsService => _gridSettingsService;
 
     // ── Open Recent ──────────────────────────────────────────────────────
 
