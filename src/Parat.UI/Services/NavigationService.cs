@@ -29,6 +29,8 @@ public class NavigationService
     public Button BtnNext { get; set; } = null!;
     public Label LblIndex { get; set; } = null!;
     public TextBox TxtSearch { get; set; } = null!;
+    public FlowLayoutPanel PnlCopyBar { get; set; } = null!;
+    public Button[] BtnCopyFields { get; set; } = null!;
 
     // ── Show Tumor (XML record) ──────────────────────────────────────────
 
@@ -88,18 +90,25 @@ public class NavigationService
 
             // Patient items
             var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr!);
+            string copyLast = "", copyFirst = "", copyDob = "", copyPathReport = "";
+
             if (patient != null)
             {
                 var patientItems = patient.SelectNodes("./n:Item", nsMgr!);
                 if (patientItems != null && patientItems.Count > 0)
                 {
+                    var sorted = SortItemsWithPriority(patientItems, PatientPriorityIds);
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== PATIENT ITEMS ===", bold: true);
-                    foreach (XmlNode item in patientItems)
+                    foreach (var item in sorted)
                     {
                         var id = item.Attributes?["naaccrId"]?.Value ?? "";
                         var value = item.InnerText;
                         bool isBold = SyntaxHighlightingHelper.BoldIds.Contains(id);
                         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"{id}: {value}", bold: isBold);
+
+                        if (id == "nameLast") copyLast = value;
+                        else if (id == "nameFirst") copyFirst = value;
+                        else if (id == "dateOfBirth") copyDob = value;
                     }
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
                 }
@@ -119,16 +128,22 @@ public class NavigationService
 
                 if (tumorItems.Count > 0)
                 {
+                    var sorted = SortItemsWithPriority(tumorItems, TumorPriorityIds);
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== TUMOR ITEMS ===", bold: true);
-                    foreach (var item in tumorItems)
+                    foreach (var item in sorted)
                     {
                         var id = item.Attributes?["naaccrId"]?.Value ?? "";
                         var value = item.InnerText;
                         bool isBold = SyntaxHighlightingHelper.BoldIds.Contains(id);
                         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"{id}: {value}", bold: isBold);
+
+                        if (id == "pathReportNumber1") copyPathReport = value;
                     }
                 }
             }
+
+            // Update copy buttons
+            UpdateCopyButtons(copyLast, copyFirst, copyDob, copyPathReport);
 
             // Update index label and button states
             int selectedCount = GetSelectedCount();
@@ -289,6 +304,14 @@ public class NavigationService
         var searchText = TxtSearch?.Text;
         SyntaxHighlightingHelper.InvokeSearchHighlight(RtbPath, searchText);
         SyntaxHighlightingHelper.InvokeSearchHighlight(RtbItems, searchText);
+
+        // Update copy buttons for HL7
+        UpdateCopyButtons(
+            message.PatientLastName,
+            message.PatientFirstName,
+            message.DateOfBirth,
+            "" // HL7 messages don't have pathReportNumber1
+        );
 
         // Update index label and button states
         int selectedCount = GetSelectedCount();
@@ -476,5 +499,91 @@ public class NavigationService
             }
         }
         return string.Join("\n", lines);
+    }
+
+    // ── Copy button and item sorting helpers ────────────────────────────
+
+    // IDs that should appear first in their respective groups
+    private static readonly string[] PatientPriorityIds = { "nameLast", "nameFirst", "nameMiddle", "dateOfBirth" };
+    private static readonly string[] TumorPriorityIds = { "pathReportNumber1" };
+
+    // Button labels: [0]=Last, [1]=First, [2]=DOB, [3]=Path#
+    private static readonly string[] CopyLabels = { "Last", "First", "DOB", "Path#" };
+
+    /// <summary>
+    /// Sorts XML items so priority IDs appear first (in order), followed by the rest in original order.
+    /// </summary>
+    private static List<XmlNode> SortItemsWithPriority(XmlNodeList items, string[] priorityIds)
+    {
+        var priorityItems = new XmlNode?[priorityIds.Length];
+        var rest = new List<XmlNode>();
+
+        foreach (XmlNode item in items)
+        {
+            var id = item.Attributes?["naaccrId"]?.Value ?? "";
+            int priorityIndex = Array.IndexOf(priorityIds, id);
+            if (priorityIndex >= 0)
+                priorityItems[priorityIndex] = item;
+            else
+                rest.Add(item);
+        }
+
+        var result = new List<XmlNode>(items.Count);
+        foreach (var item in priorityItems)
+        {
+            if (item != null)
+                result.Add(item);
+        }
+        result.AddRange(rest);
+        return result;
+    }
+
+    /// <summary>
+    /// Overload for List&lt;XmlNode&gt; (used by tumor items after filtering).
+    /// </summary>
+    private static List<XmlNode> SortItemsWithPriority(List<XmlNode> items, string[] priorityIds)
+    {
+        var priorityItems = new XmlNode?[priorityIds.Length];
+        var rest = new List<XmlNode>();
+
+        foreach (var item in items)
+        {
+            var id = item.Attributes?["naaccrId"]?.Value ?? "";
+            int priorityIndex = Array.IndexOf(priorityIds, id);
+            if (priorityIndex >= 0)
+                priorityItems[priorityIndex] = item;
+            else
+                rest.Add(item);
+        }
+
+        var result = new List<XmlNode>(items.Count);
+        foreach (var item in priorityItems)
+        {
+            if (item != null)
+                result.Add(item);
+        }
+        result.AddRange(rest);
+        return result;
+    }
+
+    /// <summary>
+    /// Updates the copy button bar with current record values.
+    /// Buttons are hidden when their value is empty.
+    /// </summary>
+    private void UpdateCopyButtons(string nameLast, string nameFirst, string dob, string pathReport)
+    {
+        var values = new[] { nameLast, nameFirst, dob, pathReport };
+
+        bool anyVisible = false;
+        for (int i = 0; i < 4; i++)
+        {
+            var val = values[i]?.Trim() ?? "";
+            bool hasValue = val.Length > 0;
+            BtnCopyFields[i].Visible = hasValue;
+            BtnCopyFields[i].Tag = val;
+            BtnCopyFields[i].Text = hasValue ? $"{CopyLabels[i]}: {val}" : CopyLabels[i];
+            anyVisible |= hasValue;
+        }
+        PnlCopyBar.Visible = anyVisible;
     }
 }

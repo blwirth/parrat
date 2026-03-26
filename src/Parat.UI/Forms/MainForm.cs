@@ -117,6 +117,12 @@ public partial class MainForm : Form
     /// <summary>The index label (e.g., "Tumor 1 of 5 (0 selected)").</summary>
     public Label LblIndex => _lblIndex;
 
+    /// <summary>The copy buttons bar panel above the items pane.</summary>
+    public FlowLayoutPanel PnlCopyBar => _pnlCopyBar;
+
+    /// <summary>The 4 copy field buttons: [0]=Last, [1]=First, [2]=DOB, [3]=Path#.</summary>
+    public Button[] BtnCopyFields => _btnCopyFields;
+
     /// <summary>Provides access to the MenuBuilder for external wiring.</summary>
     public MenuBuilder MenuBuilder => _menuBuilder;
 
@@ -152,6 +158,8 @@ public partial class MainForm : Form
         _navigationService.BtnNext = _btnNext;
         _navigationService.LblIndex = _lblIndex;
         _navigationService.TxtSearch = _txtSearch;
+        _navigationService.PnlCopyBar = _pnlCopyBar;
+        _navigationService.BtnCopyFields = _btnCopyFields;
     }
 
     // ── Event wiring ─────────────────────────────────────────────────────
@@ -180,6 +188,10 @@ public partial class MainForm : Form
         // Search text changed with debounce
         _txtSearch.TextChanged += (s, e) => _fileHandlers.HandleSearchTextChanged(this);
         _btnClearSearch.Click += (s, e) => _fileHandlers.HandleSearchClear(this);
+
+        // Copy buttons
+        foreach (var btn in _btnCopyFields)
+            btn.Click += OnCopyFieldClick;
 
         // Keyboard shortcuts
         KeyDown += OnFormKeyDown;
@@ -295,6 +307,38 @@ public partial class MainForm : Form
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+    }
+
+    private void OnCopyFieldClick(object? sender, EventArgs e)
+    {
+        if (sender is not Button btn) return;
+        var value = btn.Tag as string;
+        if (string.IsNullOrEmpty(value)) return;
+
+        try
+        {
+            Clipboard.SetDataObject(value, copy: true);
+
+            // Success feedback: flash green background, revert after 800ms
+            var originalBack = btn.BackColor;
+            var originalBorder = btn.FlatAppearance.BorderColor;
+            btn.BackColor = Color.FromArgb(200, 235, 200);
+            btn.FlatAppearance.BorderColor = Color.Green;
+
+            var timer = new System.Windows.Forms.Timer { Interval = 800 };
+            timer.Tick += (_, _) =>
+            {
+                btn.BackColor = originalBack;
+                btn.FlatAppearance.BorderColor = originalBorder;
+                timer.Stop();
+                timer.Dispose();
+            };
+            timer.Start();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Clipboard copy failed", "COPY", ex);
         }
     }
 

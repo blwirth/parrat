@@ -147,7 +147,40 @@ partial class MainForm
         _lblIndex.Text = "";
         _lblIndex.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
 
-        _bottomPanel.Controls.AddRange(new Control[] { _btnPrev, _btnNext, _lblIndex });
+        // ── Copy buttons (right-aligned in bottom panel) ────────────────
+        _pnlCopyBar = new FlowLayoutPanel();
+        _pnlCopyBar.Dock = DockStyle.Right;
+        _pnlCopyBar.AutoSize = true;
+        _pnlCopyBar.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        _pnlCopyBar.WrapContents = false;
+        _pnlCopyBar.FlowDirection = FlowDirection.RightToLeft;
+        _pnlCopyBar.Padding = new Padding(0);
+        _pnlCopyBar.Visible = false;
+
+        _btnCopyFields = new Button[4];
+        var copyLabels = new[] { "Last", "First", "DOB", "Path#" };
+        for (int i = 0; i < 4; i++)
+        {
+            var btn = new Button();
+            btn.AutoSize = true;
+            btn.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderColor = Color.Silver;
+            btn.FlatAppearance.BorderSize = 1;
+            btn.Font = new Font("Segoe UI", 8f);
+            btn.Padding = new Padding(2, 0, 2, 0);
+            btn.Margin = new Padding(2, 5, 2, 5);
+            btn.Cursor = Cursors.Hand;
+            btn.Text = copyLabels[i];
+            btn.Visible = false;
+            btn.Tag = ""; // stores the value to copy
+            _btnCopyFields[i] = btn;
+        }
+        // Add in reverse so RightToLeft flow renders Last|First|DOB|Path# left-to-right
+        for (int i = _btnCopyFields.Length - 1; i >= 0; i--)
+            _pnlCopyBar.Controls.Add(_btnCopyFields[i]);
+
+        _bottomPanel.Controls.AddRange(new Control[] { _btnPrev, _btnNext, _lblIndex, _pnlCopyBar });
 
         // ── Wire panels into split containers ────────────────────────────
         _splitOuter.Panel1.Controls.Add(_gridNav);
@@ -188,6 +221,8 @@ partial class MainForm
     private Button _btnClearSearch = null!;
     private RichTextBox _rtbPath = null!;
     private RichTextBox _rtbItems = null!;
+    private FlowLayoutPanel _pnlCopyBar = null!;
+    private Button[] _btnCopyFields = null!;
     private Panel _bottomPanel = null!;
     private Button _btnPrev = null!;
     private Button _btnNext = null!;
