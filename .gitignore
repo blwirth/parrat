@@ -10,3 +10,7 @@ src/**/.vs/
 
 # Benchmark artifacts (lives on csharp-preview-bench branch)
 benchmarks/
+
+# Publish output
+publish/
+release/
