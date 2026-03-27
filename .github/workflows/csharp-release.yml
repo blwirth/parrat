@@ -2,7 +2,7 @@ name: C# Release
 
 on:
   push:
-    tags: ['v*-csharp']
+    tags: ['v*-cs']
 
 jobs:
   release:
@@ -65,4 +65,4 @@ jobs:
         with:
           files: release/Parat-*.zip
           generate_release_notes: true
-          name: "PARAT (CS) ${{ github.ref_name }}"
+          name: "PARAT ${{ github.ref_name }}"
