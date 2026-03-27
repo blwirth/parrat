@@ -19,11 +19,10 @@ public class ParatLogger : IParatLogger
 
         try
         {
-            _logMutex = new Mutex(false, @"Global\ParatLogMutex");
+            _logMutex = new Mutex(false, @"Local\ParatLogMutex");
         }
-        catch (PlatformNotSupportedException)
+        catch
         {
-            // Named mutexes with Global\ prefix not supported on non-Windows; use unnamed
             _logMutex = new Mutex(false);
         }
 
