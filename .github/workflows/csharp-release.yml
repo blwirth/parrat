@@ -17,6 +17,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Setup Ruby (for asciidoctor-pdf)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install asciidoctor-pdf
+        run: gem install asciidoctor-pdf
+
+      - name: Build user manual PDF
+        run: |
+          cd docs
+          asciidoctor-pdf "PARAT - User Manual.adoc" -o "PARAT - User Manual.pdf"
+
       - name: Publish
         run: >
           dotnet publish src/Parat.UI/Parat.UI.csproj
@@ -30,16 +43,26 @@ jobs:
       - name: Bundle release zip
         shell: pwsh
         run: |
+          $tag = "${{ github.ref_name }}"
           $out = "release/parat"
           New-Item -ItemType Directory -Path $out -Force | Out-Null
-          Copy-Item publish/Parat.UI.exe $out/
-          Copy-Item -Recurse data $out/data
+          New-Item -ItemType Directory -Path "$out/docs" -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/config" -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/logs" -Force | Out-Null
-          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-win-x64.zip"
+
+          Copy-Item publish/Parat.UI.exe $out/
+          Copy-Item -Recurse data $out/data
+          Copy-Item "docs/PARAT - User Manual.pdf" "$out/docs/"
+
+          # Write version file (read by app for window title)
+          $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
+
+          $safeTag = $tag -replace '\.', '_'
+          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-CSharp-${safeTag}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/Parat-win-x64.zip
+          files: release/Parat-CSharp-*.zip
           generate_release_notes: true
+          name: "PARAT (C#) ${{ github.ref_name }}"

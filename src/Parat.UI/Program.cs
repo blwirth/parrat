@@ -22,6 +22,16 @@ internal static class Program
         try
         {
             var mainForm = provider.GetRequiredService<Forms.MainForm>();
+
+            // Read version from VERSION file (written by CI release)
+            var versionPath = Path.Combine(Parat.Core.Helpers.PathHelper.RepoRoot, "VERSION");
+            if (File.Exists(versionPath))
+            {
+                var version = File.ReadAllText(versionPath).Trim();
+                if (!string.IsNullOrEmpty(version))
+                    mainForm.UpdateTitle(version);
+            }
+
             Application.Run(mainForm);
         }
         finally
