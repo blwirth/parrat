@@ -116,7 +116,7 @@ public static class SyntaxHighlightingHelper
         box.SelectionStart = box.TextLength;
         box.SelectionLength = 0;
         box.SelectionFont = new Font(box.Font.FontFamily, 4f);
-        box.SelectionColor = Color.LightGray;
+        box.SelectionColor = Color.DarkGray;
         box.AppendText(new string('\u2500', 40) + "\r\n");
         box.SelectionColor = box.ForeColor;
     }
