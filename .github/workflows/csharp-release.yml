@@ -58,11 +58,11 @@ jobs:
           $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
 
           $safeTag = $tag -replace '\.', '_'
-          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-CSharp-${safeTag}.zip"
+          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-CS-${safeTag}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/Parat-CSharp-*.zip
+          files: release/Parat-CS-*.zip
           generate_release_notes: true
-          name: "PARAT (C#) ${{ github.ref_name }}"
+          name: "PARAT (CS) ${{ github.ref_name }}"
