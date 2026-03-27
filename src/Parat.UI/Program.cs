@@ -12,33 +12,41 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        var provider = services.BuildServiceProvider();
-
-        var logger = provider.GetRequiredService<IParatLogger>();
-        logger.Initialize();
-
         try
         {
-            var mainForm = provider.GetRequiredService<Forms.MainForm>();
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            var provider = services.BuildServiceProvider();
 
-            // Read version from VERSION file (written by CI release)
-            var versionPath = Path.Combine(Parat.Core.Helpers.PathHelper.RepoRoot, "VERSION");
-            if (File.Exists(versionPath))
+            var logger = provider.GetRequiredService<IParatLogger>();
+            logger.Initialize();
+
+            try
             {
-                var version = File.ReadAllText(versionPath).Trim();
-                if (!string.IsNullOrEmpty(version))
-                    mainForm.UpdateTitle(version);
-            }
+                var mainForm = provider.GetRequiredService<Forms.MainForm>();
 
-            Application.Run(mainForm);
+                // Read version from VERSION file (written by CI release)
+                var versionPath = Path.Combine(Parat.Core.Helpers.PathHelper.RepoRoot, "VERSION");
+                if (File.Exists(versionPath))
+                {
+                    var version = File.ReadAllText(versionPath).Trim();
+                    if (!string.IsNullOrEmpty(version))
+                        mainForm.UpdateTitle(version);
+                }
+
+                Application.Run(mainForm);
+            }
+            finally
+            {
+                logger.Close();
+                if (provider is IDisposable disposable)
+                    disposable.Dispose();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            logger.Close();
-            if (provider is IDisposable disposable)
-                disposable.Dispose();
+            MessageBox.Show($"PARAT failed to start:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                "Startup Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

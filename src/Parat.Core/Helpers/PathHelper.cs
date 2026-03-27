@@ -15,10 +15,12 @@ public static class PathHelper
             var dir = AppDomain.CurrentDomain.BaseDirectory;
             for (int i = 0; i < 10; i++)
             {
-                if (Directory.Exists(Path.Combine(dir, "data")) &&
-                    Directory.Exists(Path.Combine(dir, "config")))
+                if (Directory.Exists(Path.Combine(dir, "data")))
                 {
                     _repoRoot = dir;
+                    // Ensure config/ and logs/ exist
+                    Directory.CreateDirectory(Path.Combine(dir, "config"));
+                    Directory.CreateDirectory(Path.Combine(dir, "logs"));
                     return _repoRoot;
                 }
                 var parent = Directory.GetParent(dir);
