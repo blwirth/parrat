@@ -102,6 +102,25 @@ public static class SyntaxHighlightingHelper
         box.AppendText(text + "\r\n");
     }
 
+    /// <summary>
+    /// Adds a bold section header followed by a light gray separator line.
+    /// </summary>
+    public static void AddSectionHeader(RichTextBox box, string text)
+    {
+        box.SelectionStart = box.TextLength;
+        box.SelectionLength = 0;
+        box.SelectionFont = GetBoldFont(box.Font);
+        box.AppendText(text + "\r\n");
+
+        // Light gray thin separator
+        box.SelectionStart = box.TextLength;
+        box.SelectionLength = 0;
+        box.SelectionFont = new Font(box.Font.FontFamily, 4f);
+        box.SelectionColor = Color.LightGray;
+        box.AppendText(new string('\u2500', 40) + "\r\n");
+        box.SelectionColor = box.ForeColor;
+    }
+
     // ── XML syntax highlighting (full document view) ─────────────────────
 
     /// <summary>

@@ -66,7 +66,7 @@ public class NavigationService
                 var node = tumor.SelectSingleNode($"./n:Item[@naaccrId='{textId}']", nsMgr!);
                 if (node != null)
                 {
-                    SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, $"=== {textId} ===", bold: true);
+                    SyntaxHighlightingHelper.AddSectionHeader(RtbPath, textId);
 
                     var value = node.InnerText;
                     if (string.IsNullOrWhiteSpace(value))
@@ -98,7 +98,7 @@ public class NavigationService
                 if (patientItems != null && patientItems.Count > 0)
                 {
                     var sorted = SortItemsWithPriority(patientItems, PatientPriorityIds);
-                    SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== PATIENT ITEMS ===", bold: true);
+                    SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "PATIENT ITEMS");
                     foreach (var item in sorted)
                     {
                         var id = item.Attributes?["naaccrId"]?.Value ?? "";
@@ -129,7 +129,7 @@ public class NavigationService
                 if (tumorItems.Count > 0)
                 {
                     var sorted = SortItemsWithPriority(tumorItems, TumorPriorityIds);
-                    SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== TUMOR ITEMS ===", bold: true);
+                    SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "TUMOR ITEMS");
                     foreach (var item in sorted)
                     {
                         var id = item.Attributes?["naaccrId"]?.Value ?? "";
@@ -194,8 +194,7 @@ public class NavigationService
         SelectGridRow(index);
 
         // === PATH PANEL: Clean OBX text content ===
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, "=== PATHOLOGY REPORT TEXT ===", bold: true);
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, "");
+        SyntaxHighlightingHelper.AddSectionHeader(RtbPath, "PATHOLOGY REPORT TEXT");
 
         if (message.Segments.TryGetValue("OBX", out var obxSegments) && obxSegments.Count > 0)
         {
@@ -220,14 +219,14 @@ public class NavigationService
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Message {index + 1} of {messages.Count}", bold: true);
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
 
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== MESSAGE INFO ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "MESSAGE INFO");
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Message Type: {message.MessageType}", bold: true);
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Date/Time: {FormatHl7DateTime(message.MessageDateTime)}");
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Sending App: {message.SendingApplication}");
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Sending Facility: {message.SendingFacility}");
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
 
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== PATIENT INFO ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "PATIENT INFO");
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Patient ID: {message.PatientId}", bold: true);
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Name: {message.PatientName}", bold: true);
         SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Last Name: {message.PatientLastName}");
@@ -240,7 +239,7 @@ public class NavigationService
         if (!string.IsNullOrWhiteSpace(message.OrderDateTime) ||
             !string.IsNullOrWhiteSpace(message.OrderingProvider))
         {
-            SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== ORDER INFO ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "ORDER INFO");
             SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Order Date/Time: {FormatHl7DateTime(message.OrderDateTime)}");
             SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Ordering Provider: {message.OrderingProvider}");
             SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
@@ -249,7 +248,7 @@ public class NavigationService
         // NTE segments
         if (message.Segments.TryGetValue("NTE", out var nteSegments))
         {
-            SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== NOTES ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "NOTES");
             foreach (var nte in nteSegments)
             {
                 var fields = nte.Split('|');
@@ -261,8 +260,7 @@ public class NavigationService
         }
 
         // Raw HL7 segments
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "=== RAW HL7 SEGMENTS ===", bold: true);
-        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "RAW HL7 SEGMENTS");
 
         var segmentOrder = new[] { "MSH", "PID", "PV1", "ORC", "OBR", "NTE", "OBX" };
         var displayedTypes = new HashSet<string>();
@@ -271,7 +269,7 @@ public class NavigationService
         {
             if (message.Segments.TryGetValue(segType, out var segs))
             {
-                SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"--- {segType} Segment(s) ---", bold: true);
+                SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"{segType} Segment(s)", bold: true);
                 foreach (var seg in segs)
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, FormatHl7SegmentForDisplay(seg));
                 SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
@@ -284,7 +282,7 @@ public class NavigationService
         {
             if (!displayedTypes.Contains(segType))
             {
-                SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"--- {segType} Segment(s) ---", bold: true);
+                SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"{segType} Segment(s)", bold: true);
                 foreach (var seg in message.Segments[segType])
                     SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, FormatHl7SegmentForDisplay(seg));
                 SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
@@ -293,7 +291,7 @@ public class NavigationService
 
         // Apply HL7 highlighting to the raw segments section
         var rtbText = RtbItems.Text;
-        const string rawSectionMarker = "=== RAW HL7 SEGMENTS ===";
+        const string rawSectionMarker = "RAW HL7 SEGMENTS";
         int rawSectionStart = rtbText.IndexOf(rawSectionMarker, StringComparison.Ordinal);
         if (rawSectionStart >= 0)
         {
