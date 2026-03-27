@@ -10,26 +10,36 @@ public static class PathHelper
         {
             if (_repoRoot != null) return _repoRoot;
 
-            // Walk up from the executing assembly location to find the repo root
-            // The repo root contains data/, config/, and logs/ directories
-            var dir = AppDomain.CurrentDomain.BaseDirectory;
-            for (int i = 0; i < 10; i++)
+            // Try multiple starting points — for single-file published apps,
+            // BaseDirectory points to a temp extraction folder, not the exe location.
+            var candidates = new[]
             {
-                if (Directory.Exists(Path.Combine(dir, "data")))
+                Path.GetDirectoryName(Environment.ProcessPath),
+                AppDomain.CurrentDomain.BaseDirectory
+            };
+
+            foreach (var start in candidates)
+            {
+                if (string.IsNullOrEmpty(start)) continue;
+                var dir = start;
+                for (int i = 0; i < 10; i++)
                 {
-                    _repoRoot = dir;
-                    // Ensure config/ and logs/ exist
-                    Directory.CreateDirectory(Path.Combine(dir, "config"));
-                    Directory.CreateDirectory(Path.Combine(dir, "logs"));
-                    return _repoRoot;
+                    if (Directory.Exists(Path.Combine(dir, "data")))
+                    {
+                        _repoRoot = dir;
+                        Directory.CreateDirectory(Path.Combine(dir, "config"));
+                        Directory.CreateDirectory(Path.Combine(dir, "logs"));
+                        return _repoRoot;
+                    }
+                    var parent = Directory.GetParent(dir);
+                    if (parent == null) break;
+                    dir = parent.FullName;
                 }
-                var parent = Directory.GetParent(dir);
-                if (parent == null) break;
-                dir = parent.FullName;
             }
 
-            // Fallback: assume repo root is three levels up from bin output (src/Parat.UI/bin/...)
-            _repoRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".."));
+            // Fallback: use the exe's directory
+            _repoRoot = Path.GetDirectoryName(Environment.ProcessPath)
+                ?? AppDomain.CurrentDomain.BaseDirectory;
             return _repoRoot;
         }
     }
