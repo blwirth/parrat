@@ -45,7 +45,7 @@ partial class MainForm
         // ── Main content panel ───────────────────────────────────────────
         _mainPanel = new Panel();
         _mainPanel.Dock = DockStyle.Fill;
-        _mainPanel.Padding = new Padding(10);
+        _mainPanel.Padding = new Padding(10, 10, 10, 0);
 
         // ── Outer split container: grid (left) | content (right) ─────────
         _splitOuter = new SplitContainer();
@@ -122,28 +122,28 @@ partial class MainForm
         // ── Bottom navigation panel ──────────────────────────────────────
         _bottomPanel = new Panel();
         _bottomPanel.Dock = DockStyle.Bottom;
-        _bottomPanel.Height = 50;
+        _bottomPanel.Height = 40;
         _bottomPanel.Padding = new Padding(10, 5, 10, 5);
 
         _btnPrev = new Button();
         _btnPrev.Text = "<";
-        _btnPrev.Width = 40;
-        _btnPrev.Height = 30;
-        _btnPrev.Location = new Point(10, 10);
+        _btnPrev.Width = 32;
+        _btnPrev.Height = 24;
+        _btnPrev.Location = new Point(10, 5);
         _btnPrev.Enabled = false;
         _btnPrev.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
 
         _btnNext = new Button();
         _btnNext.Text = ">";
-        _btnNext.Width = 40;
-        _btnNext.Height = 30;
-        _btnNext.Location = new Point(60, 10);
+        _btnNext.Width = 32;
+        _btnNext.Height = 24;
+        _btnNext.Location = new Point(50, 5);
         _btnNext.Enabled = false;
         _btnNext.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
 
         _lblIndex = new Label();
         _lblIndex.AutoSize = true;
-        _lblIndex.Location = new Point(110, 15);
+        _lblIndex.Location = new Point(90, 8);
         _lblIndex.Text = "";
         _lblIndex.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
 
