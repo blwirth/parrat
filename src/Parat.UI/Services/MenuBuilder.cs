@@ -345,6 +345,15 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuHelp.DropDownItems.Add(MnuOpenLogs);
 
+        mnuHelp.DropDownItems.Add(new ToolStripSeparator());
+
+        var versionPath = Path.Combine(Parat.Core.Helpers.PathHelper.RepoRoot, "VERSION");
+        var versionText = File.Exists(versionPath)
+            ? File.ReadAllText(versionPath).Trim()
+            : "dev";
+        var mnuVersion = new ToolStripMenuItem($"PARAT {versionText}") { Enabled = false };
+        mnuHelp.DropDownItems.Add(mnuVersion);
+
         return mnuHelp;
     }
 
