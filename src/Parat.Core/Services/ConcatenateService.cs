@@ -46,6 +46,8 @@ public class ConcatenateService : IConcatenateService
 
             return new Dictionary<string, object>
             {
+                ["Success"] = true,
+                ["FilePath"] = filePath,
                 ["XmlVersion"] = xmlVersion,
                 ["BaseDictionaryUri"] = baseDictionaryUri,
                 ["Xmlns"] = xmlns,
@@ -53,8 +55,7 @@ public class ConcatenateService : IConcatenateService
                 ["TumorCount"] = tumors.Count,
                 ["XmlDoc"] = xml,
                 ["NsMgr"] = nsMgr,
-                ["Tumors"] = tumors,
-                ["Success"] = true
+                ["Tumors"] = tumors
             };
         }
         catch (Exception ex)
@@ -305,6 +306,7 @@ public class ConcatenateService : IConcatenateService
             return new Dictionary<string, object>
             {
                 ["Success"] = true,
+                ["FilePath"] = filePath,
                 ["MessageCount"] = messageCount,
                 ["FileSize"] = fileSize,
                 ["Content"] = content
@@ -418,6 +420,7 @@ public class ConcatenateService : IConcatenateService
             return new Dictionary<string, object>
             {
                 ["Success"] = true,
+                ["FilePath"] = filePath,
                 ["LineCount"] = lineCount,
                 ["FileSize"] = fileSize,
                 ["Content"] = content
