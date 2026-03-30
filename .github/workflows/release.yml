@@ -2,7 +2,10 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
+      - '!v*-cs'
+      - '!v*-csharp'
 
 jobs:
   test:
