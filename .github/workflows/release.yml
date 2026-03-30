@@ -2,14 +2,12 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
-      - '!v*-cs'
-      - '!v*-csharp'
+    tags: ['v*']
 
 jobs:
   test:
     runs-on: windows-latest
+    if: "!contains(github.ref_name, '-cs')"
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +34,7 @@ jobs:
 
   release:
     needs: test
+    if: "!contains(github.ref_name, '-cs')"
     runs-on: ubuntu-latest
     permissions:
       contents: write
