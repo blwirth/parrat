@@ -188,6 +188,66 @@ public class ExportServiceTests : IDisposable
         Assert.Equal("C189", row2[2]);
     }
 
+    /// <summary>
+    /// Integration test: build ExportField list using NaaccrDictionary.GetParentElement()
+    /// exactly as the UI does. This catches the original bug where ParentElement was only
+    /// populated from custom field overrides and Patient fields resolved to null/Tumor.
+    /// </summary>
+    [Fact]
+    public void ExportAllCsv_FieldsBuiltViaDictionary_PatientFieldsPopulated()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            PatientIdNumber = "PAT999",
+            NameLast = "Garcia",
+            NameFirst = "Maria",
+            DateOfBirth = "19751225",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData
+                {
+                    PrimarySite = "C220",
+                    DateOfDiagnosis = "20230601"
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "export_dict.csv");
+
+        // Use the real NAACCR dictionary to resolve ParentElement — same as UI code path
+        var dictionary = new NaaccrDictionary();
+        dictionary.Initialize(25);
+
+        var fieldIds = new[] { "patientIdNumber", "nameLast", "nameFirst", "dateOfBirth", "primarySite", "dateOfDiagnosis" };
+        var exportFields = fieldIds.Select(id => new ExportField
+        {
+            XmlId = id,
+            ParentElement = dictionary.GetParentElement(id)
+        }).ToList();
+
+        // Verify the dictionary resolved Patient fields correctly
+        Assert.Equal("Patient", exportFields[0].ParentElement); // patientIdNumber
+        Assert.Equal("Patient", exportFields[1].ParentElement); // nameLast
+        Assert.Equal("Tumor", exportFields[4].ParentElement);   // primarySite
+
+        // Act
+        var service = new ExportService();
+        service.ExportAllCsv(xmlDoc, nsMgr, outputPath, exportFields);
+
+        // Assert
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(2, lines.Length);
+
+        var values = lines[1].Split(',');
+        Assert.Equal("PAT999", values[0]);
+        Assert.Equal("Garcia", values[1]);
+        Assert.Equal("Maria", values[2]);
+        Assert.Equal("19751225", values[3]);
+        Assert.Equal("C220", values[4]);
+        Assert.Equal("20230601", values[5]);
+    }
+
     private static (XmlDocument, XmlNamespaceManager) LoadXml(string xml)
     {
         var xmlDoc = new XmlDocument();

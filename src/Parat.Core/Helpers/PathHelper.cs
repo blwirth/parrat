@@ -79,4 +79,12 @@ public static class PathHelper
     {
         _repoRoot = path;
     }
+
+    /// <summary>
+    /// Override the user directory for testing.
+    /// </summary>
+    public static void SetUserDir(string path)
+    {
+        _userDir = path;
+    }
 }
