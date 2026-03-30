@@ -1,0 +1,202 @@
+using System.Xml;
+using Parat.Core.Models;
+using Parat.Core.Services;
+using Parat.Tests.Helpers;
+using Xunit;
+
+namespace Parat.Tests.Services;
+
+public class ExportServiceTests : IDisposable
+{
+    private readonly string _tempDir;
+
+    public ExportServiceTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"parat_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
+    }
+
+    /// <summary>
+    /// Regression test: Patient-level fields (nameLast, nameFirst, dateOfBirth, patientIdNumber)
+    /// must appear in CSV output when ParentElement is correctly set to "Patient".
+    /// This was broken when ParentElement defaulted to null/Tumor for standard Patient fields.
+    /// </summary>
+    [Fact]
+    public void ExportAllCsv_PatientLevelFields_AreNotEmpty()
+    {
+        // Arrange
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            PatientIdNumber = "PAT001",
+            NameLast = "Smith",
+            NameFirst = "John",
+            DateOfBirth = "19800115",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData
+                {
+                    PrimarySite = "C509",
+                    DateOfDiagnosis = "20240101"
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "export.csv");
+
+        // Fields with correct ParentElement — the way the fix now builds them
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "patientIdNumber", ParentElement = "Patient" },
+            new() { XmlId = "nameLast", ParentElement = "Patient" },
+            new() { XmlId = "nameFirst", ParentElement = "Patient" },
+            new() { XmlId = "dateOfBirth", ParentElement = "Patient" },
+            new() { XmlId = "primarySite", ParentElement = "Tumor" },
+            new() { XmlId = "dateOfDiagnosis", ParentElement = "Tumor" },
+        };
+
+        // Act
+        var service = new ExportService();
+        service.ExportAllCsv(xmlDoc, nsMgr, outputPath, fields);
+
+        // Assert
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(2, lines.Length); // header + 1 data row
+
+        var header = lines[0].Split(',');
+        var values = lines[1].Split(',');
+
+        Assert.Equal("patientIdNumber", header[0]);
+        Assert.Equal("PAT001", values[0]);
+        Assert.Equal("Smith", values[1]);
+        Assert.Equal("John", values[2]);
+        Assert.Equal("19800115", values[3]);
+        Assert.Equal("C509", values[4]);
+        Assert.Equal("20240101", values[5]);
+    }
+
+    /// <summary>
+    /// Proves the old bug: if ParentElement is null (the broken default), Patient fields come back empty.
+    /// This test ensures that if someone reintroduces null ParentElement for Patient fields, it fails.
+    /// </summary>
+    [Fact]
+    public void ExportAllCsv_NullParentElement_PatientFieldsAreEmpty()
+    {
+        // Arrange
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            PatientIdNumber = "PAT001",
+            NameLast = "Smith",
+            NameFirst = "John",
+            DateOfBirth = "19800115",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData
+                {
+                    PrimarySite = "C509",
+                    DateOfDiagnosis = "20240101"
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "export_broken.csv");
+
+        // Null ParentElement — reproduces the old broken behavior
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "patientIdNumber", ParentElement = null },
+            new() { XmlId = "nameLast", ParentElement = null },
+            new() { XmlId = "nameFirst", ParentElement = null },
+            new() { XmlId = "dateOfBirth", ParentElement = null },
+            new() { XmlId = "primarySite", ParentElement = "Tumor" },
+        };
+
+        // Act
+        var service = new ExportService();
+        service.ExportAllCsv(xmlDoc, nsMgr, outputPath, fields);
+
+        // Assert — Patient fields are empty because they defaulted to Tumor lookup
+        var lines = File.ReadAllLines(outputPath);
+        var values = lines[1].Split(',');
+
+        Assert.Equal("", values[0]); // patientIdNumber — empty (wrong parent)
+        Assert.Equal("", values[1]); // nameLast — empty
+        Assert.Equal("", values[2]); // nameFirst — empty
+        Assert.Equal("", values[3]); // dateOfBirth — empty
+        Assert.Equal("C509", values[4]); // primarySite — still works (Tumor is correct)
+    }
+
+    /// <summary>
+    /// Multi-patient export: each tumor row should carry its own patient's data.
+    /// </summary>
+    [Fact]
+    public void ExportAllCsv_MultiplePatients_EachRowHasCorrectPatientData()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new[]
+        {
+            new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Smith",
+                PatientIdNumber = "PAT001",
+                Tumors = new[]
+                {
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" }
+                }
+            },
+            new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Jones",
+                PatientIdNumber = "PAT002",
+                Tumors = new[]
+                {
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C189" }
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "export_multi.csv");
+
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "patientIdNumber", ParentElement = "Patient" },
+            new() { XmlId = "nameLast", ParentElement = "Patient" },
+            new() { XmlId = "primarySite", ParentElement = "Tumor" },
+        };
+
+        var service = new ExportService();
+        service.ExportAllCsv(xmlDoc, nsMgr, outputPath, fields);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(3, lines.Length); // header + 2 data rows
+
+        var row1 = lines[1].Split(',');
+        Assert.Equal("PAT001", row1[0]);
+        Assert.Equal("Smith", row1[1]);
+        Assert.Equal("C509", row1[2]);
+
+        var row2 = lines[2].Split(',');
+        Assert.Equal("PAT002", row2[0]);
+        Assert.Equal("Jones", row2[1]);
+        Assert.Equal("C189", row2[2]);
+    }
+
+    private static (XmlDocument, XmlNamespaceManager) LoadXml(string xml)
+    {
+        var xmlDoc = new XmlDocument();
+        xmlDoc.XmlResolver = null;
+        xmlDoc.LoadXml(xml);
+
+        var nsMgr = new XmlNamespaceManager(xmlDoc.NameTable);
+        nsMgr.AddNamespace("n", NaaccrXmlTestHelper.NaaccrNamespace);
+
+        return (xmlDoc, nsMgr);
+    }
+}

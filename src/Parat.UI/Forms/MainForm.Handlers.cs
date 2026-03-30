@@ -950,7 +950,7 @@ public partial class MainForm
             {
                 XmlId = id,
                 IsCustom = customFields.ContainsKey(id),
-                ParentElement = customFields.GetValueOrDefault(id)
+                ParentElement = _naaccrDictionary.GetParentElement(id, customFields)
             }).ToList();
 
             using var sfd = new SaveFileDialog

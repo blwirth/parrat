@@ -591,7 +591,7 @@ public class ExportPreviewForm : Form
             {
                 XmlId = fieldId,
                 IsCustom = _customFieldParents.ContainsKey(fieldId),
-                ParentElement = _customFieldParents.GetValueOrDefault(fieldId)
+                ParentElement = _dictionary.GetParentElement(fieldId, _customFieldParents)
             }).ToList();
 
             var config = _configService.NewExportConfig(configName, fieldsArray, 25);
