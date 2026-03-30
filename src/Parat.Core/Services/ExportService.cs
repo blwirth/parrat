@@ -207,7 +207,16 @@ public class ExportService : IExportService
                 if (customFields != null && customFields.TryGetValue(field.XmlId, out var customParent))
                     parentElement = customParent;
 
-                if (parentElement == "Patient")
+                if (parentElement == "NaaccrData")
+                {
+                    var root = tumor.OwnerDocument?.DocumentElement;
+                    if (root != null)
+                    {
+                        var node = root.SelectSingleNode($"./n:Item[@naaccrId='{field.XmlId}']", nsMgr);
+                        if (node != null) value = node.InnerText;
+                    }
+                }
+                else if (parentElement == "Patient")
                 {
                     var node = patient.SelectSingleNode($"./n:Item[@naaccrId='{field.XmlId}']", nsMgr);
                     if (node != null) value = node.InnerText;

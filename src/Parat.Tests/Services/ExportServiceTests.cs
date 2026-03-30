@@ -248,6 +248,52 @@ public class ExportServiceTests : IDisposable
         Assert.Equal("20230601", values[5]);
     }
 
+    /// <summary>
+    /// NaaccrData-level fields (e.g. recordType, registryType) live on the root element,
+    /// not under Patient or Tumor. Export must look up the document root for these.
+    /// </summary>
+    [Fact]
+    public void ExportAllCsv_NaaccrDataLevelFields_AreNotEmpty()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(
+            naaccrDataItems: new Dictionary<string, string>
+            {
+                { "recordType", "I" },
+                { "registryType", "1" }
+            },
+            patients: new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Smith",
+                Tumors = new[]
+                {
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" }
+                }
+            });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "export_naaccrdata.csv");
+
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "recordType", ParentElement = "NaaccrData" },
+            new() { XmlId = "registryType", ParentElement = "NaaccrData" },
+            new() { XmlId = "nameLast", ParentElement = "Patient" },
+            new() { XmlId = "primarySite", ParentElement = "Tumor" },
+        };
+
+        var service = new ExportService();
+        service.ExportAllCsv(xmlDoc, nsMgr, outputPath, fields);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(2, lines.Length);
+
+        var values = lines[1].Split(',');
+        Assert.Equal("I", values[0]);       // recordType — NaaccrData level
+        Assert.Equal("1", values[1]);       // registryType — NaaccrData level
+        Assert.Equal("Smith", values[2]);   // nameLast — Patient level
+        Assert.Equal("C509", values[3]);    // primarySite — Tumor level
+    }
+
     private static (XmlDocument, XmlNamespaceManager) LoadXml(string xml)
     {
         var xmlDoc = new XmlDocument();

@@ -14,12 +14,20 @@ public static class NaaccrXmlTestHelper
     public static string BuildNaaccrXml(
         string baseDictionaryUri = "http://naaccr.org/naaccrxml/naaccr-dictionary-230.xml",
         string recordType = "I",
+        Dictionary<string, string>? naaccrDataItems = null,
         params PatientData[] patients)
     {
         var patientElements = string.Join("\n", patients.Select(BuildPatientElement));
 
+        var naaccrDataItemElements = "";
+        if (naaccrDataItems != null)
+        {
+            naaccrDataItemElements = "\n" + string.Join("\n",
+                naaccrDataItems.Select(kvp => $@"  <Item naaccrId=""{kvp.Key}"">{kvp.Value}</Item>"));
+        }
+
         return $@"<?xml version=""1.0"" encoding=""UTF-8""?>
-<NaaccrData xmlns=""{NaaccrNamespace}"" baseDictionaryUri=""{baseDictionaryUri}"" recordType=""{recordType}"">
+<NaaccrData xmlns=""{NaaccrNamespace}"" baseDictionaryUri=""{baseDictionaryUri}"" recordType=""{recordType}"">{naaccrDataItemElements}
 {patientElements}
 </NaaccrData>";
     }
