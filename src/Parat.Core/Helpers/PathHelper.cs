@@ -27,8 +27,6 @@ public static class PathHelper
                     if (Directory.Exists(Path.Combine(dir, "data")))
                     {
                         _repoRoot = dir;
-                        Directory.CreateDirectory(Path.Combine(dir, "config"));
-                        Directory.CreateDirectory(Path.Combine(dir, "logs"));
                         return _repoRoot;
                     }
                     var parent = Directory.GetParent(dir);
@@ -44,10 +42,25 @@ public static class PathHelper
         }
     }
 
+    private static string? _userDir;
+
+    public static string UserDir
+    {
+        get
+        {
+            if (_userDir != null) return _userDir;
+            _userDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "PARAT");
+            Directory.CreateDirectory(_userDir);
+            return _userDir;
+        }
+    }
+
     public static string DataDir => Path.Combine(RepoRoot, "data");
     public static string DictionariesDir => Path.Combine(DataDir, "dictionaries");
-    public static string ConfigDir => Path.Combine(RepoRoot, "config");
-    public static string LogsDir => Path.Combine(RepoRoot, "logs");
+    public static string ConfigDir => Path.Combine(UserDir, "config");
+    public static string LogsDir => Path.Combine(UserDir, "logs");
     public static string ExportConfigDir => Path.Combine(ConfigDir, "export-configs");
 
     public static string GetDictionaryPath(string filename) => Path.Combine(DictionariesDir, filename);
