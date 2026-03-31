@@ -225,8 +225,8 @@ public class SiteLateralityService : ISiteLateralityService
 
     public string? GetLaterality(string textLow)
     {
-        bool hasLeft = Regex.IsMatch(textLow, @"\bleft\b");
-        bool hasRight = Regex.IsMatch(textLow, @"\bright\b");
+        bool hasLeft = Regex.IsMatch(textLow, @"\bleft\b", RegexOptions.IgnoreCase);
+        bool hasRight = Regex.IsMatch(textLow, @"\bright\b", RegexOptions.IgnoreCase);
 
         if (!hasLeft && !hasRight) return null;
         if (hasLeft && hasRight) return "9";

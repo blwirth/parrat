@@ -16,6 +16,7 @@ public class ParatLoggerTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_tempDir, "config"));
         Directory.CreateDirectory(Path.Combine(_tempDir, "logs"));
         PathHelper.SetRepoRoot(_tempDir);
+        PathHelper.SetUserDir(_tempDir);
     }
 
     public void Dispose()

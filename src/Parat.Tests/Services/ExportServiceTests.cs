@@ -1,4 +1,5 @@
 using System.Xml;
+using Parat.Core.Helpers;
 using Parat.Core.Models;
 using Parat.Core.Services;
 using Parat.Tests.Helpers;
@@ -14,6 +15,24 @@ public class ExportServiceTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"parat_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
+
+        // Re-anchor RepoRoot to the actual repo so NaaccrDictionary can find
+        // data/dictionaries even when parallel test classes call SetRepoRoot.
+        PathHelper.SetRepoRoot(FindRepoRoot());
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = AppDomain.CurrentDomain.BaseDirectory;
+        for (int i = 0; i < 10; i++)
+        {
+            if (Directory.Exists(Path.Combine(dir, "data")))
+                return dir;
+            var parent = Directory.GetParent(dir);
+            if (parent == null) break;
+            dir = parent.FullName;
+        }
+        return AppDomain.CurrentDomain.BaseDirectory;
     }
 
     public void Dispose()

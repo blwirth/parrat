@@ -16,6 +16,7 @@ public class RecentFilesServiceTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_tempDir, "data"));
         Directory.CreateDirectory(Path.Combine(_tempDir, "config"));
         PathHelper.SetRepoRoot(_tempDir);
+        PathHelper.SetUserDir(_tempDir);
     }
 
     public void Dispose()
