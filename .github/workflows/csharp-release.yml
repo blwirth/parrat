@@ -57,8 +57,7 @@ jobs:
           # Write version file (read by app for window title)
           $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
 
-          $safeTag = $tag -replace '\.', '_'
-          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-${safeTag}.zip"
+          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-${tag}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
