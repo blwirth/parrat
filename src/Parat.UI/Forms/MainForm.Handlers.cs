@@ -1388,6 +1388,9 @@ public partial class MainForm
 
             using var form = new ConcatenateXmlForm(_concatenateService, ofd.FileNames);
             form.ShowDialog(this);
+
+            if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
+                _fileHandlers.OpenFile(form.OutputFilePath, this);
         }
         catch (Exception ex)
         {
@@ -1412,6 +1415,9 @@ public partial class MainForm
 
             using var form = new ConcatenateHl7Form(_concatenateService, ofd.FileNames);
             form.ShowDialog(this);
+
+            if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
+                _fileHandlers.OpenFile(form.OutputFilePath, this);
         }
         catch (Exception ex)
         {
@@ -1436,6 +1442,9 @@ public partial class MainForm
 
             using var form = new ConcatenateTxtForm(_concatenateService, ofd.FileNames);
             form.ShowDialog(this);
+
+            if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
+                _fileHandlers.OpenFile(form.OutputFilePath, this);
         }
         catch (Exception ex)
         {
