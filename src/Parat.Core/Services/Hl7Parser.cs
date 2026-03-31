@@ -114,6 +114,7 @@ public class Hl7Parser : IHl7Parser
                 MessageDateTime = parsedMsh.MessageDateTime,
                 SendingApplication = parsedMsh.SendingApplication,
                 SendingFacility = parsedMsh.SendingFacility,
+                AccessionNumber = parsedObr.AccessionNumber,
                 OrderDateTime = parsedObr.OrderDateTime,
                 OrderingProvider = parsedObr.OrderingProvider
             });
@@ -173,6 +174,9 @@ public class Hl7Parser : IHl7Parser
     {
         var fields = (obrSegment ?? "").Split('|');
 
+        // OBR-3: Filler Order Number (accession/path report number)
+        var accessionNumber = fields.Length > 3 ? fields[3] : "";
+
         var orderDateTime = fields.Length > 7 ? fields[7] : "";
         var orderingProviderField = fields.Length > 16 ? fields[16] : "";
 
@@ -189,6 +193,7 @@ public class Hl7Parser : IHl7Parser
 
         return new ObrSegment
         {
+            AccessionNumber = accessionNumber,
             OrderDateTime = orderDateTime,
             OrderingProvider = orderingProvider
         };

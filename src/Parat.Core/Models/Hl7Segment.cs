@@ -22,6 +22,7 @@ public class PidSegment
 
 public class ObrSegment
 {
+    public string AccessionNumber { get; set; } = string.Empty;
     public string OrderDateTime { get; set; } = string.Empty;
     public string OrderingProvider { get; set; } = string.Empty;
 }

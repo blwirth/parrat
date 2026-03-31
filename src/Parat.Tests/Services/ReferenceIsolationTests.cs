@@ -45,7 +45,8 @@ public class ReferenceIsolationTests : IDisposable
     [Fact]
     public void ReferenceNavTable_HasNoSelectedColumn_WhenBuiltForHl7()
     {
-        var table = BuildReferenceStyleHl7Table();
+        var table = BuildReferenceStyleHl7Table(
+            ("Smith", "John", "19800101", "PATH001", "PAT001"));
 
         Assert.False(table.Columns.Contains("Selected"),
             "Reference NavTable must NOT contain a 'Selected' column — this is the structural export isolation guarantee");
@@ -262,6 +263,44 @@ public class ReferenceIsolationTests : IDisposable
         Assert.Single(matches);
     }
 
+    // ── HL7 accession number matching tests ─────────────────────────────
+
+    [Fact]
+    public void FindByKeyFields_MatchesHl7AccessionNumber()
+    {
+        var table = BuildReferenceStyleHl7Table(
+            ("Smith", "John", "19800101", "PATH-2024-001", "PAT001"),
+            ("Smith", "John", "19800101", "PATH-2024-002", "PAT001"));
+
+        // pathReportNumber from XML primary should match accessionNumber in HL7 reference
+        var matches = FindMatchingIndices(table, "Smith", "John", "19800101", "PATH-2024-001");
+
+        Assert.Single(matches);
+        Assert.Equal(1, matches[0]);
+    }
+
+    [Fact]
+    public void FindByKeyFields_Hl7NoAccessionMatch_FallsBackToNameDob()
+    {
+        var table = BuildReferenceStyleHl7Table(
+            ("Smith", "John", "19800101", "DIFFERENT-PATH", "PAT001"));
+
+        // Path number doesn't match — should return empty (accessionNumber column exists but value differs)
+        var matches = FindMatchingIndices(table, "Smith", "John", "19800101", "PATH-2024-001");
+
+        Assert.Empty(matches);
+    }
+
+    [Fact]
+    public void ReferenceHl7NavTable_HasAccessionNumberColumn()
+    {
+        var table = BuildReferenceStyleHl7Table(
+            ("Smith", "John", "19800101", "PATH001", "PAT001"));
+
+        Assert.True(table.Columns.Contains("accessionNumber"));
+        Assert.False(table.Columns.Contains("Selected"));
+    }
+
     // ── Test helpers ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -293,16 +332,31 @@ public class ReferenceIsolationTests : IDisposable
         return table;
     }
 
-    private static DataTable BuildReferenceStyleHl7Table()
+    private static DataTable BuildReferenceStyleHl7Table(
+        params (string Last, string First, string Dob, string Accession, string PatientId)[] records)
     {
         var table = new DataTable();
         table.Columns.Add("Index", typeof(int));
         table.Columns.Add("nameLast", typeof(string));
         table.Columns.Add("nameFirst", typeof(string));
         table.Columns.Add("dateOfBirth", typeof(string));
+        table.Columns.Add("accessionNumber", typeof(string));
         table.Columns.Add("patientId", typeof(string));
         table.Columns.Add("messageType", typeof(string));
         table.Columns.Add("orderDateTime", typeof(string));
+
+        for (int i = 0; i < records.Length; i++)
+        {
+            var row = table.NewRow();
+            row["Index"] = i + 1;
+            row["nameLast"] = records[i].Last;
+            row["nameFirst"] = records[i].First;
+            row["dateOfBirth"] = records[i].Dob;
+            row["accessionNumber"] = records[i].Accession;
+            row["patientId"] = records[i].PatientId;
+            table.Rows.Add(row);
+        }
+
         return table;
     }
 
@@ -336,10 +390,18 @@ public class ReferenceIsolationTests : IDisposable
             }
 
             bool pathMatch = true;
-            if (!string.IsNullOrEmpty(pathTrimmed) && row.Table.Columns.Contains("pathReportNumber1"))
+            if (!string.IsNullOrEmpty(pathTrimmed))
             {
-                string rowPath = (row["pathReportNumber1"]?.ToString() ?? "").Trim();
-                pathMatch = rowPath == pathTrimmed;
+                if (row.Table.Columns.Contains("pathReportNumber1"))
+                {
+                    string rowPath = (row["pathReportNumber1"]?.ToString() ?? "").Trim();
+                    pathMatch = rowPath == pathTrimmed;
+                }
+                else if (row.Table.Columns.Contains("accessionNumber"))
+                {
+                    string rowAccession = (row["accessionNumber"]?.ToString() ?? "").Trim();
+                    pathMatch = rowAccession == pathTrimmed;
+                }
             }
 
             if (lastMatch && firstMatch && dobMatch && pathMatch)

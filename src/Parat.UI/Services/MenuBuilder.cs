@@ -125,7 +125,7 @@ public class MenuBuilder
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
-        MnuOpenReference = new ToolStripMenuItem("Open Reference File...");
+        MnuOpenReference = new ToolStripMenuItem("Open Reference File...") { Enabled = false };
         // Click handler wired by MainForm
         mnuFile.DropDownItems.Add(MnuOpenReference);
 
@@ -380,6 +380,7 @@ public class MenuBuilder
         MnuDeduplicate.Enabled = hasFile;
         MnuExport.Enabled = hasFile;
         MnuOpenFolder.Enabled = hasFile;
+        MnuOpenReference.Enabled = hasFile;
 
         bool isXml = fileType == "xml";
         MnuAssign.Enabled = isXml;

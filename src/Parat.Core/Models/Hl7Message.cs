@@ -16,6 +16,7 @@ public class Hl7Message
     public string MessageDateTime { get; set; } = string.Empty;
     public string SendingApplication { get; set; } = string.Empty;
     public string SendingFacility { get; set; } = string.Empty;
+    public string AccessionNumber { get; set; } = string.Empty;
     public string OrderDateTime { get; set; } = string.Empty;
     public string OrderingProvider { get; set; } = string.Empty;
 }

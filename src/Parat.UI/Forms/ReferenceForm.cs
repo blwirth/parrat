@@ -21,6 +21,8 @@ public partial class ReferenceForm : Form
     private readonly IParatLogger _logger;
 
     private System.Windows.Forms.Timer? _searchTimer;
+    private System.Windows.Forms.Timer? _autoSyncTimer;
+    private string? _pendingLast, _pendingFirst, _pendingDob, _pendingPath;
 
     public ReferenceForm(
         IXmlFileService xmlFileService,
@@ -164,12 +166,20 @@ public partial class ReferenceForm : Form
                 dobMatch = rowDob == dobTrimmed;
             }
 
-            // Path report number matching (exact, XML only)
+            // Path report number matching (exact — checks pathReportNumber1 for XML, accessionNumber for HL7)
             bool pathMatch = true;
-            if (!string.IsNullOrEmpty(pathTrimmed) && row.Table.Columns.Contains("pathReportNumber1"))
+            if (!string.IsNullOrEmpty(pathTrimmed))
             {
-                string rowPath = (row["pathReportNumber1"]?.ToString() ?? "").Trim();
-                pathMatch = rowPath == pathTrimmed;
+                if (row.Table.Columns.Contains("pathReportNumber1"))
+                {
+                    string rowPath = (row["pathReportNumber1"]?.ToString() ?? "").Trim();
+                    pathMatch = rowPath == pathTrimmed;
+                }
+                else if (row.Table.Columns.Contains("accessionNumber"))
+                {
+                    string rowAccession = (row["accessionNumber"]?.ToString() ?? "").Trim();
+                    pathMatch = rowAccession == pathTrimmed;
+                }
             }
 
             if (lastMatch && firstMatch && dobMatch && pathMatch)
@@ -224,6 +234,109 @@ public partial class ReferenceForm : Form
             _ctx.NavTable.DefaultView.RowFilter = "";
         _lblMatchStatus.Visible = false;
         _lblMatchStatus.Text = "";
+    }
+
+    /// <summary>
+    /// Called by MainForm when the primary record changes. If auto-sync is
+    /// enabled, triggers a debounced FindByKeyFields after 250ms of inactivity.
+    /// </summary>
+    public void NotifyPrimaryRecordChanged(string? lastName, string? firstName, string? dob, string? pathReport)
+    {
+        if (!_chkAutoSync.Checked) return;
+
+        _pendingLast = lastName;
+        _pendingFirst = firstName;
+        _pendingDob = dob;
+        _pendingPath = pathReport;
+
+        if (_autoSyncTimer == null)
+        {
+            _autoSyncTimer = new System.Windows.Forms.Timer { Interval = 250 };
+            _autoSyncTimer.Tick += (s, e) =>
+            {
+                _autoSyncTimer.Stop();
+                AutoSyncFind();
+            };
+        }
+
+        _autoSyncTimer.Stop();
+        _autoSyncTimer.Start();
+    }
+
+    private void AutoSyncFind()
+    {
+        if (_ctx.NavTable == null || _ctx.RecordCount == 0) return;
+
+        // Use the same matching logic but silently skip on no-match
+        var table = _ctx.NavTable;
+        string lastLower = (_pendingLast ?? "").Trim().ToLowerInvariant();
+        string firstLower = (_pendingFirst ?? "").Trim().ToLowerInvariant();
+        string dobTrimmed = (_pendingDob ?? "").Trim();
+        string pathTrimmed = (_pendingPath ?? "").Trim();
+
+        var matchingIndices = new List<int>();
+
+        foreach (DataRow row in table.Rows)
+        {
+            int index = Convert.ToInt32(row["Index"]);
+
+            string rowLast = (row.Table.Columns.Contains("nameLast") ? row["nameLast"]?.ToString() ?? "" : "").Trim().ToLowerInvariant();
+            string rowFirst = (row.Table.Columns.Contains("nameFirst") ? row["nameFirst"]?.ToString() ?? "" : "").Trim().ToLowerInvariant();
+
+            bool lastMatch = string.IsNullOrEmpty(lastLower) || rowLast == lastLower;
+            bool firstMatch = string.IsNullOrEmpty(firstLower) || rowFirst == firstLower;
+
+            bool dobMatch = true;
+            if (!string.IsNullOrEmpty(dobTrimmed) && row.Table.Columns.Contains("dateOfBirth"))
+            {
+                string rowDob = (row["dateOfBirth"]?.ToString() ?? "").Trim();
+                dobMatch = rowDob == dobTrimmed;
+            }
+
+            bool pathMatch = true;
+            if (!string.IsNullOrEmpty(pathTrimmed))
+            {
+                if (row.Table.Columns.Contains("pathReportNumber1"))
+                {
+                    string rowPath = (row["pathReportNumber1"]?.ToString() ?? "").Trim();
+                    pathMatch = rowPath == pathTrimmed;
+                }
+                else if (row.Table.Columns.Contains("accessionNumber"))
+                {
+                    string rowAccession = (row["accessionNumber"]?.ToString() ?? "").Trim();
+                    pathMatch = rowAccession == pathTrimmed;
+                }
+            }
+
+            if (lastMatch && firstMatch && dobMatch && pathMatch)
+                matchingIndices.Add(index);
+        }
+
+        if (matchingIndices.Count == 0)
+        {
+            // Try relaxed match
+            matchingIndices = FindRelaxedMatches(table, lastLower, dobTrimmed);
+        }
+
+        if (matchingIndices.Count == 0)
+        {
+            // Silently clear status — don't spam "No match found" during rapid nav
+            _lblMatchStatus.Visible = false;
+            return;
+        }
+
+        if (matchingIndices.Count == 1)
+        {
+            table.DefaultView.RowFilter = "";
+            ShowMatchStatus("Auto-sync: match found", isWarning: false);
+            _navService.ShowRecord(matchingIndices[0] - 1);
+        }
+        else
+        {
+            table.DefaultView.RowFilter = $"Index IN ({string.Join(",", matchingIndices)})";
+            ShowMatchStatus($"Auto-sync: {matchingIndices.Count} candidates", isWarning: false);
+            _navService.ShowRecord(matchingIndices[0] - 1);
+        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────

@@ -242,6 +242,7 @@ public class FileHandlers
             table.Columns.Add("nameLast", typeof(string));
             table.Columns.Add("nameFirst", typeof(string));
             table.Columns.Add("dateOfBirth", typeof(string));
+            table.Columns.Add("accessionNumber", typeof(string));
             table.Columns.Add("patientId", typeof(string));
             table.Columns.Add("messageType", typeof(string));
             table.Columns.Add("orderDateTime", typeof(string));
@@ -255,6 +256,7 @@ public class FileHandlers
                 row["nameLast"] = msg.PatientLastName;
                 row["nameFirst"] = msg.PatientFirstName;
                 row["dateOfBirth"] = msg.DateOfBirth;
+                row["accessionNumber"] = msg.AccessionNumber;
                 row["patientId"] = msg.PatientId;
                 row["messageType"] = msg.MessageType;
                 row["orderDateTime"] = msg.OrderDateTime;
@@ -326,7 +328,7 @@ public class FileHandlers
             else if (col.Name == "Index")
             {
                 col.ReadOnly = true;
-                col.DisplayIndex = 1;
+                col.DisplayIndex = grid.Columns.Contains("Selected") ? 1 : 0;
                 col.Width = 55;
                 col.Resizable = DataGridViewTriState.False;
                 col.SortMode = DataGridViewColumnSortMode.Automatic;

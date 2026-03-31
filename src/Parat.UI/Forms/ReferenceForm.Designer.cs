@@ -97,6 +97,15 @@ partial class ReferenceForm
         _pnlSearch.Controls.Add(_lblSearchCount);
         _pnlSearch.Controls.Add(_btnClearSearch);
 
+        // ── Auto-sync checkbox (above match status) ─────────────────────
+        _chkAutoSync = new CheckBox();
+        _chkAutoSync.Text = "Auto-sync";
+        _chkAutoSync.Dock = DockStyle.Top;
+        _chkAutoSync.Height = 22;
+        _chkAutoSync.Font = new Font("Segoe UI", 8f);
+        _chkAutoSync.Padding = new Padding(2, 0, 0, 0);
+        _chkAutoSync.Checked = false;
+
         // ── Match status label (above search, shows Find in Reference results) ──
         _lblMatchStatus = new Label();
         _lblMatchStatus.Dock = DockStyle.Top;
@@ -192,6 +201,7 @@ partial class ReferenceForm
         _splitOuter.Panel1.Controls.Add(_gridNav);
         _splitOuter.Panel1.Controls.Add(_pnlSearch);
         _splitOuter.Panel1.Controls.Add(_lblMatchStatus);
+        _splitOuter.Panel1.Controls.Add(_chkAutoSync);
         _splitInner.Panel1.Controls.Add(_rtbPath);
         _splitInner.Panel2.Controls.Add(_rtbItems);
         _splitOuter.Panel2.Controls.Add(_splitInner);
@@ -228,6 +238,7 @@ partial class ReferenceForm
     private Label _lblSearchCount = null!;
     private Button _btnClearSearch = null!;
     private Label _lblMatchStatus = null!;
+    private CheckBox _chkAutoSync = null!;
     private RichTextBox _rtbPath = null!;
     private RichTextBox _rtbItems = null!;
     private FlowLayoutPanel _pnlCopyBar = null!;

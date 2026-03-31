@@ -149,6 +149,7 @@ public class ReferenceFileLoader
             table.Columns.Add("nameLast", typeof(string));
             table.Columns.Add("nameFirst", typeof(string));
             table.Columns.Add("dateOfBirth", typeof(string));
+            table.Columns.Add("accessionNumber", typeof(string));
             table.Columns.Add("patientId", typeof(string));
             table.Columns.Add("messageType", typeof(string));
             table.Columns.Add("orderDateTime", typeof(string));
@@ -161,6 +162,7 @@ public class ReferenceFileLoader
                 row["nameLast"] = msg.PatientLastName;
                 row["nameFirst"] = msg.PatientFirstName;
                 row["dateOfBirth"] = msg.DateOfBirth;
+                row["accessionNumber"] = msg.AccessionNumber;
                 row["patientId"] = msg.PatientId;
                 row["messageType"] = msg.MessageType;
                 row["orderDateTime"] = msg.OrderDateTime;

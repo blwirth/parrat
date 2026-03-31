@@ -236,6 +236,19 @@ public partial class MainForm : Form
     private void OnGridSelectionChanged(object? sender, EventArgs e)
     {
         _navigationService.HandleGridSelectionChanged();
+        NotifyReferenceOfCurrentRecord();
+    }
+
+    private void NotifyReferenceOfCurrentRecord()
+    {
+        if (_referenceForm == null || _referenceForm.IsDisposed) return;
+
+        string lastName = _btnCopyFields[0].Tag?.ToString() ?? "";
+        string firstName = _btnCopyFields[1].Tag?.ToString() ?? "";
+        string dob = _btnCopyFields[2].Tag?.ToString() ?? "";
+        string pathReport = _btnCopyFields[3].Tag?.ToString() ?? "";
+
+        _referenceForm.NotifyPrimaryRecordChanged(lastName, firstName, dob, pathReport);
     }
 
     private void OnGridKeyDown(object? sender, KeyEventArgs e)
@@ -309,6 +322,16 @@ public partial class MainForm : Form
             {
                 _txtSearch.Focus();
                 _txtSearch.SelectAll();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+        // Ctrl+R — Find in Reference
+        else if (e.Control && !e.Shift && e.KeyCode == Keys.R)
+        {
+            if (_referenceForm != null && !_referenceForm.IsDisposed)
+            {
+                OnFindInReferenceClick(this, EventArgs.Empty);
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }

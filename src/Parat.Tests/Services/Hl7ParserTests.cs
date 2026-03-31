@@ -180,6 +180,39 @@ public class Hl7ParserTests
     {
         var result = _parser.ParseObr("OBR|1");
         Assert.Equal("", result.OrderDateTime);
+        Assert.Equal("", result.AccessionNumber);
+    }
+
+    [Fact]
+    public void ParseObr_ExtractsAccessionNumberFromField3()
+    {
+        var obr = "OBR|1|ORD001|PATH-2024-001|88305^Surgical Pathology|||20240101";
+        var result = _parser.ParseObr(obr);
+
+        Assert.Equal("PATH-2024-001", result.AccessionNumber);
+    }
+
+    [Fact]
+    public void ParseObr_AccessionNumberIsEmptyWhenFieldMissing()
+    {
+        var obr = "OBR|1||";
+        var result = _parser.ParseObr(obr);
+
+        Assert.Equal("", result.AccessionNumber);
+    }
+
+    [Fact]
+    public void Parse_MapsAccessionNumberToHl7Message()
+    {
+        var hl7 = "MSH|^~\\&|App|Fac||Recv|20240101||ORU^R01|MSG1|P|2.3\r" +
+                  "PID|||PAT1||Smith^John||19800101|M\r" +
+                  "OBR|1||SP-2024-555|88305|||20240101\r" +
+                  "OBX|1|TX|Path||Test text||||||F\r";
+
+        var messages = _parser.Parse(hl7);
+
+        Assert.Single(messages);
+        Assert.Equal("SP-2024-555", messages[0].AccessionNumber);
     }
 
     #endregion
