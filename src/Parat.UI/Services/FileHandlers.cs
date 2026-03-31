@@ -301,7 +301,7 @@ public class FileHandlers
 
     // ── Grid column configuration ────────────────────────────────────────
 
-    private static void ConfigureGridColumns(DataGridView grid, List<GridColumnDef> columnDefs)
+    internal static void ConfigureGridColumns(DataGridView grid, List<GridColumnDef> columnDefs)
     {
         if (grid.Columns.Count == 0) return;
 

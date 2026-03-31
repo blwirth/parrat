@@ -20,6 +20,9 @@ public partial class MainForm : Form
     private readonly IParatLogger _logger;
     private MenuStrip _menuStrip = null!;
 
+    // Reference panel
+    private ReferenceForm? _referenceForm;
+
     public MainForm(
         AppState state,
         MenuBuilder menuBuilder,
@@ -146,6 +149,8 @@ public partial class MainForm : Form
         _menuBuilder.MnuOpenFolder.Click += (s, e) => _fileHandlers.HandleOpenContainingFolder();
 
         _menuBuilder.MnuRestart.Click += (s, e) => _fileHandlers.HandleRestart();
+
+        _menuBuilder.MnuOpenReference.Click += (s, e) => HandleOpenReference();
     }
 
     private void InitializeNavigation()
@@ -192,6 +197,9 @@ public partial class MainForm : Form
         // Copy buttons
         foreach (var btn in _btnCopyFields)
             btn.Click += OnCopyFieldClick;
+
+        // Find in Reference button
+        _btnFindInRef.Click += OnFindInReferenceClick;
 
         // Save column widths on resize
         _gridNav.ColumnWidthChanged += OnGridColumnWidthChanged;
@@ -371,6 +379,62 @@ public partial class MainForm : Form
         {
             _logger.LogError("Clipboard copy failed", "COPY", ex);
         }
+    }
+
+    // ── Reference panel ─────────────────────────────────────────────────
+
+    private void HandleOpenReference()
+    {
+        using var ofd = new OpenFileDialog
+        {
+            Filter = "NAACCR/HL7 Files (*.xml;*.hl7)|*.xml;*.hl7|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*",
+            Title = "Select reference file"
+        };
+
+        if (ofd.ShowDialog() != DialogResult.OK) return;
+
+        // Close existing reference form if open
+        if (_referenceForm != null && !_referenceForm.IsDisposed)
+        {
+            _referenceForm.Close();
+            _referenceForm = null;
+        }
+
+        var refForm = new ReferenceForm(
+            _xmlFileService,
+            _hl7FileService,
+            _fileHandlers.GridSettingsService,
+            _logger);
+
+        if (!refForm.OpenFile(ofd.FileName))
+        {
+            refForm.Dispose();
+            return;
+        }
+
+        _referenceForm = refForm;
+        _referenceForm.Owner = this;
+        _referenceForm.FormClosed += (s, e) =>
+        {
+            _referenceForm = null;
+            _btnFindInRef.Visible = false;
+        };
+
+        _referenceForm.Show();
+        _btnFindInRef.Visible = true;
+    }
+
+    private void OnFindInReferenceClick(object? sender, EventArgs e)
+    {
+        if (_referenceForm == null || _referenceForm.IsDisposed) return;
+
+        // Read key fields from the copy button Tags (already populated by NavigationService)
+        string lastName = _btnCopyFields[0].Tag?.ToString() ?? "";
+        string firstName = _btnCopyFields[1].Tag?.ToString() ?? "";
+        string dob = _btnCopyFields[2].Tag?.ToString() ?? "";
+        string pathReport = _btnCopyFields[3].Tag?.ToString() ?? "";
+
+        _referenceForm.FindByKeyFields(lastName, firstName, null, dob, pathReport);
     }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)

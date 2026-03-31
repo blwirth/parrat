@@ -50,6 +50,9 @@ public class MenuBuilder
     public ToolStripMenuItem MenuItemRemoveEmptyObx5 { get; private set; } = null!;
     public ToolStripMenuItem MenuItemRemoveVariable { get; private set; } = null!;
 
+    // Reference
+    public ToolStripMenuItem MnuOpenReference { get; private set; } = null!;
+
     // Export menu
     public ToolStripMenuItem MnuExport { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedXml { get; private set; } = null!;
@@ -119,6 +122,12 @@ public class MenuBuilder
         MnuOpenFolder = new ToolStripMenuItem("Open Containing Folder") { Enabled = false };
         // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpenFolder);
+
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
+
+        MnuOpenReference = new ToolStripMenuItem("Open Reference File...");
+        // Click handler wired by MainForm
+        mnuFile.DropDownItems.Add(MnuOpenReference);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 

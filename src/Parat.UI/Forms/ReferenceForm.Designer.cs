@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace Parat.UI.Forms;
 
-partial class MainForm
+partial class ReferenceForm
 {
     private System.ComponentModel.IContainer components = null;
 
@@ -20,9 +20,6 @@ partial class MainForm
     {
         components = new System.ComponentModel.Container();
 
-        // ── MenuStrip (built by MenuBuilder, assigned in constructor) ────
-        // _menuStrip is created in the constructor via MenuBuilder.
-
         // ── StatusStrip ──────────────────────────────────────────────────
         _statusStrip = new StatusStrip();
         _lblStatus = new ToolStripStatusLabel();
@@ -31,7 +28,7 @@ partial class MainForm
         _statusStrip.Dock = DockStyle.Bottom;
         _statusStrip.SuspendLayout();
 
-        _lblStatus.Text = "No file loaded";
+        _lblStatus.Text = "No reference file loaded";
         _lblStatus.Spring = true;
         _lblStatus.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -61,16 +58,15 @@ partial class MainForm
         _splitInner.IsSplitterFixed = false;
         _splitInner.Panel1MinSize = 200;
 
-        // ── DataGridView (left panel — tumor/message list) ───────────────
+        // ── DataGridView (left panel — fully read-only, no checkboxes) ───
         _gridNav = new DataGridView();
         _gridNav.Dock = DockStyle.Fill;
         _gridNav.AllowUserToAddRows = false;
         _gridNav.AllowUserToDeleteRows = false;
         _gridNav.RowHeadersVisible = false;
-        _gridNav.ReadOnly = false;
-        _gridNav.MultiSelect = true;
+        _gridNav.ReadOnly = true;
+        _gridNav.MultiSelect = false;
         _gridNav.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        // Column widths managed by ConfigureGridColumns based on saved settings
 
         // ── Search panel (docked above grid) ─────────────────────────────
         _pnlSearch = new Panel();
@@ -94,12 +90,23 @@ partial class MainForm
         _btnClearSearch.Width = 25;
         _btnClearSearch.FlatStyle = FlatStyle.Flat;
         _btnClearSearch.FlatAppearance.BorderSize = 0;
-        _btnClearSearch.Text = "\u2715"; // Unicode X mark
+        _btnClearSearch.Text = "\u2715";
         _btnClearSearch.Font = new Font("Segoe UI", 8f);
 
         _pnlSearch.Controls.Add(_txtSearch);
         _pnlSearch.Controls.Add(_lblSearchCount);
         _pnlSearch.Controls.Add(_btnClearSearch);
+
+        // ── Match status label (above search, shows Find in Reference results) ──
+        _lblMatchStatus = new Label();
+        _lblMatchStatus.Dock = DockStyle.Top;
+        _lblMatchStatus.Height = 24;
+        _lblMatchStatus.TextAlign = ContentAlignment.MiddleLeft;
+        _lblMatchStatus.Font = new Font("Segoe UI", 9f, FontStyle.Italic);
+        _lblMatchStatus.ForeColor = Color.DarkSlateGray;
+        _lblMatchStatus.Padding = new Padding(4, 0, 0, 0);
+        _lblMatchStatus.Text = "";
+        _lblMatchStatus.Visible = false;
 
         // ── RichTextBox — path/text panel (middle) ───────────────────────
         _rtbPath = new RichTextBox();
@@ -173,34 +180,18 @@ partial class MainForm
             btn.Cursor = Cursors.Hand;
             btn.Text = copyLabels[i];
             btn.Visible = false;
-            btn.Tag = ""; // stores the value to copy
+            btn.Tag = "";
             _btnCopyFields[i] = btn;
         }
-        // Add in reverse so RightToLeft flow renders Last|First|DOB|Path# left-to-right
         for (int i = _btnCopyFields.Length - 1; i >= 0; i--)
             _pnlCopyBar.Controls.Add(_btnCopyFields[i]);
 
-        // ── Find in Reference button (visible only when reference panel is open) ──
-        _btnFindInRef = new Button();
-        _btnFindInRef.AutoSize = true;
-        _btnFindInRef.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        _btnFindInRef.FlatStyle = FlatStyle.Flat;
-        _btnFindInRef.FlatAppearance.BorderColor = Color.CadetBlue;
-        _btnFindInRef.FlatAppearance.BorderSize = 1;
-        _btnFindInRef.Font = new Font("Segoe UI", 8f);
-        _btnFindInRef.Padding = new Padding(4, 0, 4, 0);
-        _btnFindInRef.Margin = new Padding(6, 5, 2, 5);
-        _btnFindInRef.Cursor = Cursors.Hand;
-        _btnFindInRef.Text = "Find in Reference";
-        _btnFindInRef.Location = new Point(340, 5);
-        _btnFindInRef.Visible = false;
-        _btnFindInRef.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
-
-        _bottomPanel.Controls.AddRange(new Control[] { _btnPrev, _btnNext, _lblIndex, _btnFindInRef, _pnlCopyBar });
+        _bottomPanel.Controls.AddRange(new Control[] { _btnPrev, _btnNext, _lblIndex, _pnlCopyBar });
 
         // ── Wire panels into split containers ────────────────────────────
         _splitOuter.Panel1.Controls.Add(_gridNav);
         _splitOuter.Panel1.Controls.Add(_pnlSearch);
+        _splitOuter.Panel1.Controls.Add(_lblMatchStatus);
         _splitInner.Panel1.Controls.Add(_rtbPath);
         _splitInner.Panel2.Controls.Add(_rtbItems);
         _splitOuter.Panel2.Controls.Add(_splitInner);
@@ -208,7 +199,6 @@ partial class MainForm
         _mainPanel.Controls.Add(_splitOuter);
 
         // ── Add all to form ──────────────────────────────────────────────
-        // Note: _menuStrip is added in the constructor after MenuBuilder creates it
         Controls.AddRange(new Control[]
         {
             _mainPanel,
@@ -217,8 +207,10 @@ partial class MainForm
         });
 
         // ── Form properties ──────────────────────────────────────────────
+        Text = "PARAT Reference";
         StartPosition = FormStartPosition.CenterScreen;
-        WindowState = FormWindowState.Maximized;
+        Width = 1400;
+        Height = 900;
         KeyPreview = true;
     }
 
@@ -235,6 +227,7 @@ partial class MainForm
     private TextBox _txtSearch = null!;
     private Label _lblSearchCount = null!;
     private Button _btnClearSearch = null!;
+    private Label _lblMatchStatus = null!;
     private RichTextBox _rtbPath = null!;
     private RichTextBox _rtbItems = null!;
     private FlowLayoutPanel _pnlCopyBar = null!;
@@ -243,5 +236,4 @@ partial class MainForm
     private Button _btnPrev = null!;
     private Button _btnNext = null!;
     private Label _lblIndex = null!;
-    private Button _btnFindInRef = null!;
 }
