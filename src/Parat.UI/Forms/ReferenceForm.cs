@@ -320,8 +320,7 @@ public partial class ReferenceForm : Form
 
         if (matchingIndices.Count == 0)
         {
-            // Silently clear status — don't spam "No match found" during rapid nav
-            _lblMatchStatus.Visible = false;
+            ShowMatchStatus("Auto-sync: no match found", isWarning: true);
             return;
         }
 

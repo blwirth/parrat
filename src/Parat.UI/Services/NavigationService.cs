@@ -303,12 +303,12 @@ public class NavigationService
         SyntaxHighlightingHelper.InvokeSearchHighlight(RtbPath, searchText);
         SyntaxHighlightingHelper.InvokeSearchHighlight(RtbItems, searchText);
 
-        // Update copy buttons for HL7
+        // Update copy buttons for HL7 (use AccessionNumber for Path# button)
         UpdateCopyButtons(
             message.PatientLastName,
             message.PatientFirstName,
             message.DateOfBirth,
-            "" // HL7 messages don't have pathReportNumber1
+            message.AccessionNumber
         );
 
         // Update index label and button states

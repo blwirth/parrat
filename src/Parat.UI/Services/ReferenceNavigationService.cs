@@ -276,7 +276,7 @@ public class ReferenceNavigationService
             message.PatientLastName,
             message.PatientFirstName,
             message.DateOfBirth,
-            ""
+            message.AccessionNumber
         );
 
         LblIndex.Text = $"Message {index + 1} of {messages.Count}";
