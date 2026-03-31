@@ -1,5 +1,6 @@
 using System.Data;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Xml;
 using Parat.Core.Helpers;
 using Parat.Core.Interfaces;
@@ -1271,12 +1272,97 @@ public partial class MainForm
             SetStatusText("Testing site/laterality on current record...");
             Refresh();
 
-            // For now, open the custom text dialog as a fallback
-            // The full implementation would extract text from current record
-            using var resultsForm = new TestSiteLateralityForm();
-            resultsForm.ShowDialog(this);
+            SiteLateralityTestResult result;
+            string? sourceText = null;
+            string[]? obxSegments = null;
+            string[]? skipCodes = null;
+
+            if (fileType == "xml")
+            {
+                var tumor = _state.Tumors![idx]!;
+                var nsMgr = _state.NsMgr!;
+
+                var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr);
+                string nameLast = patient?.SelectSingleNode("./n:Item[@naaccrId='nameLast']", nsMgr)?.InnerText ?? "";
+                string nameFirst = patient?.SelectSingleNode("./n:Item[@naaccrId='nameFirst']", nsMgr)?.InnerText ?? "";
+                string sourceInfo = $"Tumor {idx + 1}";
+                string patientLabel = $"{nameLast}, {nameFirst}".Trim(',', ' ');
+                if (!string.IsNullOrWhiteSpace(patientLabel))
+                    sourceInfo += $" — {patientLabel}";
+
+                string textPath = tumor.SelectSingleNode("./n:Item[@naaccrId='textDxProcPath']", nsMgr)?.InnerText ?? "";
+                string textPe = tumor.SelectSingleNode("./n:Item[@naaccrId='textDxProcPe']", nsMgr)?.InnerText ?? "";
+                string textLab = tumor.SelectSingleNode("./n:Item[@naaccrId='textDxProcLabTests']", nsMgr)?.InnerText ?? "";
+
+                string textCombined = (textPath + " " + textPe).Trim();
+                if (string.IsNullOrWhiteSpace(textCombined))
+                    textCombined = textLab.Trim();
+
+                if (string.IsNullOrWhiteSpace(textCombined))
+                {
+                    MessageBox.Show("No pathology text found in this record (textDxProcPath, textDxProcPe, textDxProcLabTests are all empty).",
+                        "Test Site/Laterality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+                    return;
+                }
+
+                var parts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(textPath)) parts.Add($"textDxProcPath:\n{textPath}");
+                if (!string.IsNullOrWhiteSpace(textPe)) parts.Add($"textDxProcPe:\n{textPe}");
+                if (!string.IsNullOrWhiteSpace(textLab)) parts.Add($"textDxProcLabTests:\n{textLab}");
+                sourceText = string.Join("\n\n", parts);
+
+                result = RunSiteLateralityTest(textCombined, sourceInfo);
+            }
+            else // hl7
+            {
+                var message = _state.Hl7Messages[idx];
+                string sourceInfo = $"Message {idx + 1}";
+                if (!string.IsNullOrWhiteSpace(message.PatientName))
+                    sourceInfo += $" — {message.PatientName}";
+
+                if (!message.Segments.TryGetValue("OBX", out var rawObxList) || rawObxList.Count == 0)
+                {
+                    MessageBox.Show("No OBX segments found in this message.",
+                        "Test Site/Laterality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+                    return;
+                }
+
+                obxSegments = rawObxList.ToArray();
+                var skipConfig = _configService.GetObxSkipConfig();
+                skipCodes = skipConfig.SkipCodes.ToArray();
+
+                var skipCodesUpper = new HashSet<string>(
+                    skipCodes.Select(c => c.ToUpperInvariant()),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var textParts = new List<string>();
+                foreach (var obx in obxSegments)
+                {
+                    var fields = obx.Split('|');
+                    string obx3Code = (fields.Length > 3 ? fields[3].Split('^')[0] : "").Trim().ToUpperInvariant();
+                    if (skipCodesUpper.Contains(obx3Code)) continue;
+
+                    string obx5 = fields.Length > 5 ? fields[5] : "";
+                    if (!string.IsNullOrWhiteSpace(obx5))
+                        textParts.Add(Hl7EscapeHelper.Unescape(obx5));
+                }
+
+                if (textParts.Count == 0)
+                {
+                    MessageBox.Show("No text content found in OBX segments (after applying skip codes).",
+                        "Test Site/Laterality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+                    return;
+                }
+
+                result = RunSiteLateralityTest(string.Join("\r\n", textParts), sourceInfo);
+            }
 
             SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+            using var resultsForm = new TestSiteLateralityForm(result, sourceText, obxSegments, skipCodes);
+            resultsForm.ShowDialog(this);
         }
         catch (Exception ex)
         {
@@ -1298,12 +1384,12 @@ public partial class MainForm
             SetStatusText("Testing site/laterality heuristics...");
             Refresh();
 
-            // The actual test would use _siteLateralityService here
-            // This is the UI wiring; the service call will work when services are registered
-            MessageBox.Show("Site/laterality test would execute here on the entered text.",
-                "Test Site/Laterality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            string text = inputForm.InputText;
+            var result = RunSiteLateralityTest(text, "Custom text");
 
             SetStatusText("Site/Lat test complete");
+            using var resultsForm = new TestSiteLateralityForm(result, text);
+            resultsForm.ShowDialog(this);
         }
         catch (Exception ex)
         {
@@ -1311,6 +1397,144 @@ public partial class MainForm
             MessageBox.Show($"Error testing heuristics: {ex.Message}",
                 "Test Site/Laterality - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    /// <summary>Runs site/laterality heuristics against the given text and returns test results.</summary>
+    private SiteLateralityTestResult RunSiteLateralityTest(string text, string sourceInfo)
+    {
+        string topoPath = PathHelper.GetDictionaryPath("Topography.jsonl");
+        string melTopoPath = PathHelper.GetDictionaryPath("TopographyMelanoma.jsonl");
+        string latPath = PathHelper.GetDictionaryPath("Laterality.json");
+        string rulesPath = PathHelper.GetDictionaryPath("SiteCodingRules.jsonl");
+
+        var topoMap = File.Exists(topoPath)
+            ? _siteLateralityService.ReadTopographyJson(topoPath)
+                .Where(t => !string.IsNullOrEmpty(t.Code) && !string.IsNullOrEmpty(t.SearchPhrase) && !t.Code.StartsWith("C77"))
+                .ToList()
+            : new List<TopographyEntry>();
+
+        var melTopoMap = File.Exists(melTopoPath)
+            ? _siteLateralityService.ReadTopographyJson(melTopoPath)
+            : new List<TopographyEntry>();
+
+        var latCodes = File.Exists(latPath)
+            ? _siteLateralityService.ReadLateralityJson(latPath)
+            : new Dictionary<string, bool>();
+
+        var rules = File.Exists(rulesPath)
+            ? _siteLateralityService.ReadSiteCodingRules(rulesPath)
+            : new List<SiteCodingRule>();
+
+        string low = text.ToLowerInvariant();
+        string siteCode = "";
+        string matchType = "";
+        string matchedPhrase = "";
+        int? patternPriority = null;
+        SiteCodingRule? matchedRule = null;
+
+        foreach (var rule in rules)
+        {
+            var testResult = _siteLateralityService.TestSiteCodingRule(rule, low, topoMap);
+            if (testResult.Matched)
+            {
+                string code = testResult.TopoCode ?? (rule.Code != "{topo}" ? rule.Code : "");
+                if (!string.IsNullOrEmpty(code))
+                {
+                    siteCode = code;
+                    matchType = "site-coding-rule";
+                    matchedPhrase = testResult.MatchedTerm ?? "";
+                    patternPriority = rule.Priority;
+                    matchedRule = rule;
+                    break;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(siteCode) && low.Contains("melanoma") && melTopoMap.Count > 0)
+        {
+            var (code, phrase) = FindBestDictMatch(melTopoMap, low);
+            if (!string.IsNullOrEmpty(code))
+            {
+                siteCode = code;
+                matchType = "melanoma-dict";
+                matchedPhrase = phrase;
+            }
+        }
+
+        if (string.IsNullOrEmpty(siteCode) && topoMap.Count > 0)
+        {
+            var (code, phrase) = FindBestDictMatch(topoMap, low);
+            if (!string.IsNullOrEmpty(code))
+            {
+                siteCode = code;
+                matchType = "standard-dict";
+                matchedPhrase = phrase;
+            }
+        }
+
+        string? latCode = null;
+        string latDesc = "";
+        bool siteRequiresLat = false;
+
+        if (!string.IsNullOrEmpty(siteCode))
+        {
+            siteRequiresLat = latCodes.ContainsKey(siteCode);
+
+            if (matchedRule?.ForceLaterality != null)
+                latCode = matchedRule.ForceLaterality;
+            else if (siteRequiresLat)
+                latCode = _siteLateralityService.GetLaterality(low) ?? "9";
+            else
+                latCode = "0";
+
+            latDesc = latCode switch
+            {
+                "0" => "Not a paired site",
+                "1" => "Right",
+                "2" => "Left",
+                "9" => "Bilateral or unknown laterality",
+                _ => latCode
+            };
+        }
+
+        return new SiteLateralityTestResult
+        {
+            SourceInfo = sourceInfo,
+            SiteCode = string.IsNullOrEmpty(siteCode) ? null : siteCode,
+            MatchType = string.IsNullOrEmpty(matchType) ? null : matchType,
+            PatternPriority = patternPriority,
+            MatchedPhrase = string.IsNullOrEmpty(matchedPhrase) ? null : matchedPhrase,
+            LateralityCode = latCode,
+            LateralityDescription = string.IsNullOrEmpty(latDesc) ? null : latDesc,
+            SiteRequiresLaterality = siteRequiresLat
+        };
+    }
+
+    /// <summary>Finds the topography entry whose search phrase occurs earliest in the text.</summary>
+    private static (string Code, string Phrase) FindBestDictMatch(List<TopographyEntry> map, string textLow)
+    {
+        string bestCode = "";
+        string bestPhrase = "";
+        int bestPos = 0;
+
+        foreach (var entry in map)
+        {
+            if (string.IsNullOrEmpty(entry.SearchPhrase)) continue;
+            string escaped = Regex.Escape(entry.SearchPhrase);
+            var match = Regex.Match(textLow, $"(?<![a-zA-Z]){escaped}(?![a-zA-Z])");
+            if (match.Success)
+            {
+                int pos = match.Index + 1;
+                if (bestPos == 0 || pos < bestPos)
+                {
+                    bestPos = pos;
+                    bestCode = entry.Code;
+                    bestPhrase = entry.SearchPhrase;
+                }
+            }
+        }
+
+        return (bestCode, bestPhrase);
     }
 
     /// <summary>Split File — opens SplitFileForm.</summary>
