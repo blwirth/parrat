@@ -57,7 +57,7 @@ public class MenuBuilder
     public ToolStripMenuItem MnuExport { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedXml { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedHl7 { get; private set; } = null!;
-    public ToolStripSeparrator MnuExportSeparrator { get; private set; } = null!;
+    public ToolStripSeparator MnuExportSeparator { get; private set; } = null!;
     public ToolStripMenuItem MnuExportAllCsv { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedCsv { get; private set; } = null!;
 
@@ -123,19 +123,19 @@ public class MenuBuilder
         // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpenFolder);
 
-        mnuFile.DropDownItems.Add(new ToolStripSeparrator());
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuOpenReference = new ToolStripMenuItem("Open Reference File...") { Enabled = false };
         // Click handler wired by MainForm
         mnuFile.DropDownItems.Add(MnuOpenReference);
 
-        mnuFile.DropDownItems.Add(new ToolStripSeparrator());
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuDiffFiles = new ToolStripMenuItem("Diff Files...");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuDiffFiles);
 
-        mnuFile.DropDownItems.Add(new ToolStripSeparrator());
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         // Concatenate submenu
         MnuConcatenate = new ToolStripMenuItem("Concatenate...");
@@ -158,13 +158,13 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuSplit);
 
-        mnuFile.DropDownItems.Add(new ToolStripSeparrator());
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuConvertTxt = new ToolStripMenuItem("Convert .txt");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertTxt);
 
-        mnuFile.DropDownItems.Add(new ToolStripSeparrator());
+        mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
         MnuRestart = new ToolStripMenuItem("Restart Application")
         {
@@ -203,7 +203,7 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuEdit.DropDownItems.Add(MnuAssign);
 
-        mnuEdit.DropDownItems.Add(new ToolStripSeparrator());
+        mnuEdit.DropDownItems.Add(new ToolStripSeparator());
 
         // Modify HL7 submenu
         MnuModifyHl7 = new ToolStripMenuItem("Modify HL7") { Enabled = false };
@@ -227,7 +227,7 @@ public class MenuBuilder
 
         mnuEdit.DropDownItems.Add(MnuModifyXml);
 
-        mnuEdit.DropDownItems.Add(new ToolStripSeparrator());
+        mnuEdit.DropDownItems.Add(new ToolStripSeparator());
 
         // Deduplicate submenu
         MnuDeduplicate = new ToolStripMenuItem("Deduplicate...") { Enabled = false };
@@ -263,8 +263,8 @@ public class MenuBuilder
         MnuExportSelectedHl7 = new ToolStripMenuItem("Export Selected as HL7");
         MnuExport.DropDownItems.Add(MnuExportSelectedHl7);
 
-        MnuExportSeparrator = new ToolStripSeparrator();
-        MnuExport.DropDownItems.Add(MnuExportSeparrator);
+        MnuExportSeparator = new ToolStripSeparator();
+        MnuExport.DropDownItems.Add(MnuExportSeparator);
 
         MnuExportAllCsv = new ToolStripMenuItem("Export All as CSV");
         MnuExport.DropDownItems.Add(MnuExportAllCsv);
@@ -290,7 +290,7 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuTestSiteLatCustom);
 
-        mnuTools.DropDownItems.Add(new ToolStripSeparrator());
+        mnuTools.DropDownItems.Add(new ToolStripSeparator());
 
         MnuFilterCurrentHl7 = new ToolStripMenuItem("Test current HL7 (NOAH)") { Enabled = false };
         // Click handler wired by MainForm.Handlers.cs
@@ -329,7 +329,7 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuSettings.DropDownItems.Add(MnuObxSkipCodes);
 
-        mnuSettings.DropDownItems.Add(new ToolStripSeparrator());
+        mnuSettings.DropDownItems.Add(new ToolStripSeparator());
 
         MnuGridColumns = new ToolStripMenuItem("Grid Columns...");
         // Click handler wired by MainForm.Handlers.cs
@@ -348,13 +348,13 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuHelp.DropDownItems.Add(MnuUserManual);
 
-        mnuHelp.DropDownItems.Add(new ToolStripSeparrator());
+        mnuHelp.DropDownItems.Add(new ToolStripSeparator());
 
         MnuOpenLogs = new ToolStripMenuItem("Open Logs Folder");
         // Click handler wired by MainForm.Handlers.cs
         mnuHelp.DropDownItems.Add(MnuOpenLogs);
 
-        mnuHelp.DropDownItems.Add(new ToolStripSeparrator());
+        mnuHelp.DropDownItems.Add(new ToolStripSeparator());
 
         var versionPath = Path.Combine(Parrat.Core.Helpers.PathHelper.RepoRoot, "VERSION");
         var versionText = File.Exists(versionPath)

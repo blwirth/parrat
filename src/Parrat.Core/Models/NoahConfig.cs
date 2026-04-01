@@ -5,7 +5,7 @@ public class NoahConfig
     public string ExePath { get; set; } = string.Empty;
     public string ModelId { get; set; } = string.Empty;
     public string Output { get; set; } = "hl7";
-    public bool SeparrateImpossiblesAndMets { get; set; }
+    public bool SeparateImpossiblesAndMets { get; set; }
     public string WorkingRoot { get; set; } = Path.GetTempPath();
     public string ApiServerUrl { get; set; } = "http://localhost:4000";
 }

@@ -176,7 +176,7 @@ public class DeduplicationServiceTests
     }
 
     [Fact]
-    public void GetPatientTumorGroups_SeparratesTumorsWithDifferentDiagnosisDates()
+    public void GetPatientTumorGroups_SeparatesTumorsWithDifferentDiagnosisDates()
     {
         var (doc, nsMgr) = CreateTestDoc(
             PatientFragment("Smith", "John", "19800101",
@@ -190,7 +190,7 @@ public class DeduplicationServiceTests
     }
 
     [Fact]
-    public void GetPatientTumorGroups_SeparratesDifferentPatients()
+    public void GetPatientTumorGroups_SeparatesDifferentPatients()
     {
         var (doc, nsMgr) = CreateTestDoc(
             PatientFragment("Smith", "John", "19800101",

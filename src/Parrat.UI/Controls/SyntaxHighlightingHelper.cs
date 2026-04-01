@@ -65,7 +65,7 @@ public static class SyntaxHighlightingHelper
     private static readonly Color ColorNaaccrId = Color.Blue;
     private static readonly Color ColorValue = Color.FromArgb(0, 128, 128);       // Teal
     private static readonly Color ColorSegment = Color.Blue;
-    private static readonly Color ColorSeparrator = Color.FromArgb(128, 128, 128); // Gray
+    private static readonly Color ColorSeparator = Color.FromArgb(128, 128, 128); // Gray
     private static readonly Color ColorMsh = Color.FromArgb(128, 0, 128);         // Purple
     private static readonly Color ColorPid = Color.FromArgb(0, 128, 0);           // Green
     private static readonly Color ColorObxId = Color.FromArgb(0, 128, 128);       // Teal
@@ -103,7 +103,7 @@ public static class SyntaxHighlightingHelper
     }
 
     /// <summary>
-    /// Adds a bold section header followed by a light gray separrator line.
+    /// Adds a bold section header followed by a light gray separator line.
     /// </summary>
     public static void AddSectionHeader(RichTextBox box, string text)
     {
@@ -112,7 +112,7 @@ public static class SyntaxHighlightingHelper
         box.SelectionFont = GetBoldFont(box.Font);
         box.AppendText(text + "\r\n");
 
-        // Light gray thin separrator
+        // Light gray thin separator
         box.SelectionStart = box.TextLength;
         box.SelectionLength = 0;
         box.SelectionFont = new Font(box.Font.FontFamily, 4f);
@@ -219,7 +219,7 @@ public static class SyntaxHighlightingHelper
 
     /// <summary>
     /// Applies full syntax highlighting to raw HL7 content in a RichTextBox.
-    /// Colors segment names, PID-5, OBX-3.1, OBX-5.1, and separrators.
+    /// Colors segment names, PID-5, OBX-3.1, OBX-5.1, and separators.
     /// </summary>
     public static void SetHl7SyntaxHighlighting(RichTextBox richTextBox, string hl7Text)
     {
@@ -255,12 +255,12 @@ public static class SyntaxHighlightingHelper
         // Highlight OBX-3.1 and OBX-5.1
         HighlightObxFields(richTextBox, hl7Text, 0, boldObx5Component1Only: true);
 
-        // Highlight all HL7 separrators (|, ^, &, ~)
+        // Highlight all HL7 separators (|, ^, &, ~)
         var sepMatches = Regex.Matches(hl7Text, @"[\|\^&~]");
         foreach (Match match in sepMatches)
         {
             richTextBox.Select(match.Index, match.Length);
-            richTextBox.SelectionColor = ColorSeparrator;
+            richTextBox.SelectionColor = ColorSeparator;
         }
 
         richTextBox.Select(0, 0);
@@ -304,11 +304,11 @@ public static class SyntaxHighlightingHelper
         // Highlight OBX-3.1 and bold full OBX-5
         HighlightObxFields(richTextBox, textToProcess, startOffset, boldObx5Component1Only: false);
 
-        // Highlight separrators (| and ^)
+        // Highlight separators (| and ^)
         foreach (Match match in Regex.Matches(textToProcess, @"[\|\^]"))
         {
             richTextBox.Select(startOffset + match.Index, match.Length);
-            richTextBox.SelectionColor = ColorSeparrator;
+            richTextBox.SelectionColor = ColorSeparator;
         }
 
         richTextBox.Select(0, 0);

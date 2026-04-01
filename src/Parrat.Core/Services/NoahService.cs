@@ -333,7 +333,7 @@ public class NoahService : INoahService
         string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
         string msgId = Guid.NewGuid().ToString()[..8];
 
-        string segmentSeparrator = "\r";
+        string segmentSeparator = "\r";
 
         var segments = new List<string>
         {
@@ -343,6 +343,6 @@ public class NoahService : INoahService
             $"OBX|1|FT|88305&ICD10&2.16.840.1.113883.6.90^Final Diagnosis^L|2|{customText}||||||F"
         };
 
-        return string.Join(segmentSeparrator, segments);
+        return string.Join(segmentSeparator, segments);
     }
 }

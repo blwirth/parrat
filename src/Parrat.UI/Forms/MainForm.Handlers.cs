@@ -1716,7 +1716,7 @@ public partial class MainForm
         };
         mnu.DropDownItems.Add(mnuSkinTopo);
 
-        mnu.DropDownItems.Add(new ToolStripSeparrator());
+        mnu.DropDownItems.Add(new ToolStripSeparator());
 
         var mnuSiteCodingRules = new ToolStripMenuItem("Site Coding Rules");
         mnuSiteCodingRules.Click += (s, ev) =>

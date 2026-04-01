@@ -1,4 +1,4 @@
-= PARRAT: PAthology Report and cancer Abstract Tools
+= PARRAT: PAthology Report and Registry Abstract Tools
 :toc: macro
 :toclevels: 3
 :numbered:
@@ -73,7 +73,7 @@ To open the folder containing the currently loaded file in Windows Explorer, sel
 When viewing HL7 files, the application applies syntax highlighting for improved readability:
 
 * Segment names (MSH, PID, OBX, etc.) are color-coded
-* Field separrators (`|`) and component separrators (`^`) are displayed in gray
+* Field separators (`|`) and component separators (`^`) are displayed in gray
 * Patient names (PID-5) are bolded
 * Observation identifiers (OBX-3.1) are highlighted in teal
 * Observation values (OBX-5.1) are bolded
@@ -593,8 +593,8 @@ This program currently does not handle melanoma arising from non-cutaneous sites
 When adding terms to an expression:
 
 * *Add Term*: Adds a single search phrase.
-* *Add AND*: Adds a group where all terms must match. Enter comma-separrated terms.
-* *Add OR*: Adds a group where any term triggers a match. Enter comma-separrated terms.
+* *Add AND*: Adds a group where all terms must match. Enter comma-separated terms.
+* *Add OR*: Adds a group where any term triggers a match. Enter comma-separated terms.
 * *Add {topo}*: Adds a dynamic template that matches any topography SearchPhrase. The site code is looked up from the matching topography entry.
 
 Changes are saved to `/data/dictionaries/SiteCodingRules.jsonl`.

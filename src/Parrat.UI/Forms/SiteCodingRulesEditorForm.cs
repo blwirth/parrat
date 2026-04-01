@@ -203,8 +203,8 @@ public class SiteCodingRulesEditorForm : Form
             }
         }
 
-        var separrator = logic == "AND" ? " AND " : " OR ";
-        return string.Join(separrator, parts);
+        var separator = logic == "AND" ? " AND " : " OR ";
+        return string.Join(separator, parts);
     }
 
     // ── Event handlers ───────────────────────────────────────────────────
@@ -628,7 +628,7 @@ public class PatternEditDialog : Form
     private void OnAddGroup(string logic)
     {
         var value = ShowTextInputDialog($"Add {logic} Group",
-            $"Enter terms (comma-separrated):\n{(logic == "AND" ? "All terms must match for group to match." : "Any term matching will satisfy the group.")}");
+            $"Enter terms (comma-separated):\n{(logic == "AND" ? "All terms must match for group to match." : "Any term matching will satisfy the group.")}");
         if (value == null) return;
 
         var terms = value.Split(',')
@@ -695,7 +695,7 @@ public class PatternEditDialog : Form
             case "group":
             {
                 var value = ShowTextInputDialog($"Edit {item.Logic} Group",
-                    "Enter terms (comma-separrated):",
+                    "Enter terms (comma-separated):",
                     string.Join(", ", item.Terms ?? new List<string>()));
                 if (value == null) return;
                 var terms = value.Split(',')

@@ -426,7 +426,7 @@ public class FileHandlers
             mnuOpenRecent.DropDownItems.Add(item);
         }
 
-        mnuOpenRecent.DropDownItems.Add(new ToolStripSeparrator());
+        mnuOpenRecent.DropDownItems.Add(new ToolStripSeparator());
 
         var clearItem = new ToolStripMenuItem("Clear Recent Files");
         clearItem.Click += (s, e) =>

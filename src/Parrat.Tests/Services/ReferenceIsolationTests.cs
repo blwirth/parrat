@@ -88,7 +88,7 @@ public class ReferenceIsolationTests : IDisposable
 
         var (primaryDoc, primaryTumors, primaryNsMgr) = xmlService.LoadNaaccrXml(primaryPath);
 
-        // Load "reference" file into separrate variables (simulates FileContext)
+        // Load "reference" file into separate variables (simulates FileContext)
         var refXml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
         {
             NameLast = "ReferencePatient",
