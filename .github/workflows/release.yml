@@ -28,11 +28,11 @@ jobs:
       - name: Build user manual PDF
         run: |
           cd docs
-          asciidoctor-pdf "PARAT - User Manual.adoc" -o "PARAT - User Manual.pdf"
+          asciidoctor-pdf "PARRAT - User Manual.adoc" -o "PARRAT - User Manual.pdf"
 
       - name: Publish
         run: >
-          dotnet publish src/Parat.UI/Parat.UI.csproj
+          dotnet publish src/Parrat.UI/Parrat.UI.csproj
           -c Release
           -r win-x64
           --self-contained true
@@ -44,24 +44,24 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
-          $out = "release/parat"
+          $out = "release/parrat"
           New-Item -ItemType Directory -Path $out -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/docs" -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/config" -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/logs" -Force | Out-Null
 
-          Copy-Item publish/Parat.UI.exe $out/
+          Copy-Item publish/Parrat.UI.exe $out/
           Copy-Item -Recurse data $out/data
-          Copy-Item "docs/PARAT - User Manual.pdf" "$out/docs/"
+          Copy-Item "docs/PARRAT - User Manual.pdf" "$out/docs/"
 
           # Write version file (read by app for window title)
           $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
 
-          Compress-Archive -Path "$out/*" -DestinationPath "release/Parat-${tag}.zip"
+          Compress-Archive -Path "$out/*" -DestinationPath "release/Parrat-${tag}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/Parat-*.zip
+          files: release/Parrat-*.zip
           generate_release_notes: true
-          name: "PARAT ${{ github.ref_name }}"
+          name: "PARRAT ${{ github.ref_name }}"
