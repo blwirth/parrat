@@ -10,6 +10,15 @@ namespace Parrat.Core.Services;
 /// </summary>
 public class ObxService : IObxService
 {
+    private readonly IHl7Parser _parser;
+
+    public ObxService() : this(new Hl7Parser()) { }
+
+    public ObxService(IHl7Parser parser)
+    {
+        _parser = parser;
+    }
+
     public (List<Hl7Message> Messages, int RepairedCount) RepairObxInMessages(List<Hl7Message> messages, int minFields = 5)
     {
         int fixedCount = 0;
@@ -50,8 +59,7 @@ public class ObxService : IObxService
         }
 
         // Re-parse from modified content
-        var parser = new Hl7Parser();
-        var repairedMessages = parser.Parse(sb.ToString());
+        var repairedMessages = _parser.Parse(sb.ToString());
 
         return (repairedMessages, fixedCount);
     }
@@ -127,8 +135,7 @@ public class ObxService : IObxService
             isFirst = false;
         }
 
-        var parser = new Hl7Parser();
-        var resultMessages = parser.Parse(sb.ToString());
+        var resultMessages = _parser.Parse(sb.ToString());
 
         return (resultMessages, removedCount);
     }

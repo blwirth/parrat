@@ -5,6 +5,15 @@ namespace Parrat.Core.Services;
 
 public class SplitFileService : ISplitFileService
 {
+    private readonly IParratLogger _logger;
+
+    public SplitFileService() : this(NullParratLogger.Instance) { }
+
+    public SplitFileService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly (char Start, char End, string Label)[][] RangeMaps = new[]
     {
         Array.Empty<(char, char, string)>(), // 0 placeholder
@@ -126,6 +135,7 @@ public class SplitFileService : ISplitFileService
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Error scanning XML file for split: {filePath}", "SPLIT_XML_SCAN", ex);
             return new Dictionary<string, object>
             {
                 ["Success"] = false,
@@ -202,6 +212,7 @@ public class SplitFileService : ISplitFileService
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Error scanning HL7 file for split: {filePath}", "SPLIT_HL7_SCAN", ex);
             return new Dictionary<string, object>
             {
                 ["Success"] = false,

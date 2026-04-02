@@ -7,6 +7,15 @@ namespace Parrat.Core.Services;
 
 public class RecentFilesService : IRecentFilesService
 {
+    private readonly IParratLogger _logger;
+
+    public RecentFilesService() : this(NullParratLogger.Instance) { }
+
+    public RecentFilesService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     private const int MaxItems = 10;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -40,8 +49,9 @@ public class RecentFilesService : IRecentFilesService
             var wrapper = JsonSerializer.Deserialize<RecentFilesWrapper>(content, ReadOptions);
             return wrapper?.Files ?? new List<RecentFileEntry>();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Failed to read recent files list", "RECENT_FILES_LOAD", ex);
             return new List<RecentFileEntry>();
         }
     }
@@ -63,9 +73,9 @@ public class RecentFilesService : IRecentFilesService
             var json = JsonSerializer.Serialize(wrapper, JsonOptions);
             File.WriteAllText(path, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Silent fail
+            _logger.LogError("Failed to save recent files list", "RECENT_FILES_SAVE", ex);
         }
     }
 
@@ -78,8 +88,9 @@ public class RecentFilesService : IRecentFilesService
         {
             normalizedPath = Path.GetFullPath(filePath);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.Log("WARN", "Failed to normalize file path, using raw path", "RECENT_FILES_PATH", ex.Message);
             normalizedPath = filePath;
         }
 
@@ -126,9 +137,9 @@ public class RecentFilesService : IRecentFilesService
                 return dir;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore path errors
+            _logger.Log("WARN", "Failed to resolve last opened directory from recent file path", "RECENT_FILES_DIR", ex.Message);
         }
 
         return null;

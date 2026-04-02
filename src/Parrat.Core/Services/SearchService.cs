@@ -7,16 +7,24 @@ namespace Parrat.Core.Services;
 
 public class SearchService : ISearchService
 {
+    private readonly IParratLogger _logger;
     private readonly XmlNodeList? _tumors;
     private readonly XmlNamespaceManager? _nsMgr;
     private readonly List<Hl7Message>? _hl7Messages;
 
-    public SearchService()
+    public SearchService() : this(NullParratLogger.Instance) { }
+
+    public SearchService(IParratLogger logger)
     {
+        _logger = logger;
     }
 
     public SearchService(XmlNodeList? tumors, XmlNamespaceManager? nsMgr, List<Hl7Message>? hl7Messages = null)
+        : this(NullParratLogger.Instance, tumors, nsMgr, hl7Messages) { }
+
+    public SearchService(IParratLogger logger, XmlNodeList? tumors, XmlNamespaceManager? nsMgr, List<Hl7Message>? hl7Messages = null)
     {
+        _logger = logger;
         _tumors = tumors;
         _nsMgr = nsMgr;
         _hl7Messages = hl7Messages;
@@ -121,8 +129,9 @@ public class SearchService : ISearchService
                 return Array.Empty<string>();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError($"Failed to build search index for file type '{fileType}'", "SEARCH_INDEX_BUILD", ex);
             return Array.Empty<string>();
         }
     }
@@ -157,9 +166,9 @@ public class SearchService : ISearchService
                 navTable.DefaultView.RowFilter = $"Index IN ({string.Join(",", matchingIndices)})";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently handle filter errors
+            _logger.LogError("Failed to apply search filter to navigation table", "SEARCH_FILTER", ex);
         }
     }
 
@@ -202,9 +211,9 @@ public class SearchService : ISearchService
             rtb.SelectionStart = 0;
             rtb.SelectionLength = 0;
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently handle highlight errors (e.g., if not a RichTextBox)
+            _logger.Log("WARN", "Failed to highlight search matches in text control", "SEARCH_HIGHLIGHT", ex.Message);
         }
     }
 }

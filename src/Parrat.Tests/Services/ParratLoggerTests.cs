@@ -7,6 +7,8 @@ namespace Parrat.Tests.Services;
 public class ParratLoggerTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _originalRepoRoot;
+    private readonly string _originalUserDir;
 
     public ParratLoggerTests()
     {
@@ -15,12 +17,17 @@ public class ParratLoggerTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_tempDir, "data"));
         Directory.CreateDirectory(Path.Combine(_tempDir, "config"));
         Directory.CreateDirectory(Path.Combine(_tempDir, "logs"));
+
+        _originalRepoRoot = PathHelper.RepoRoot;
+        _originalUserDir = PathHelper.UserDir;
         PathHelper.SetRepoRoot(_tempDir);
         PathHelper.SetUserDir(_tempDir);
     }
 
     public void Dispose()
     {
+        PathHelper.SetRepoRoot(_originalRepoRoot);
+        PathHelper.SetUserDir(_originalUserDir);
         try { Directory.Delete(_tempDir, true); } catch { }
     }
 

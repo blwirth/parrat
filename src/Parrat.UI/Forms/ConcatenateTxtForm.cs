@@ -5,6 +5,7 @@ using Parrat.Core.Interfaces;
 
 namespace Parrat.UI.Forms;
 
+
 /// <summary>
 /// Dialog for merging multiple text files.
 /// File list with Add/Remove/Reorder, line count preview, and Concatenate button.
@@ -13,6 +14,7 @@ namespace Parrat.UI.Forms;
 public class ConcatenateTxtForm : Form
 {
     private readonly IConcatenateService _concatenateService;
+    private readonly IParratLogger _logger;
 
     private readonly List<Dictionary<string, object>> _fileInfos = new();
 
@@ -35,9 +37,11 @@ public class ConcatenateTxtForm : Form
 
     public ConcatenateTxtForm(
         IConcatenateService concatenateService,
-        string[] initialFiles)
+        string[] initialFiles,
+        IParratLogger? logger = null)
     {
         _concatenateService = concatenateService;
+        _logger = logger!;
 
         InitializeComponents();
         LoadInitialFiles(initialFiles);
@@ -132,6 +136,7 @@ public class ConcatenateTxtForm : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to load TXT file info: {Path.GetFileName(file)}", "CONCAT", ex);
                 errors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -218,6 +223,7 @@ public class ConcatenateTxtForm : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to add TXT file: {Path.GetFileName(file)}", "CONCAT", ex);
                 addErrors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -373,6 +379,7 @@ public class ConcatenateTxtForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to concatenate TXT files", "CONCAT", ex);
             MessageBox.Show(
                 $"Error concatenating TXT files: {ex.Message}",
                 "Error",

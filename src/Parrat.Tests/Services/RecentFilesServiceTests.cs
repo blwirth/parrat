@@ -8,6 +8,8 @@ namespace Parrat.Tests.Services;
 public class RecentFilesServiceTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _originalRepoRoot;
+    private readonly string _originalUserDir;
 
     public RecentFilesServiceTests()
     {
@@ -15,12 +17,17 @@ public class RecentFilesServiceTests : IDisposable
         Directory.CreateDirectory(_tempDir);
         Directory.CreateDirectory(Path.Combine(_tempDir, "data"));
         Directory.CreateDirectory(Path.Combine(_tempDir, "config"));
+
+        _originalRepoRoot = PathHelper.RepoRoot;
+        _originalUserDir = PathHelper.UserDir;
         PathHelper.SetRepoRoot(_tempDir);
         PathHelper.SetUserDir(_tempDir);
     }
 
     public void Dispose()
     {
+        PathHelper.SetRepoRoot(_originalRepoRoot);
+        PathHelper.SetUserDir(_originalUserDir);
         try { Directory.Delete(_tempDir, true); } catch { }
     }
 

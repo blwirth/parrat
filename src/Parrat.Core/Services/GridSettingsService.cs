@@ -7,6 +7,15 @@ namespace Parrat.Core.Services;
 
 public class GridSettingsService : IGridSettingsService
 {
+    private readonly IParratLogger _logger;
+
+    public GridSettingsService() : this(NullParratLogger.Instance) { }
+
+    public GridSettingsService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly string SettingsFileName = "grid-settings.json";
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -36,9 +45,9 @@ public class GridSettingsService : IGridSettingsService
 
             return settings;
         }
-        catch
+        catch (Exception ex)
         {
-            // Malformed JSON, permission error, etc. — fall back to defaults
+            _logger.LogError("Failed to load grid settings, falling back to defaults", "GRID_SETTINGS_LOAD", ex);
             return CreateDefaults();
         }
     }
@@ -51,9 +60,9 @@ public class GridSettingsService : IGridSettingsService
             var json = JsonSerializer.Serialize(settings, JsonOpts);
             File.WriteAllText(SettingsPath, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow — saving user prefs should never crash the app
+            _logger.LogError("Failed to save grid settings", "GRID_SETTINGS_SAVE", ex);
         }
     }
 

@@ -8,6 +8,15 @@ namespace Parrat.Core.Services;
 
 public partial class ConfigService : IConfigService
 {
+    private readonly IParratLogger _logger;
+
+    public ConfigService() : this(NullParratLogger.Instance) { }
+
+    public ConfigService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly JsonSerializerOptions JsonWriteOptions = new()
     {
         WriteIndented = true,
@@ -86,6 +95,7 @@ public partial class ConfigService : IConfigService
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to save export configuration", "CONFIG_SAVE", ex);
             return (false, string.Empty, $"Error saving configuration: {ex.Message}");
         }
     }
@@ -117,9 +127,9 @@ public partial class ConfigService : IConfigService
                 var config = GetExportConfig(file);
                 results.Add((config.Name, file));
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip invalid config files
+                _logger.Log("WARN", $"Skipping invalid export config file: {file}", "CONFIG_LOAD_SKIP", ex.Message);
             }
         }
 
@@ -187,8 +197,9 @@ public partial class ConfigService : IConfigService
             var config = JsonSerializer.Deserialize<ObxSkipConfig>(json, JsonReadOptions);
             return config ?? defaultConfig;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Failed to load OBX skip config, using defaults", "CONFIG_OBX_SKIP_LOAD", ex);
             return defaultConfig;
         }
     }

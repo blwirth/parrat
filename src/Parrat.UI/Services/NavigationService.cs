@@ -1,6 +1,7 @@
 using System.Data;
 using System.Windows.Forms;
 using System.Xml;
+using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 using Parrat.UI.Controls;
 
@@ -14,10 +15,12 @@ namespace Parrat.UI.Services;
 public class NavigationService
 {
     private readonly AppState _state;
+    private readonly IParratLogger _logger;
 
-    public NavigationService(AppState state)
+    public NavigationService(AppState state, IParratLogger logger)
     {
         _state = state;
+        _logger = logger;
     }
 
     // ── Control references (set by MainForm after construction) ──────────
@@ -420,7 +423,7 @@ public class NavigationService
     /// <summary>
     /// Formats an HL7 datetime string for display.
     /// </summary>
-    private static string FormatHl7DateTime(string? hl7DateTime)
+    private string FormatHl7DateTime(string? hl7DateTime)
     {
         if (string.IsNullOrWhiteSpace(hl7DateTime)) return "";
 
@@ -440,9 +443,9 @@ public class NavigationService
                 return datePart;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fall through to return raw value
+            _logger.Log("WARN", $"Failed to parse HL7 datetime value: {ex.Message}", "NAV_ERROR");
         }
 
         return hl7DateTime;

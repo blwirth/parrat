@@ -11,6 +11,15 @@ namespace Parrat.Core.Services;
 /// </summary>
 public class ConcatenateService : IConcatenateService
 {
+    private readonly IParratLogger _logger;
+
+    public ConcatenateService() : this(NullParratLogger.Instance) { }
+
+    public ConcatenateService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     #region XML Concatenation
 
     public Dictionary<string, object> GetXmlHeaderInfo(string filePath)
@@ -60,6 +69,7 @@ public class ConcatenateService : IConcatenateService
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to read XML header info", "CONCAT_XML_HEADER", ex);
             return new Dictionary<string, object>
             {
                 ["Success"] = false,
@@ -274,9 +284,9 @@ public class ConcatenateService : IConcatenateService
                     newRoot.AppendChild(imported);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip files that fail to load
+                _logger.LogError($"Skipping file that failed to load during XML concatenation: {filePath}", "CONCAT_XML_FILE", ex);
             }
         }
 
@@ -314,6 +324,7 @@ public class ConcatenateService : IConcatenateService
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to read HL7 file info", "CONCAT_HL7_INFO", ex);
             return new Dictionary<string, object>
             {
                 ["Success"] = false,
@@ -428,6 +439,7 @@ public class ConcatenateService : IConcatenateService
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to read TXT file info", "CONCAT_TXT_INFO", ex);
             return new Dictionary<string, object>
             {
                 ["Success"] = false,

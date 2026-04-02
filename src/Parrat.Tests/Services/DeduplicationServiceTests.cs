@@ -278,7 +278,8 @@ public class DeduplicationServiceTests
         var result = _service.GetDuplicates(tumors, nsMgr);
 
         Assert.Contains("Smith", result.Report[0].PatientKey);
-        Assert.False(string.IsNullOrEmpty(result.Report[0].Reason));
+        Assert.False(string.IsNullOrEmpty(result.Report[0].Reason),
+            "Duplicate report reason should describe why the tumors were flagged");
     }
 
     [Fact]

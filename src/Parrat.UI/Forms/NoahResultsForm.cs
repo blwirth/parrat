@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Text.Json;
 using System.Windows.Forms;
+using Parrat.Core.Interfaces;
 using Parrat.UI.Controls;
 
 namespace Parrat.UI.Forms;
@@ -39,19 +40,22 @@ public class NoahResultsForm : Form
     private readonly string _recordLabel;
     private readonly int _recordIndex;
     private readonly int _recordCount;
+    private readonly IParratLogger? _logger;
 
     public NoahResultsForm(
         string resultFilePath,
         string workingFolder,
         string recordLabel = "Record",
         int recordIndex = 0,
-        int recordCount = 1)
+        int recordCount = 1,
+        IParratLogger? logger = null)
     {
         _resultFilePath = resultFilePath;
         _workingFolder = workingFolder;
         _recordLabel = recordLabel;
         _recordIndex = recordIndex;
         _recordCount = recordCount;
+        _logger = logger;
 
         InitializeLayout();
     }
@@ -82,6 +86,7 @@ public class NoahResultsForm : Form
         }
         catch (Exception ex)
         {
+            _logger?.LogError("Failed to parse NOAH result JSON", "NOAH", ex);
             MessageBox.Show(
                 $"Failed to parse result JSON:\n{ex.Message}",
                 "NOAH Results",

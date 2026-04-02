@@ -31,7 +31,7 @@ public partial class ReferenceForm : Form
         IParratLogger logger)
     {
         _logger = logger;
-        _navService = new ReferenceNavigationService(_ctx);
+        _navService = new ReferenceNavigationService(_ctx, logger);
         _fileLoader = new ReferenceFileLoader(xmlFileService, hl7FileService, gridSettingsService, logger);
 
         InitializeComponent();
@@ -85,9 +85,9 @@ public partial class ReferenceForm : Form
             if (innerDist > _splitInner.Panel1MinSize)
                 _splitInner.SplitterDistance = innerDist;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore splitter errors during initial layout
+            _logger.Log("WARN", $"Splitter layout error during initial form display: {ex.Message}", "REF_LAYOUT");
         }
     }
 
@@ -398,7 +398,7 @@ public partial class ReferenceForm : Form
 
                     if (navTable == null) return;
 
-                    var searchService = new SearchService();
+                    var searchService = new SearchService(_logger);
                     searchService.ApplyFilter(searchText, navTable, searchIndex);
 
                     int totalCount = searchIndex.Length;

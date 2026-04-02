@@ -8,6 +8,15 @@ namespace Parrat.Core.Services;
 
 public class SiteLateralityService : ISiteLateralityService
 {
+    private readonly IParratLogger _logger;
+
+    public SiteLateralityService() : this(NullParratLogger.Instance) { }
+
+    public SiteLateralityService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     // Cache for loaded data
     private List<TopographyEntry>? _topoMapCache;
     private List<TopographyEntry>? _melTopoMapCache;
@@ -35,9 +44,9 @@ public class SiteLateralityService : ISiteLateralityService
                 if (item != null && !string.IsNullOrEmpty(item.Code) && !string.IsNullOrEmpty(item.SearchPhrase))
                     items.Add(item);
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip malformed lines
+                _logger.Log("WARN", $"Skipping malformed topography line in {path}", "SITE_TOPO_PARSE", ex.Message);
             }
         }
 
@@ -83,9 +92,9 @@ public class SiteLateralityService : ISiteLateralityService
                 if (pattern != null && !string.IsNullOrEmpty(pattern.Code) && pattern.Enabled)
                     patterns.Add(pattern);
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip malformed lines
+                _logger.Log("WARN", $"Skipping malformed site coding rule line in {path}", "SITE_RULE_PARSE", ex.Message);
             }
         }
 
