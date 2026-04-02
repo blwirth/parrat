@@ -1,5 +1,7 @@
+using System.Xml;
 using Parrat.Core.Models;
 using Parrat.Core.Services;
+using Parrat.Tests.Helpers;
 using Xunit;
 
 namespace Parrat.Tests.Services;
@@ -161,5 +163,168 @@ public class DiffServiceTests
         Assert.Equal(2, result.Count);
         Assert.Single(result.Where(r => r.Status == DiffStatus.Deleted));
         Assert.Single(result.Where(r => r.Status == DiffStatus.Added));
+    }
+
+    // =====================================================================
+    //  GetTumorLabel
+    // =====================================================================
+
+    [Fact]
+    public void GetTumorLabel_ReturnsFormattedLabel()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            NameLast = "Smith",
+            NameFirst = "John",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData
+                {
+                    DateOfDiagnosis = "20240101",
+                    PathReportNumber1 = "P001"
+                }
+            }
+        });
+
+        var (tumors, nsMgr) = LoadTumors(xml);
+        var service = new DiffService(tumors, nsMgr);
+
+        var label = service.GetTumorLabel(0);
+        Assert.Contains("Smith", label);
+        Assert.Contains("John", label);
+        Assert.Contains("20240101", label);
+        Assert.Contains("P001", label);
+        Assert.Contains("Idx 1", label);
+    }
+
+    [Fact]
+    public void GetTumorLabel_ThrowsForInvalidIndex()
+    {
+        var xml = NaaccrXmlTestHelper.BuildSimpleNaaccrXml();
+        var (tumors, nsMgr) = LoadTumors(xml);
+        var service = new DiffService(tumors, nsMgr);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.GetTumorLabel(5));
+    }
+
+    [Fact]
+    public void GetTumorLabel_ThrowsWhenNoTumorsLoaded()
+    {
+        var service = new DiffService();
+        Assert.Throws<InvalidOperationException>(() => service.GetTumorLabel(0));
+    }
+
+    // =====================================================================
+    //  GetFormattedTumorXml
+    // =====================================================================
+
+    [Fact]
+    public void GetFormattedTumorXml_ReturnsIndentedXmlLines()
+    {
+        var xml = NaaccrXmlTestHelper.BuildSimpleNaaccrXml();
+        var (tumors, nsMgr) = LoadTumors(xml);
+        var service = new DiffService(tumors, nsMgr);
+
+        var lines = service.GetFormattedTumorXml(0);
+        Assert.True(lines.Length > 1, "Should have multiple formatted lines");
+        Assert.Contains(lines, l => l.Contains("Patient"));
+    }
+
+    // =====================================================================
+    //  GetHl7MessageLabel
+    // =====================================================================
+
+    [Fact]
+    public void GetHl7MessageLabel_ReturnsFormattedLabel()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new()
+            {
+                PatientName = "Smith, John",
+                MessageType = "ORU^R01",
+                PatientId = "12345"
+            }
+        };
+        var service = new DiffService(null, null, messages);
+
+        var label = service.GetHl7MessageLabel(0);
+        Assert.Contains("Smith, John", label);
+        Assert.Contains("ORU^R01", label);
+        Assert.Contains("12345", label);
+        Assert.Contains("Idx 1", label);
+    }
+
+    [Fact]
+    public void GetHl7MessageLabel_ThrowsWhenNoMessagesLoaded()
+    {
+        var service = new DiffService();
+        Assert.Throws<InvalidOperationException>(() => service.GetHl7MessageLabel(0));
+    }
+
+    // =====================================================================
+    //  GetHl7MessageLines
+    // =====================================================================
+
+    [Fact]
+    public void GetHl7MessageLines_ReturnsSegmentsInStandardOrder()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new()
+            {
+                Segments = new Dictionary<string, List<string>>
+                {
+                    ["OBR"] = new() { "OBR|1|ORD1||PROC1" },
+                    ["MSH"] = new() { "MSH|^~\\&|App|Fac" },
+                    ["PID"] = new() { "PID|1||123" },
+                }
+            }
+        };
+        var service = new DiffService(null, null, messages);
+
+        var lines = service.GetHl7MessageLines(0);
+        Assert.Equal(3, lines.Length);
+        // MSH should come first, then PID, then OBR
+        Assert.StartsWith("MSH", lines[0]);
+        Assert.StartsWith("PID", lines[1]);
+        Assert.StartsWith("OBR", lines[2]);
+    }
+
+    [Fact]
+    public void GetHl7MessageLines_IncludesNonStandardSegments()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new()
+            {
+                Segments = new Dictionary<string, List<string>>
+                {
+                    ["MSH"] = new() { "MSH|^~\\&|App|Fac" },
+                    ["ZCS"] = new() { "ZCS|custom" },
+                }
+            }
+        };
+        var service = new DiffService(null, null, messages);
+
+        var lines = service.GetHl7MessageLines(0);
+        Assert.Equal(2, lines.Length);
+        Assert.StartsWith("MSH", lines[0]);
+        Assert.StartsWith("ZCS", lines[1]);
+    }
+
+    // =====================================================================
+    //  Helpers
+    // =====================================================================
+
+    private static (XmlNodeList tumors, XmlNamespaceManager nsMgr) LoadTumors(string xml)
+    {
+        var doc = new XmlDocument();
+        doc.XmlResolver = null;
+        doc.LoadXml(xml);
+        var nsMgr = new XmlNamespaceManager(doc.NameTable);
+        nsMgr.AddNamespace("n", NaaccrXmlTestHelper.NaaccrNamespace);
+        var tumors = doc.SelectNodes("//n:Tumor", nsMgr)!;
+        return (tumors, nsMgr);
     }
 }

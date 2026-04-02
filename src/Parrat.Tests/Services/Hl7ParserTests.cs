@@ -506,8 +506,10 @@ public class Hl7ParserTests
         var messages = _parser.Parse(content);
 
         Assert.Single(messages);
-        Assert.True(messages[0].Segments.ContainsKey("PID"));
-        Assert.True(messages[0].Segments.ContainsKey("OBR"));
+        Assert.True(messages[0].Segments.ContainsKey("PID"),
+            "Segments dictionary should contain 'PID' after parsing message with blank lines between segments");
+        Assert.True(messages[0].Segments.ContainsKey("OBR"),
+            "Segments dictionary should contain 'OBR' after parsing message with blank lines between segments");
     }
 
     [Fact]

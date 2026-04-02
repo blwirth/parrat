@@ -1,30 +1,15 @@
 using Parrat.Core.Helpers;
 using Parrat.Core.Services;
+using Parrat.Tests.Helpers;
 using Xunit;
 
 namespace Parrat.Tests.Services;
 
 public class NaaccrDictionaryTests
 {
-    private static readonly string RepoRoot = FindRepoRoot();
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppDomain.CurrentDomain.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            if (Directory.Exists(Path.Combine(dir, "data", "dictionaries")))
-                return dir;
-            var parent = Directory.GetParent(dir);
-            if (parent == null) break;
-            dir = parent.FullName;
-        }
-        return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".."));
-    }
-
     private NaaccrDictionary CreateDictionary(int version = 25)
     {
-        PathHelper.SetRepoRoot(RepoRoot);
+        PathHelper.SetRepoRoot(TestEnvironment.FindRepoRoot());
         var dict = new NaaccrDictionary();
         dict.Initialize(version);
         return dict;
@@ -36,7 +21,8 @@ public class NaaccrDictionaryTests
         var dict = CreateDictionary();
 
         var items = dict.GetDictionary();
-        Assert.NotEmpty(items);
+        Assert.True(items.Count > 100,
+            $"NAACCR dictionary should contain hundreds of items, got {items.Count}");
     }
 
     [Fact]
@@ -127,7 +113,8 @@ public class NaaccrDictionaryTests
         var dict = CreateDictionary();
 
         var results = dict.Search("patient");
-        Assert.NotEmpty(results);
+        Assert.True(results.Count >= 2,
+            $"Need at least 2 results to verify sort order, got {results.Count}");
 
         for (int i = 1; i < results.Count; i++)
         {

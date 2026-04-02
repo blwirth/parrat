@@ -10,33 +10,27 @@ namespace Parrat.Tests.Services;
 public class ExportServiceTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _originalRepoRoot;
+    private readonly string _originalUserDir;
 
     public ExportServiceTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"parrat_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
+        _originalRepoRoot = PathHelper.RepoRoot;
+        _originalUserDir = PathHelper.UserDir;
+
         // Re-anchor RepoRoot to the actual repo so NaaccrDictionary can find
         // data/dictionaries even when parallel test classes call SetRepoRoot.
-        PathHelper.SetRepoRoot(FindRepoRoot());
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppDomain.CurrentDomain.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            if (Directory.Exists(Path.Combine(dir, "data")))
-                return dir;
-            var parent = Directory.GetParent(dir);
-            if (parent == null) break;
-            dir = parent.FullName;
-        }
-        return AppDomain.CurrentDomain.BaseDirectory;
+        PathHelper.SetRepoRoot(TestEnvironment.FindRepoRoot());
     }
 
     public void Dispose()
     {
+        PathHelper.SetRepoRoot(_originalRepoRoot);
+        PathHelper.SetUserDir(_originalUserDir);
+
         if (Directory.Exists(_tempDir))
             Directory.Delete(_tempDir, true);
     }
@@ -323,5 +317,145 @@ public class ExportServiceTests : IDisposable
         nsMgr.AddNamespace("n", NaaccrXmlTestHelper.NaaccrNamespace);
 
         return (xmlDoc, nsMgr);
+    }
+
+    // =====================================================================
+    //  ExportHl7Csv
+    // =====================================================================
+
+    [Fact]
+    public void ExportHl7Csv_WritesAllMessages()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new() { PatientLastName = "Smith", PatientFirstName = "John", DateOfBirth = "19800101", MessageDateTime = "20240101120000" },
+            new() { PatientLastName = "Jones", PatientFirstName = "Jane", DateOfBirth = "19900215", MessageDateTime = "20240102080000" },
+        };
+        var outputPath = Path.Combine(_tempDir, "hl7_export.csv");
+
+        var service = new ExportService();
+        service.ExportAllHl7Csv(messages, outputPath);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(3, lines.Length); // header + 2 rows
+        Assert.Equal("LastName,FirstName,DateOfBirth,MessageDateTime", lines[0]);
+        Assert.Equal("Smith,John,19800101,20240101120000", lines[1]);
+        Assert.Equal("Jones,Jane,19900215,20240102080000", lines[2]);
+    }
+
+    [Fact]
+    public void ExportSelectedHl7Csv_WritesOnlySelectedMessages()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new() { PatientLastName = "Smith", PatientFirstName = "John", DateOfBirth = "19800101", MessageDateTime = "20240101" },
+            new() { PatientLastName = "Jones", PatientFirstName = "Jane", DateOfBirth = "19900215", MessageDateTime = "20240102" },
+            new() { PatientLastName = "Brown", PatientFirstName = "Bob", DateOfBirth = "19750530", MessageDateTime = "20240103" },
+        };
+        var outputPath = Path.Combine(_tempDir, "hl7_selected.csv");
+
+        var service = new ExportService();
+        service.ExportSelectedHl7Csv(new[] { 0, 2 }, messages, outputPath);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(3, lines.Length); // header + 2 selected rows
+        Assert.Contains("Smith", lines[1]);
+        Assert.Contains("Brown", lines[2]);
+    }
+
+    // =====================================================================
+    //  ExportSelectedXml
+    // =====================================================================
+
+    [Fact]
+    public void ExportSelectedXml_WritesOnlySelectedTumors()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new[]
+        {
+            new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Smith",
+                Tumors = new[]
+                {
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" },
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C189" },
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "selected.xml");
+
+        var service = new ExportService();
+        service.ExportSelectedXml(new[] { 0 }, xmlDoc, nsMgr, outputPath);
+
+        var outDoc = new XmlDocument();
+        outDoc.Load(outputPath);
+        var outNsMgr = new XmlNamespaceManager(outDoc.NameTable);
+        outNsMgr.AddNamespace("n", NaaccrXmlTestHelper.NaaccrNamespace);
+
+        var tumors = outDoc.SelectNodes("//n:Tumor", outNsMgr)!;
+        Assert.Equal(1, tumors.Count);
+
+        var site = tumors[0]!.SelectSingleNode("./n:Item[@naaccrId='primarySite']", outNsMgr);
+        Assert.Equal("C509", site!.InnerText);
+    }
+
+    // =====================================================================
+    //  ExportSelectedHl7
+    // =====================================================================
+
+    [Fact]
+    public void ExportSelectedHl7_WritesRawContentOfSelectedMessages()
+    {
+        var messages = new List<Hl7Message>
+        {
+            new() { RawContent = "MSH|^~\\&|A\rPID|1||001\r" },
+            new() { RawContent = "MSH|^~\\&|B\rPID|1||002\r" },
+        };
+        var outputPath = Path.Combine(_tempDir, "selected.hl7");
+
+        var service = new ExportService();
+        service.ExportSelectedHl7(new[] { 1 }, messages, outputPath);
+
+        var content = File.ReadAllText(outputPath);
+        Assert.Contains("MSH|^~\\&|B", content);
+        Assert.DoesNotContain("MSH|^~\\&|A", content);
+    }
+
+    // =====================================================================
+    //  ExportSelectedCsv (delegates to ExportTumorsCsv)
+    // =====================================================================
+
+    [Fact]
+    public void ExportSelectedCsv_WritesOnlySelectedTumors()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new[]
+        {
+            new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Smith",
+                Tumors = new[]
+                {
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" },
+                    new NaaccrXmlTestHelper.TumorData { PrimarySite = "C189" },
+                }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var outputPath = Path.Combine(_tempDir, "selected.csv");
+
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "primarySite", ParentElement = "Tumor" },
+        };
+
+        var service = new ExportService();
+        service.ExportSelectedCsv(new[] { 1 }, xmlDoc, nsMgr, outputPath, fields);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal(2, lines.Length); // header + 1 row
+        Assert.Equal("C189", lines[1]);
     }
 }

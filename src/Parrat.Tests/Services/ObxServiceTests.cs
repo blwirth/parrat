@@ -19,7 +19,8 @@ public class ObxServiceTests
         var lines = modifiedContent.Split('\n');
         var obxLine = lines.First(l => l.StartsWith("OBX|"));
         var pipeCount = obxLine.Count(c => c == '|');
-        Assert.True(pipeCount >= 5);
+        Assert.True(pipeCount >= 5,
+            $"OBX should have been padded to at least 5 pipes, but has {pipeCount}");
         Assert.Equal(1, fixedCount);
     }
 
