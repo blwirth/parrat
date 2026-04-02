@@ -50,18 +50,18 @@ jobs:
           New-Item -ItemType Directory -Path "$out/config" -Force | Out-Null
           New-Item -ItemType Directory -Path "$out/logs" -Force | Out-Null
 
-          Copy-Item publish/Parrat.UI.exe $out/
+          Copy-Item publish/PARRAT.exe $out/
           Copy-Item -Recurse data $out/data
           Copy-Item "docs/PARRAT - User Manual.pdf" "$out/docs/"
 
           # Write version file (read by app for window title)
           $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
 
-          Compress-Archive -Path "$out/*" -DestinationPath "release/Parrat-${tag}.zip"
+          Compress-Archive -Path "$out/*" -DestinationPath "release/PARRAT-${tag}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/Parrat-*.zip
+          files: release/PARRAT-*.zip
           generate_release_notes: true
           name: "PARRAT ${{ github.ref_name }}"

@@ -6,7 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- TODO: Add ApplicationIcon once parrat.ico is created from logo.svg -->
+    <AssemblyName>PARRAT</AssemblyName>
+    <ApplicationIcon>..\..\logo\parrat.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
