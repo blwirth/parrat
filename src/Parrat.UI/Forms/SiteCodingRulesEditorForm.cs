@@ -15,6 +15,7 @@ namespace Parrat.UI.Forms;
 public class SiteCodingRulesEditorForm : Form
 {
     private readonly ISiteLateralityService _siteLateralityService;
+    private readonly IParratLogger _logger;
     private string _filePath;
     private bool _isDirty;
     private List<SiteCodingRule> _currentPatterns;
@@ -26,10 +27,12 @@ public class SiteCodingRulesEditorForm : Form
 
     public SiteCodingRulesEditorForm(
         ISiteLateralityService siteLateralityService,
-        string filePath)
+        string filePath,
+        IParratLogger logger)
     {
         _siteLateralityService = siteLateralityService;
         _filePath = filePath;
+        _logger = logger;
         _currentPatterns = new List<SiteCodingRule>();
 
         InitializeControls();
@@ -44,6 +47,7 @@ public class SiteCodingRulesEditorForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to load site coding rules file", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to load file: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
@@ -286,11 +290,13 @@ public class SiteCodingRulesEditorForm : Form
         {
             SaveToFile(_filePath);
             _isDirty = false;
+            _logger.Log("INFO", $"Site coding rules saved to {Path.GetFileName(_filePath)}", "CODING_TABLE");
             MessageBox.Show($"File saved successfully.\n\n{_filePath}", "Saved",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to save site coding rules", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to save file: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -315,11 +321,13 @@ public class SiteCodingRulesEditorForm : Form
             _isDirty = false;
             _filePath = saveDialog.FileName;
             _lblFile.Text = $"File: {_filePath}";
+            _logger.Log("INFO", $"Site coding rules saved as {Path.GetFileName(saveDialog.FileName)}", "CODING_TABLE");
             MessageBox.Show($"File saved successfully.\n\n{saveDialog.FileName}", "Saved",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to save site coding rules (Save As)", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to save file: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -845,7 +853,7 @@ public class PatternEditDialog : Form
         }
         catch
         {
-            // Ignore regex errors during highlighting
+            // Regex highlighting is best-effort for UI display
         }
     }
 

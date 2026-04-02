@@ -14,6 +14,7 @@ namespace Parrat.UI.Forms;
 public class ConcatenateXmlForm : Form
 {
     private readonly IConcatenateService _concatenateService;
+    private readonly IParratLogger _logger;
 
     private readonly List<Dictionary<string, object>> _fileInfos = new();
     private Dictionary<string, object>? _referenceInfo;
@@ -37,9 +38,11 @@ public class ConcatenateXmlForm : Form
 
     public ConcatenateXmlForm(
         IConcatenateService concatenateService,
-        string[] initialFiles)
+        string[] initialFiles,
+        IParratLogger? logger = null)
     {
         _concatenateService = concatenateService;
+        _logger = logger!;
 
         InitializeComponents();
         LoadInitialFiles(initialFiles);
@@ -137,6 +140,7 @@ public class ConcatenateXmlForm : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to load XML header info: {Path.GetFileName(file)}", "CONCAT", ex);
                 errors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -229,6 +233,7 @@ public class ConcatenateXmlForm : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to add XML file: {Path.GetFileName(file)}", "CONCAT", ex);
                 addErrors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -396,6 +401,7 @@ public class ConcatenateXmlForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to concatenate XML files", "CONCAT", ex);
             MessageBox.Show(
                 $"Error concatenating XMLs: {ex.Message}",
                 "Error",

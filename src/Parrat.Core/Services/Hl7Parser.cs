@@ -10,6 +10,15 @@ namespace Parrat.Core.Services;
 /// </summary>
 public class Hl7Parser : IHl7Parser
 {
+    private readonly IParratLogger _logger;
+
+    public Hl7Parser() : this(NullParratLogger.Instance) { }
+
+    public Hl7Parser(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     public string GetField(string segment, int fieldIndex)
     {
         if (string.IsNullOrWhiteSpace(segment))
@@ -245,9 +254,9 @@ public class Hl7Parser : IHl7Parser
                 return $"{year}-{month}-{day}";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Return original if parsing fails
+            _logger.Log("WARN", $"Failed to parse HL7 datetime value: {hl7DateTime}", "HL7_PARSE_DATETIME", ex.Message);
         }
 
         return hl7DateTime;

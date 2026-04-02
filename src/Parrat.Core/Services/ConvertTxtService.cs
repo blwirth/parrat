@@ -12,6 +12,15 @@ namespace Parrat.Core.Services;
 /// </summary>
 public class ConvertTxtService : IConvertTxtService
 {
+    private readonly IParratLogger _logger;
+
+    public ConvertTxtService() : this(NullParratLogger.Instance) { }
+
+    public ConvertTxtService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
+
     private const string UnknownDate = "99999999";
 
     private static readonly Dictionary<string, FacilityConfig> FacilityConfigs = new()
@@ -107,7 +116,7 @@ public class ConvertTxtService : IConvertTxtService
 
     #region Date Helpers
 
-    private static string ConvertDateToHL7(string dateString, string format = "MM/dd/yyyy")
+    private string ConvertDateToHL7(string dateString, string format = "MM/dd/yyyy")
     {
         if (string.IsNullOrWhiteSpace(dateString))
             return UnknownDate;
@@ -122,8 +131,9 @@ public class ConvertTxtService : IConvertTxtService
 
             return date.ToString("yyyyMMdd");
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.Log("WARN", $"Failed to parse date '{dateString}' with format '{format}'", "CONVERT_TXT_DATE", ex.Message);
             return UnknownDate;
         }
     }

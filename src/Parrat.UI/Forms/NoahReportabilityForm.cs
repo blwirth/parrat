@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 
+
 namespace Parrat.UI.Forms;
 
 /// <summary>
@@ -14,6 +15,7 @@ namespace Parrat.UI.Forms;
 public class NoahReportabilityForm : Form
 {
     private readonly INoahService _noahService;
+    private readonly IParratLogger? _logger;
 
     // ── Settings controls ────────────────────────────────────────────────
     private Label _lblExePath = null!;
@@ -63,11 +65,12 @@ public class NoahReportabilityForm : Form
     /// <summary>Whether settings were saved (Settings mode).</summary>
     public bool SettingsSaved { get; private set; }
 
-    public NoahReportabilityForm(INoahService noahService, NoahConfig config, DialogMode mode)
+    public NoahReportabilityForm(INoahService noahService, NoahConfig config, DialogMode mode, IParratLogger? logger = null)
     {
         _noahService = noahService;
         _config = config;
         _mode = mode;
+        _logger = logger;
 
         switch (mode)
         {
@@ -303,6 +306,7 @@ public class NoahReportabilityForm : Form
         }
         catch (Exception ex)
         {
+            _logger?.LogError("Failed to refresh NOAH models from API", "NOAH", ex);
             _lblRefreshStatus.Text = $"Error: {ex.Message}";
             _lblRefreshStatus.ForeColor = Color.Red;
         }

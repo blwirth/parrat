@@ -318,7 +318,8 @@ public partial class MainForm
                 _state.CurrentFilePath,
                 _state.XmlDoc!,
                 _state.Tumors,
-                fileSuffix);
+                fileSuffix,
+                _logger);
             reportForm.ShowDialog(this);
         }
         catch (Exception ex)
@@ -931,7 +932,8 @@ public partial class MainForm
                 _state.NsMgr!,
                 _state.Tumors,
                 _configService.ConvertFieldListToXmlIds(defaultFields),
-                $"Export {(mode == "all" ? "All" : "Selected")} as CSV - Configure Fields & Preview");
+                $"Export {(mode == "all" ? "All" : "Selected")} as CSV - Configure Fields & Preview",
+                _logger);
 
             if (previewForm.ShowDialog(this) != DialogResult.OK)
                 return;
@@ -1147,7 +1149,7 @@ public partial class MainForm
             var config = _noahService.GetConfig();
 
             // Show model selection dialog
-            using var modelForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.ModelSelection);
+            using var modelForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.ModelSelection, _logger);
             if (modelForm.ShowDialog(this) != DialogResult.OK || modelForm.SelectedModel == null)
                 return;
 
@@ -1197,12 +1199,12 @@ public partial class MainForm
         try
         {
             var config = _noahService.GetConfig();
-            using var payloadForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.CustomPayload);
+            using var payloadForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.CustomPayload, _logger);
             if (payloadForm.ShowDialog(this) != DialogResult.OK || string.IsNullOrEmpty(payloadForm.CustomPayloadText))
                 return;
 
             // Show model selection
-            using var modelForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.ModelSelection);
+            using var modelForm = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.ModelSelection, _logger);
             if (modelForm.ShowDialog(this) != DialogResult.OK || modelForm.SelectedModel == null)
                 return;
 
@@ -1224,7 +1226,7 @@ public partial class MainForm
                 if (resultFiles.Length > 0)
                 {
                     using var resultsForm = new NoahResultsForm(
-                        resultFiles[0], result.WorkingFolder, "Custom", 0, 1);
+                        resultFiles[0], result.WorkingFolder, "Custom", 0, 1, _logger);
                     resultsForm.ShowDialog(this);
                 }
                 else
@@ -1610,7 +1612,7 @@ public partial class MainForm
 
             if (ofd.ShowDialog(this) != DialogResult.OK || ofd.FileNames.Length == 0) return;
 
-            using var form = new ConcatenateXmlForm(_concatenateService, ofd.FileNames);
+            using var form = new ConcatenateXmlForm(_concatenateService, ofd.FileNames, _logger);
             form.ShowDialog(this);
 
             if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
@@ -1637,7 +1639,7 @@ public partial class MainForm
 
             if (ofd.ShowDialog(this) != DialogResult.OK || ofd.FileNames.Length == 0) return;
 
-            using var form = new ConcatenateHl7Form(_concatenateService, ofd.FileNames);
+            using var form = new ConcatenateHl7Form(_concatenateService, ofd.FileNames, _logger);
             form.ShowDialog(this);
 
             if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
@@ -1664,7 +1666,7 @@ public partial class MainForm
 
             if (ofd.ShowDialog(this) != DialogResult.OK || ofd.FileNames.Length == 0) return;
 
-            using var form = new ConcatenateTxtForm(_concatenateService, ofd.FileNames);
+            using var form = new ConcatenateTxtForm(_concatenateService, ofd.FileNames, _logger);
             form.ShowDialog(this);
 
             if (form.ShouldOpenOutput && !string.IsNullOrEmpty(form.OutputFilePath))
@@ -1695,7 +1697,7 @@ public partial class MainForm
         var mnuLat = new ToolStripMenuItem("Laterality");
         mnuLat.Click += (s, ev) =>
         {
-            using var form = new CodingTableEditorForm(_siteLateralityService, lateralityPath, "laterality", "Laterality");
+            using var form = new CodingTableEditorForm(_siteLateralityService, lateralityPath, "laterality", "Laterality", _logger);
             form.ShowDialog(this);
         };
         mnu.DropDownItems.Add(mnuLat);
@@ -1703,7 +1705,7 @@ public partial class MainForm
         var mnuTopo = new ToolStripMenuItem("Topography");
         mnuTopo.Click += (s, ev) =>
         {
-            using var form = new CodingTableEditorForm(_siteLateralityService, topographyPath, "topography", "Topography");
+            using var form = new CodingTableEditorForm(_siteLateralityService, topographyPath, "topography", "Topography", _logger);
             form.ShowDialog(this);
         };
         mnu.DropDownItems.Add(mnuTopo);
@@ -1711,7 +1713,7 @@ public partial class MainForm
         var mnuSkinTopo = new ToolStripMenuItem("Skin Topography");
         mnuSkinTopo.Click += (s, ev) =>
         {
-            using var form = new CodingTableEditorForm(_siteLateralityService, skinTopoPath, "topography", "Skin Topography");
+            using var form = new CodingTableEditorForm(_siteLateralityService, skinTopoPath, "topography", "Skin Topography", _logger);
             form.ShowDialog(this);
         };
         mnu.DropDownItems.Add(mnuSkinTopo);
@@ -1721,7 +1723,7 @@ public partial class MainForm
         var mnuSiteCodingRules = new ToolStripMenuItem("Site Coding Rules");
         mnuSiteCodingRules.Click += (s, ev) =>
         {
-            using var form = new SiteCodingRulesEditorForm(_siteLateralityService, siteCodingRulesPath);
+            using var form = new SiteCodingRulesEditorForm(_siteLateralityService, siteCodingRulesPath, _logger);
             form.ShowDialog(this);
         };
         mnu.DropDownItems.Add(mnuSiteCodingRules);
@@ -1733,7 +1735,7 @@ public partial class MainForm
         try
         {
             var config = _noahService.GetConfig();
-            using var form = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.Settings);
+            using var form = new NoahReportabilityForm(_noahService, config, NoahReportabilityForm.DialogMode.Settings, _logger);
             form.ShowDialog(this);
         }
         catch (Exception ex)
@@ -1815,6 +1817,7 @@ public partial class MainForm
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to open user manual", "HELP", ex);
             MessageBox.Show($"Error opening user manual: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -1831,6 +1834,7 @@ public partial class MainForm
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to open logs folder", "FILE_OPEN", ex);
             MessageBox.Show($"Error opening logs folder: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -1841,7 +1845,7 @@ public partial class MainForm
     // =====================================================================
 
     /// <summary>Opens the containing folder and selects the specified file.</summary>
-    private static void OpenFolderAndSelect(string filePath)
+    private void OpenFolderAndSelect(string filePath)
     {
         try
         {
@@ -1860,9 +1864,10 @@ public partial class MainForm
                     Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently ignore if we can't open the folder
+            // Non-critical: folder open is a convenience feature
+            _logger.Log("WARN", $"Failed to open folder for file: {ex.Message}", "FILE_OPEN");
         }
     }
 

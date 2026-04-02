@@ -13,6 +13,7 @@ namespace Parrat.UI.Forms;
 public class DeduplicationReportForm : Form
 {
     private readonly IDeduplicationService _deduplicationService;
+    private readonly IParratLogger _logger;
     private readonly List<DuplicateReport> _report;
     private readonly HashSet<int> _indicesToKeep;
     private readonly int _originalCount;
@@ -35,7 +36,8 @@ public class DeduplicationReportForm : Form
         string originalFilePath,
         XmlDocument xmlDoc,
         XmlNodeList tumors,
-        string fileSuffix = "-dedup")
+        string fileSuffix = "-dedup",
+        IParratLogger? logger = null)
     {
         _deduplicationService = deduplicationService;
         _report = report;
@@ -45,6 +47,7 @@ public class DeduplicationReportForm : Form
         _xmlDoc = xmlDoc;
         _tumors = tumors;
         _fileSuffix = fileSuffix;
+        _logger = logger!;
 
         InitializeComponent();
         PopulateGrid();
@@ -144,6 +147,7 @@ public class DeduplicationReportForm : Form
 
             _deduplicationService.WriteDedupedXml(_xmlDoc, _tumors, _indicesToKeep, outputPath);
 
+            _logger.Log("INFO", $"Deduplicated XML saved to {Path.GetFileName(outputPath)}", "DEDUP");
             MessageBox.Show(
                 $"Deduplicated XML saved to:\n{outputPath}",
                 "Success",
@@ -152,6 +156,7 @@ public class DeduplicationReportForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to save deduplicated XML", "DEDUP", ex);
             MessageBox.Show(
                 $"Error saving XML: {ex.Message}",
                 "Error",
@@ -186,6 +191,7 @@ public class DeduplicationReportForm : Form
                     CsvEscape(item.Physician3)));
             }
 
+            _logger.Log("INFO", $"Deduplication CSV report saved to {Path.GetFileName(csvPath)}", "DEDUP");
             MessageBox.Show(
                 $"CSV report saved to:\n{csvPath}",
                 "Success",
@@ -194,6 +200,7 @@ public class DeduplicationReportForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to save deduplication CSV report", "DEDUP", ex);
             MessageBox.Show(
                 $"Error saving CSV: {ex.Message}",
                 "Error",

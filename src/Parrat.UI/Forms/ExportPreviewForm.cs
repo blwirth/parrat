@@ -17,6 +17,7 @@ public class ExportPreviewForm : Form
 {
     private readonly INaaccrDictionary _dictionary;
     private readonly IConfigService _configService;
+    private readonly IParratLogger? _logger;
     private readonly int[] _tumorIndices;
     private readonly XmlDocument _xmlDoc;
     private readonly XmlNamespaceManager _nsMgr;
@@ -58,7 +59,8 @@ public class ExportPreviewForm : Form
         XmlNamespaceManager nsMgr,
         XmlNodeList? tumors,
         List<string>? initialFieldList = null,
-        string title = "Export Preview")
+        string title = "Export Preview",
+        IParratLogger? logger = null)
     {
         _dictionary = dictionary;
         _configService = configService;
@@ -66,6 +68,7 @@ public class ExportPreviewForm : Form
         _xmlDoc = xmlDoc;
         _nsMgr = nsMgr;
         _tumors = tumors;
+        _logger = logger;
 
         if (initialFieldList != null)
         {
@@ -385,6 +388,7 @@ public class ExportPreviewForm : Form
         }
         catch (Exception ex)
         {
+            _logger?.LogError("Error building export preview", "EXPORT", ex);
             errors.Add($"Error building preview: {ex.Message}");
         }
 
@@ -551,6 +555,7 @@ public class ExportPreviewForm : Form
             }
             catch (Exception ex)
             {
+                _logger?.LogError("Failed to load export configuration", "EXPORT", ex);
                 MessageBox.Show(ex.Message, "Load Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }

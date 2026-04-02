@@ -10,7 +10,15 @@ namespace Parrat.Core.Services;
 
 public class NoahService : INoahService
 {
+    private readonly IParratLogger _logger;
     private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    public NoahService() : this(NullParratLogger.Instance) { }
+
+    public NoahService(IParratLogger logger)
+    {
+        _logger = logger;
+    }
 
     public string GetNoahConfigPath()
     {
@@ -42,8 +50,9 @@ public class NoahService : INoahService
 
             return cache ?? new CachedNoahModels();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Failed to read cached NOAH models", "NOAH_CACHE_LOAD", ex);
             return new CachedNoahModels();
         }
     }
@@ -84,9 +93,9 @@ public class NoahService : INoahService
                     if (config != null) return config;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to defaults
+                _logger.LogError("Failed to read NOAH config, falling back to defaults", "NOAH_CONFIG_LOAD", ex);
             }
         }
 
@@ -141,9 +150,9 @@ public class NoahService : INoahService
                 process.WaitForExit(5000);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors when stopping
+            _logger.Log("WARN", "Error while stopping NOAH server process", "NOAH_STOP", ex.Message);
         }
     }
 
@@ -169,9 +178,9 @@ public class NoahService : INoahService
 
             return models ?? new List<NoahModel>();
         }
-        catch
+        catch (Exception ex)
         {
-            // Server not running, try to start it
+            _logger.Log("WARN", "NOAH API not reachable, attempting to start server", "NOAH_MODELS_FETCH", ex.Message);
             try
             {
                 serverProcess = StartServer(config);
@@ -199,13 +208,13 @@ public class NoahService : INoahService
                     }
                     catch
                     {
-                        // Server not ready yet
+                        // Server not ready yet — polling, will retry
                     }
                 }
             }
-            catch
+            catch (Exception startEx)
             {
-                // Failed to start server
+                _logger.LogError("Failed to start NOAH server", "NOAH_START", startEx);
             }
         }
 
@@ -316,6 +325,7 @@ public class NoahService : INoahService
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to invoke NOAH reportability API", "NOAH_API_INVOKE", ex);
             return new NoahResult { Success = false, Classification = $"Failed to POST to NOAH API: {ex.Message}" };
         }
         finally

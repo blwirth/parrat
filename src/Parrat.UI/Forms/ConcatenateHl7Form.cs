@@ -13,6 +13,7 @@ namespace Parrat.UI.Forms;
 public class ConcatenateHl7Form : Form
 {
     private readonly IConcatenateService _concatenateService;
+    private readonly IParratLogger _logger;
 
     private readonly List<Dictionary<string, object>> _fileInfos = new();
 
@@ -35,9 +36,11 @@ public class ConcatenateHl7Form : Form
 
     public ConcatenateHl7Form(
         IConcatenateService concatenateService,
-        string[] initialFiles)
+        string[] initialFiles,
+        IParratLogger? logger = null)
     {
         _concatenateService = concatenateService;
+        _logger = logger!;
 
         InitializeComponents();
         LoadInitialFiles(initialFiles);
@@ -132,6 +135,7 @@ public class ConcatenateHl7Form : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to load HL7 file info: {Path.GetFileName(file)}", "CONCAT", ex);
                 errors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -218,6 +222,7 @@ public class ConcatenateHl7Form : Form
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Failed to add HL7 file: {Path.GetFileName(file)}", "CONCAT", ex);
                 addErrors.Add($"Error loading {file}: {ex.Message}");
             }
         }
@@ -373,6 +378,7 @@ public class ConcatenateHl7Form : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("Failed to concatenate HL7 files", "CONCAT", ex);
             MessageBox.Show(
                 $"Error concatenating HL7 files: {ex.Message}",
                 "Error",

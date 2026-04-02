@@ -108,7 +108,7 @@ public class ReferenceFileLoader
             ctx.IsLoadingData = false;
 
             // Build search index
-            var searchService = new SearchService(tumors, nsMgr);
+            var searchService = new SearchService(_logger, tumors, nsMgr);
             ctx.SearchIndex = searchService.BuildSearchIndex("xml");
 
             _logger.Log("INFO", $"Reference loaded: {Path.GetFileName(filePath)} ({tumors.Count} tumors)", "REF_OPEN");
@@ -183,7 +183,7 @@ public class ReferenceFileLoader
             ctx.IsLoadingData = false;
 
             // Build search index
-            var searchService = new SearchService(null, null, messages);
+            var searchService = new SearchService(_logger, null, null, messages);
             ctx.SearchIndex = searchService.BuildSearchIndex("hl7");
 
             _logger.Log("INFO", $"Reference loaded: {Path.GetFileName(filePath)} ({messages.Count} messages)", "REF_OPEN");

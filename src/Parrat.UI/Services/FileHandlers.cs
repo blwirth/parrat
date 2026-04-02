@@ -174,7 +174,7 @@ public class FileHandlers
             _navigationService.ShowTumor(0);
 
             // Build search index
-            var searchService = new SearchService(tumors, nsMgr);
+            var searchService = new SearchService(_logger, tumors, nsMgr);
             _state.SearchIndex = searchService.BuildSearchIndex("xml");
 
             form.PnlSearch.Visible = true;
@@ -286,7 +286,7 @@ public class FileHandlers
             _navigationService.ShowHl7Message(0);
 
             // Build search index
-            var searchService = new SearchService(null, null, messages);
+            var searchService = new SearchService(_logger, null, null, messages);
             _state.SearchIndex = searchService.BuildSearchIndex("hl7");
 
             form.PnlSearch.Visible = true;
@@ -495,7 +495,7 @@ public class FileHandlers
                     if (navTable == null) return;
 
                     // Use a SearchService instance for ApplyFilter
-                    var searchService = new SearchService();
+                    var searchService = new SearchService(_logger);
                     searchService.ApplyFilter(searchText, navTable, searchIndex);
 
                     int totalCount = searchIndex.Length;

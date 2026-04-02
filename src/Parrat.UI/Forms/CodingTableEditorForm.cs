@@ -13,6 +13,7 @@ namespace Parrat.UI.Forms;
 public class CodingTableEditorForm : Form
 {
     private readonly ISiteLateralityService _siteLateralityService;
+    private readonly IParratLogger _logger;
     private readonly string _tableType; // "laterality" or "topography"
     private string _filePath;
     private bool _isDirty;
@@ -26,11 +27,13 @@ public class CodingTableEditorForm : Form
         ISiteLateralityService siteLateralityService,
         string filePath,
         string tableType,
-        string title)
+        string title,
+        IParratLogger logger)
     {
         _siteLateralityService = siteLateralityService;
         _filePath = filePath;
         _tableType = tableType;
+        _logger = logger;
         InitializeControls(title);
     }
 
@@ -49,6 +52,7 @@ public class CodingTableEditorForm : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Failed to load coding table ({_tableType})", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to load file: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
@@ -325,11 +329,13 @@ public class CodingTableEditorForm : Form
             SaveToFile(_filePath);
             _isDirty = false;
 
+            _logger.Log("INFO", $"Coding table ({_tableType}) saved to {Path.GetFileName(_filePath)}", "CODING_TABLE");
             MessageBox.Show($"File saved successfully.\n\n{_filePath}",
                 "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Failed to save coding table ({_tableType})", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to save file: {ex.Message}",
                 "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -366,11 +372,13 @@ public class CodingTableEditorForm : Form
             _filePath = saveDialog.FileName;
             _lblFile.Text = $"File: {_filePath}";
 
+            _logger.Log("INFO", $"Coding table ({_tableType}) saved as {Path.GetFileName(saveDialog.FileName)}", "CODING_TABLE");
             MessageBox.Show($"File saved successfully.\n\n{saveDialog.FileName}",
                 "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Failed to save coding table ({_tableType}) (Save As)", "CODING_TABLE", ex);
             MessageBox.Show($"Failed to save file: {ex.Message}",
                 "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
