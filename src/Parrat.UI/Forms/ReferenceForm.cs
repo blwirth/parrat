@@ -13,7 +13,7 @@ namespace Parrat.UI.Forms;
 /// a private FileContext instance that is completely isolated from the
 /// primary application state.
 /// </summary>
-public partial class ReferenceForm : Form
+public partial class ReferenceForm : ParratFormBase
 {
     private readonly FileContext _ctx = new();
     private readonly ReferenceNavigationService _navService;

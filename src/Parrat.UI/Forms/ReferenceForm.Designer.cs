@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace Parrat.UI.Forms;
 
-partial class ReferenceForm
+partial class ReferenceForm : ParratFormBase
 {
     private System.ComponentModel.IContainer components = null;
 

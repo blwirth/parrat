@@ -13,7 +13,7 @@ namespace Parrat.UI.Forms;
 /// and classification summary.
 /// Ported from Show-NoahResultsWindow in lib/noah-results-viewer.ps1.
 /// </summary>
-public class NoahResultsForm : Form
+public class NoahResultsForm : ParratFormBase
 {
     // ── OBX segment number -> field name mapping ─────────────────────────
     private static readonly Dictionary<int, string> OBXSegmentMap = new()

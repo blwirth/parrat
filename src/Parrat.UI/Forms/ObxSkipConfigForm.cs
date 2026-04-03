@@ -9,7 +9,7 @@ namespace Parrat.UI.Forms;
 /// Dialog for managing OBX skip codes (codes to filter out from HL7 OBX segments).
 /// Ported from Show-ObxSkipConfigDialog and Show-AddSkipCodeDialog in lib/obx-skip-config.ps1.
 /// </summary>
-public class ObxSkipConfigForm : Form
+public class ObxSkipConfigForm : ParratFormBase
 {
     private readonly IConfigService _configService;
     private ListView _listView = null!;
@@ -200,7 +200,7 @@ public class ObxSkipConfigForm : Form
 /// Sub-dialog for adding or editing a single OBX skip code.
 /// Ported from Show-AddSkipCodeDialog in lib/obx-skip-config.ps1.
 /// </summary>
-public class AddSkipCodeDialog : Form
+public class AddSkipCodeDialog : ParratFormBase
 {
     private TextBox _txtCode = null!;
     private TextBox _txtDesc = null!;

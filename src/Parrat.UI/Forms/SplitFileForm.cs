@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// and a Split button.
 /// Ported from ui/split-file-ui.ps1 Show-SplitOptionsDialog.
 /// </summary>
-public class SplitFileForm : Form
+public class SplitFileForm : ParratFormBase
 {
     private readonly ISplitFileService _splitFileService;
     private readonly string _filePath;

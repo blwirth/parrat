@@ -13,7 +13,7 @@ namespace Parrat.UI.Forms;
 /// Ported from Show-RawXmlForTumor (lib/xml-viewer.ps1) and
 /// Show-RawHl7ForMessage (lib/hl7-viewer.ps1).
 /// </summary>
-public class RawRecordForm : Form
+public class RawRecordForm : ParratFormBase
 {
     /// <summary>
     /// Creates a raw XML viewer for a single tumor record.

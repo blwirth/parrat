@@ -12,7 +12,7 @@ namespace Parrat.UI.Forms;
 /// Combines Show-NoahSettingsDialog, Show-NoahModelSelectionDialog, and
 /// Show-CustomPayloadDialog from ui/noah-reportability-ui.ps1.
 /// </summary>
-public class NoahReportabilityForm : Form
+public class NoahReportabilityForm : ParratFormBase
 {
     private readonly INoahService _noahService;
     private readonly IParratLogger? _logger;

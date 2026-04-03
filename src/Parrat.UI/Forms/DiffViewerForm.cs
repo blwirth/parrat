@@ -9,7 +9,7 @@ namespace Parrat.UI.Forms;
 /// Uses a RichTextBox with color coding: green for added, red for deleted.
 /// Ported from Show-NaaccrTumorDiff and Show-Hl7MessageDiff in lib/diff.ps1.
 /// </summary>
-public class DiffViewerForm : Form
+public class DiffViewerForm : ParratFormBase
 {
     private readonly List<DiffLine> _diffLines;
     private readonly string _labelA;

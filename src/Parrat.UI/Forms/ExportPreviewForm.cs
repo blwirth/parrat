@@ -13,7 +13,7 @@ namespace Parrat.UI.Forms;
 /// Add/Remove buttons, field ordering, config save/load, and a preview grid showing sample data.
 /// Ported from ui/export-preview-ui.ps1 Show-ExportPreview.
 /// </summary>
-public class ExportPreviewForm : Form
+public class ExportPreviewForm : ParratFormBase
 {
     private readonly INaaccrDictionary _dictionary;
     private readonly IConfigService _configService;

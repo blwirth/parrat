@@ -11,7 +11,7 @@ namespace Parrat.UI.Forms;
 /// duplicate patient ID warning, preview of tumor counts, and a Concatenate button.
 /// Ported from ui/concatenate-xml-ui.ps1.
 /// </summary>
-public class ConcatenateXmlForm : Form
+public class ConcatenateXmlForm : ParratFormBase
 {
     private readonly IConcatenateService _concatenateService;
     private readonly IParratLogger _logger;

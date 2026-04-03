@@ -11,7 +11,7 @@ namespace Parrat.UI.Forms;
 /// File list with Add/Remove/Reorder, line count preview, and Concatenate button.
 /// Ported from ui/concatenate-txt-ui.ps1.
 /// </summary>
-public class ConcatenateTxtForm : Form
+public class ConcatenateTxtForm : ParratFormBase
 {
     private readonly IConcatenateService _concatenateService;
     private readonly IParratLogger _logger;

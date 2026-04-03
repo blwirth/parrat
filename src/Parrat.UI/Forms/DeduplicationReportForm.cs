@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// and why (tiebreaker reasons). Has Save XML, Save CSV, and Close buttons.
 /// Ported from Show-DeduplicationReport in ui/deduplicate-ui.ps1.
 /// </summary>
-public class DeduplicationReportForm : Form
+public class DeduplicationReportForm : ParratFormBase
 {
     private readonly IDeduplicationService _deduplicationService;
     private readonly IParratLogger _logger;

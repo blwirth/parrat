@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// File list with Add/Remove/Reorder, message count preview, and Concatenate button.
 /// Ported from ui/concatenate-hl7-ui.ps1.
 /// </summary>
-public class ConcatenateHl7Form : Form
+public class ConcatenateHl7Form : ParratFormBase
 {
     private readonly IConcatenateService _concatenateService;
     private readonly IParratLogger _logger;

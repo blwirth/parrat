@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// Displays a DataGridView with duplicate groups and Apply/Cancel buttons.
 /// Ported from Show-DeduplicationPreview in ui/deduplicate-ui.ps1.
 /// </summary>
-public class DeduplicationPreviewForm : Form
+public class DeduplicationPreviewForm : ParratFormBase
 {
     private readonly DeduplicationResult _result;
     private readonly int _originalCount;

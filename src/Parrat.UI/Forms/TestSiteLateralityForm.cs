@@ -11,7 +11,7 @@ namespace Parrat.UI.Forms;
 /// Show-TestSiteLateralityResults (results display with highlighting)
 /// from ui/test-site-laterality-ui.ps1.
 /// </summary>
-public class TestSiteLateralityForm : Form
+public class TestSiteLateralityForm : ParratFormBase
 {
     // ── TextInput mode controls ──────────────────────────────────────────
     private Label? _lblPrompt;

@@ -12,7 +12,7 @@ namespace Parrat.UI.Forms;
 /// Editor for site coding rules with pattern grid, expression builder, test panel,
 /// and priority ordering. Ported from ui/site-coding-rules-editor-ui.ps1.
 /// </summary>
-public class SiteCodingRulesEditorForm : Form
+public class SiteCodingRulesEditorForm : ParratFormBase
 {
     private readonly ISiteLateralityService _siteLateralityService;
     private readonly IParratLogger _logger;
@@ -381,7 +381,7 @@ public class SiteCodingRulesEditorForm : Form
 /// Sub-dialog for adding or editing a single site coding rule pattern.
 /// Ported from Show-PatternEditDialog in ui/site-coding-rules-editor-ui.ps1.
 /// </summary>
-public class PatternEditDialog : Form
+public class PatternEditDialog : ParratFormBase
 {
     private readonly ISiteLateralityService _siteLateralityService;
     private List<ExpressionItem> _expressionItems;

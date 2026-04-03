@@ -11,7 +11,7 @@ namespace Parrat.UI.Forms;
 /// selection, and a Compare button that opens DiffViewerForm.
 /// Ported from Show-FileDiffSetupDialog and Show-FileDiff in ui/diff-files-ui.ps1.
 /// </summary>
-public class DiffFilesForm : Form
+public class DiffFilesForm : ParratFormBase
 {
     private readonly IDiffService _diffService;
     private readonly IXmlFileService _xmlFileService;

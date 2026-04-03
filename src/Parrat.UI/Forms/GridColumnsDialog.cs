@@ -7,7 +7,7 @@ namespace Parrat.UI.Forms;
 /// Dialog for customizing XML grid columns.
 /// Users can add/remove NAACCR fields and reorder them via drag-and-drop or buttons.
 /// </summary>
-public class GridColumnsDialog : Form
+public class GridColumnsDialog : ParratFormBase
 {
     private readonly IGridSettingsService _gridSettingsService;
     private readonly INaaccrDictionary _naaccrDictionary;

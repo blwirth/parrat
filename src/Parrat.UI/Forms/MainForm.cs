@@ -11,7 +11,7 @@ namespace Parrat.UI.Forms;
 /// MenuStrip, StatusBar, and navigation controls.
 /// Ported from the form layout and event wiring in parrat.ps1.
 /// </summary>
-public partial class MainForm : Form
+public partial class MainForm : ParratFormBase
 {
     private readonly AppState _state;
     private readonly MenuBuilder _menuBuilder;

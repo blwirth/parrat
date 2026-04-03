@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// Editor for topography and laterality lookup tables.
 /// Ported from Show-CodingTableEditor in ui/coding-table-editor-ui.ps1.
 /// </summary>
-public class CodingTableEditorForm : Form
+public class CodingTableEditorForm : ParratFormBase
 {
     private readonly ISiteLateralityService _siteLateralityService;
     private readonly IParratLogger _logger;

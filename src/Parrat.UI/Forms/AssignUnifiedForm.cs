@@ -10,7 +10,7 @@ namespace Parrat.UI.Forms;
 /// Combined dialog for assigning site/laterality, facility, and patient IDs.
 /// Ported from ui/assign-unified-ui.ps1 and ui/assign-site-laterality-ui.ps1.
 /// </summary>
-public class AssignUnifiedForm : Form
+public class AssignUnifiedForm : ParratFormBase
 {
     private readonly IUnifiedAssignmentService _unifiedService;
     private readonly ISiteLateralityService _siteLateralityService;
@@ -452,7 +452,7 @@ public class AssignUnifiedForm : Form
 /// Preview form showing proposed unified assignment changes with a grid and text preview.
 /// Ported from Show-UnifiedPreviewReport in assign-unified-ui.ps1.
 /// </summary>
-public class AssignUnifiedPreviewForm : Form
+public class AssignUnifiedPreviewForm : ParratFormBase
 {
     private readonly IUnifiedAssignmentService _unifiedService;
     private DataGridView _grid = null!;
