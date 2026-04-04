@@ -14,7 +14,7 @@ toc::[]
 
 == Overview
 
-This application consists of a collection of PowerShell utilities for managing ePath-related files. Original files are read-only, and write operations are performed on a copy of the original file so that the original record is always retained and unmodified.
+This application is a collection of utilities for managing ePath-related files. Original files are read-only, and write operations are performed on a copy of the original file so that the original record is always retained and unmodified.
 
 <<<
 
