@@ -1,0 +1,8 @@
+patientIdNumber,nameLast,nameFirst,Date of Birth,Primary Site,dateOfDiagnosis,Histologic Type,pathReportNumber1,Facility Name,Notes,behaviorCodeIcdO3
+P001,Smith,John,19650315,C509,20240115,8500,SP-2024-001,Memorial Hospital,Routine screening detected,3
+P001,Smith,John,19650315,C504,20240320,8520,SP-2024-045,Memorial Hospital,Second primary same patient,3
+P002,Jones,Maria,19780822,C180,20240201,8140,SP-2024-012,City Medical Center,"Large tumor, urgent referral",3
+P003,Williams,Robert,19550610,C341,20240115,8070,SP-2024-008,Memorial Hospital,,2
+P004,Garcia,Ana,19880403,C619,20240305,8000,SP-2024-067,Regional Health,,3
+P004,Garcia,Ana,19880403,C509,20240310,8500,SP-2024-068,Regional Health,Found during workup for other primary,3
+P005,Brown,David,19720919,C421,20240220,9823,SP-2024-033,City Medical Center,Referred from outside,3
