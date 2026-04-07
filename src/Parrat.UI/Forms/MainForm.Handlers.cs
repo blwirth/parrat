@@ -791,11 +791,12 @@ public partial class MainForm
             var mappings = _csvImportService.AutoMatch(csvData.Headers);
 
             // Show mapping form
-            using var importForm = new CsvImportForm(_naaccrDictionary, csvData, mappings);
+            using var importForm = new CsvImportForm(_naaccrDictionary, _csvImportService, csvData, mappings);
             if (importForm.ShowDialog(this) != DialogResult.OK) return;
 
             var finalMappings = importForm.ResultMappings;
             var recordType = importForm.RecordType;
+            var naaccrVersion = importForm.NaaccrVersion;
 
             // Check that at least one column is mapped
             if (finalMappings.All(m => m.IsSkipped))
@@ -808,7 +809,7 @@ public partial class MainForm
             SetStatusText("Generating NAACCR XML...");
             Refresh();
 
-            var xmlDoc = _csvImportService.GenerateNaaccrXml(csvData, finalMappings, recordType);
+            var xmlDoc = _csvImportService.GenerateNaaccrXml(csvData, finalMappings, naaccrVersion, recordType);
 
             // Save
             using var sfd = new SaveFileDialog

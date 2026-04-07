@@ -9,6 +9,12 @@ public class CsvImportService : ICsvImportService
 {
     private const string NaaccrNamespace = "http://naaccr.org/naaccrxml";
 
+    private static readonly Dictionary<int, string> BaseDictionaryUris = new()
+    {
+        [25] = "http://naaccr.org/naaccrxml/naaccr-dictionary-250.xml",
+        [26] = "http://naaccr.org/naaccrxml/naaccr-dictionary-260.xml"
+    };
+
     private readonly INaaccrDictionary _dictionary;
 
     public CsvImportService(INaaccrDictionary dictionary)
@@ -16,8 +22,9 @@ public class CsvImportService : ICsvImportService
         _dictionary = dictionary;
     }
 
-    public List<CsvImportMapping> AutoMatch(string[] csvHeaders)
+    public List<CsvImportMapping> AutoMatch(string[] csvHeaders, int naaccrVersion = 25)
     {
+        _dictionary.Initialize(naaccrVersion);
         var dict = _dictionary.GetDictionary();
         var mappings = new List<CsvImportMapping>();
         var usedXmlIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -31,7 +38,7 @@ public class CsvImportService : ICsvImportService
                 CsvHeader = header
             };
 
-            var matchedId = TryMatchHeader(header, dict, usedXmlIds);
+            var matchedId = TryMatchHeader(header, dict, usedXmlIds, naaccrVersion);
             if (matchedId != null)
             {
                 mapping.MappedNaaccrId = matchedId;
@@ -48,9 +55,13 @@ public class CsvImportService : ICsvImportService
     public XmlDocument GenerateNaaccrXml(
         CsvParseResult csvData,
         List<CsvImportMapping> mappings,
-        string recordType = "A",
-        string baseDictionaryUri = "http://naaccr.org/naaccrxml/naaccr-dictionary-250.xml")
+        int naaccrVersion = 25,
+        string recordType = "A")
     {
+        _dictionary.Initialize(naaccrVersion);
+        var baseDictionaryUri = BaseDictionaryUris.GetValueOrDefault(naaccrVersion,
+            BaseDictionaryUris[25]);
+
         var doc = new XmlDocument();
         doc.AppendChild(doc.CreateXmlDeclaration("1.0", "UTF-8", null));
 
@@ -134,8 +145,20 @@ public class CsvImportService : ICsvImportService
         return doc;
     }
 
-    private string? TryMatchHeader(string header, Dictionary<string, NaaccrItem> dict, HashSet<string> usedXmlIds)
+    private string? TryMatchHeader(string header, Dictionary<string, NaaccrItem> dict,
+        HashSet<string> usedXmlIds, int naaccrVersion)
     {
+        // For v26: also try matching "sex" header to "sexAssignedAtBirth"
+        if (naaccrVersion >= 26)
+        {
+            var normalizedHeader = Normalize(header);
+            if (normalizedHeader == "sex" && !usedXmlIds.Contains("sexAssignedAtBirth")
+                && dict.ContainsKey("sexAssignedAtBirth"))
+            {
+                return "sexAssignedAtBirth";
+            }
+        }
+
         // 1. Exact match on xmlId (case-insensitive)
         foreach (var item in dict.Values)
         {
@@ -157,14 +180,14 @@ public class CsvImportService : ICsvImportService
         }
 
         // 3. Normalized match: strip non-alphanumeric, lowercase, compare
-        var normalizedHeader = Normalize(header);
-        if (string.IsNullOrEmpty(normalizedHeader))
+        var normalizedHdr = Normalize(header);
+        if (string.IsNullOrEmpty(normalizedHdr))
             return null;
 
         foreach (var item in dict.Values)
         {
             if (!usedXmlIds.Contains(item.XmlId) &&
-                (normalizedHeader == Normalize(item.XmlId) || normalizedHeader == Normalize(item.Name)))
+                (normalizedHdr == Normalize(item.XmlId) || normalizedHdr == Normalize(item.Name)))
             {
                 return item.XmlId;
             }

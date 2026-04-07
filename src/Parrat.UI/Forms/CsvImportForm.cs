@@ -11,11 +11,14 @@ namespace Parrat.UI.Forms;
 public class CsvImportForm : ParratFormBase
 {
     private readonly INaaccrDictionary _dictionary;
+    private readonly ICsvImportService _importService;
     private readonly CsvParseResult _csvData;
     private readonly List<CsvImportMapping> _mappings;
+    private readonly int _initialVersion;
 
     // Controls — top zone
     private Label _lblFileInfo = null!;
+    private ComboBox _cboVersion = null!;
     private Button _btnAutoMatch = null!;
     private Button _btnClearAll = null!;
 
@@ -37,12 +40,19 @@ public class CsvImportForm : ParratFormBase
     /// <summary>Gets the selected record type.</summary>
     public string RecordType => "A";
 
+    /// <summary>Gets the selected NAACCR version.</summary>
+    public int NaaccrVersion => int.TryParse(_cboVersion.SelectedItem?.ToString()?.Replace("v", ""), out var v) ? v : 25;
+
     public CsvImportForm(
         INaaccrDictionary dictionary,
+        ICsvImportService importService,
         CsvParseResult csvData,
-        List<CsvImportMapping> initialMappings)
+        List<CsvImportMapping> initialMappings,
+        int initialVersion = 25)
     {
         _dictionary = dictionary;
+        _importService = importService;
+        _initialVersion = initialVersion;
         _csvData = csvData;
         _mappings = initialMappings.Select(m => new CsvImportMapping
         {
@@ -85,10 +95,27 @@ public class CsvImportForm : ParratFormBase
             Text = $"{_csvData.ColumnCount} columns, {_csvData.RowCount} data rows"
         };
 
+        var lblVersion = new Label
+        {
+            Text = "NAACCR Version:",
+            Location = new Point(0, 28),
+            AutoSize = true
+        };
+
+        _cboVersion = new ComboBox
+        {
+            Location = new Point(105, 25),
+            Width = 55,
+            DropDownStyle = ComboBoxStyle.DropDownList
+        };
+        _cboVersion.Items.AddRange(new object[] { "v25", "v26" });
+        _cboVersion.SelectedItem = $"v{_initialVersion}";
+        _cboVersion.SelectedIndexChanged += (_, _) => OnVersionChanged();
+
         _btnAutoMatch = new Button
         {
             Text = "Auto-Match",
-            Location = new Point(0, 24),
+            Location = new Point(175, 24),
             Width = 90
         };
         _btnAutoMatch.Click += (_, _) => RunAutoMatch();
@@ -96,12 +123,12 @@ public class CsvImportForm : ParratFormBase
         _btnClearAll = new Button
         {
             Text = "Clear All",
-            Location = new Point(100, 24),
+            Location = new Point(275, 24),
             Width = 80
         };
         _btnClearAll.Click += (_, _) => ClearAllMappings();
 
-        topPanel.Controls.AddRange(new Control[] { _lblFileInfo, _btnAutoMatch, _btnClearAll });
+        topPanel.Controls.AddRange(new Control[] { _lblFileInfo, lblVersion, _cboVersion, _btnAutoMatch, _btnClearAll });
 
         // ===== MIDDLE ZONE: Split between mapping grid and preview =====
         var splitContainer = new SplitContainer
@@ -353,14 +380,28 @@ public class CsvImportForm : ParratFormBase
         UpdatePreviewAndValidation();
     }
 
-    // ── Auto-Match / Clear ───────────────────────────────────────────────
+    // ── Version / Auto-Match / Clear ────────────────────────────────────
+
+    private void OnVersionChanged()
+    {
+        // Re-initialize dictionary for the selected version
+        _dictionary.Initialize(NaaccrVersion);
+
+        // Clear all mappings and re-run auto-match with the new version's dictionary
+        foreach (var m in _mappings)
+        {
+            m.MappedNaaccrId = null;
+            m.IsAutoMatched = false;
+        }
+
+        RunAutoMatch();
+    }
 
     private void RunAutoMatch()
     {
-        var dict = _dictionary.GetDictionary();
         var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Keep existing manual mappings and re-run auto-match for unmapped columns
+        // Keep existing manual mappings
         foreach (var m in _mappings)
         {
             if (!m.IsSkipped)
@@ -369,9 +410,9 @@ public class CsvImportForm : ParratFormBase
             }
         }
 
-        // Re-auto-match unmapped columns using the import service's pattern
+        // Re-auto-match unmapped columns
         var headers = _mappings.Select(m => m.CsvHeader).ToArray();
-        var freshMatch = new Core.Services.CsvImportService(_dictionary).AutoMatch(headers);
+        var freshMatch = _importService.AutoMatch(headers, NaaccrVersion);
 
         foreach (var m in _mappings)
         {

@@ -8,12 +8,16 @@ namespace Parrat.Core.Services;
 
 public class NaaccrDictionary : INaaccrDictionary
 {
-    private readonly Dictionary<string, NaaccrItem> _dictionary = new();
-    private bool _loaded;
+    private readonly Dictionary<int, Dictionary<string, NaaccrItem>> _versions = new();
+    private int _activeVersion;
 
     public void Initialize(int version = 25)
     {
-        if (_loaded) return;
+        if (_versions.ContainsKey(version))
+        {
+            _activeVersion = version;
+            return;
+        }
 
         var jsonPath = PathHelper.GetDictionaryPath($"naaccr-items-v{version}.json");
 
@@ -30,6 +34,7 @@ public class NaaccrDictionary : INaaccrDictionary
             jsonContent = jsonContent[1..];
         }
 
+        var dict = new Dictionary<string, NaaccrItem>();
         using var doc = JsonDocument.Parse(jsonContent);
         foreach (var element in doc.RootElement.EnumerateArray())
         {
@@ -40,7 +45,7 @@ public class NaaccrDictionary : INaaccrDictionary
             int.TryParse(numberStr, out var numberInt);
             if (numberInt == 0) numberInt = 999999;
 
-            _dictionary[xmlId] = new NaaccrItem
+            dict[xmlId] = new NaaccrItem
             {
                 Number = numberStr,
                 NumberInt = numberInt,
@@ -50,19 +55,20 @@ public class NaaccrDictionary : INaaccrDictionary
             };
         }
 
-        _loaded = true;
+        _versions[version] = dict;
+        _activeVersion = version;
     }
 
     public Dictionary<string, NaaccrItem> GetDictionary()
     {
         EnsureLoaded();
-        return _dictionary;
+        return _versions[_activeVersion];
     }
 
     public NaaccrItem? GetItemByXmlId(string xmlId)
     {
         EnsureLoaded();
-        return _dictionary.TryGetValue(xmlId, out var item) ? item : null;
+        return _versions[_activeVersion].TryGetValue(xmlId, out var item) ? item : null;
     }
 
     public string GetParentElement(string xmlId, Dictionary<string, string>? customFields = null)
@@ -76,7 +82,7 @@ public class NaaccrDictionary : INaaccrDictionary
         }
 
         // Check dictionary
-        if (_dictionary.TryGetValue(xmlId, out var item) && !string.IsNullOrWhiteSpace(item.ParentElement))
+        if (_versions[_activeVersion].TryGetValue(xmlId, out var item) && !string.IsNullOrWhiteSpace(item.ParentElement))
         {
             return item.ParentElement;
         }
@@ -89,7 +95,7 @@ public class NaaccrDictionary : INaaccrDictionary
     {
         EnsureLoaded();
 
-        return _dictionary.Values
+        return _versions[_activeVersion].Values
             .Where(item =>
                 item.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                 item.XmlId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
@@ -106,9 +112,14 @@ public class NaaccrDictionary : INaaccrDictionary
             : $"{xmlId} (custom)";
     }
 
+    /// <summary>
+    /// Gets the currently active dictionary version number.
+    /// </summary>
+    public int ActiveVersion => _activeVersion;
+
     private void EnsureLoaded()
     {
-        if (!_loaded)
+        if (!_versions.ContainsKey(_activeVersion))
         {
             Initialize();
         }

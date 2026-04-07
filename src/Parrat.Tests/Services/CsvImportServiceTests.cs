@@ -101,6 +101,45 @@ public class CsvImportServiceTests : IDisposable
         Assert.Null(mappings[1].MappedNaaccrId);
     }
 
+    // ── v26 AutoMatch Tests ─────────────────────────────────────────────
+
+    [Fact]
+    public void AutoMatch_V26_SexHeader_MatchesSexAssignedAtBirth()
+    {
+        var headers = new[] { "sex", "nameLast" };
+        var mappings = _service.AutoMatch(headers, naaccrVersion: 26);
+
+        Assert.Equal("sexAssignedAtBirth", mappings[0].MappedNaaccrId);
+        Assert.True(mappings[0].IsAutoMatched);
+        Assert.Equal("nameLast", mappings[1].MappedNaaccrId);
+    }
+
+    [Fact]
+    public void AutoMatch_V25_SexHeader_MatchesSex()
+    {
+        var headers = new[] { "sex", "nameLast" };
+        var mappings = _service.AutoMatch(headers, naaccrVersion: 25);
+
+        Assert.Equal("sex", mappings[0].MappedNaaccrId);
+    }
+
+    [Fact]
+    public void GenerateNaaccrXml_V26_UsesCorrectDictionaryUri()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast" },
+            Rows = new List<string[]> { new[] { "Smith" } }
+        };
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" }
+        };
+
+        var doc = _service.GenerateNaaccrXml(csv, mappings, naaccrVersion: 26);
+        Assert.Contains("naaccr-dictionary-260.xml", doc.DocumentElement!.GetAttribute("baseDictionaryUri"));
+    }
+
     // ── GenerateNaaccrXml Tests ──────────────────────────────────────────
 
     [Fact]

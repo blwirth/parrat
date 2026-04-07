@@ -5,10 +5,10 @@ namespace Parrat.Core.Interfaces;
 
 public interface ICsvImportService
 {
-    List<CsvImportMapping> AutoMatch(string[] csvHeaders);
+    List<CsvImportMapping> AutoMatch(string[] csvHeaders, int naaccrVersion = 25);
     XmlDocument GenerateNaaccrXml(
         CsvParseResult csvData,
         List<CsvImportMapping> mappings,
-        string recordType = "A",
-        string baseDictionaryUri = "http://naaccr.org/naaccrxml/naaccr-dictionary-250.xml");
+        int naaccrVersion = 25,
+        string recordType = "A");
 }
