@@ -126,7 +126,7 @@ public class CsvImportServiceTests : IDisposable
 
         // Root structure
         Assert.Equal("NaaccrData", doc.DocumentElement!.LocalName);
-        Assert.Equal("I", doc.DocumentElement.GetAttribute("recordType"));
+        Assert.Equal("A", doc.DocumentElement.GetAttribute("recordType"));
 
         // One patient
         var patients = doc.SelectNodes("//n:Patient", nsMgr)!;

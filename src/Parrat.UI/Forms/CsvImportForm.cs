@@ -16,7 +16,6 @@ public class CsvImportForm : ParratFormBase
 
     // Controls — top zone
     private Label _lblFileInfo = null!;
-    private ComboBox _cboRecordType = null!;
     private Button _btnAutoMatch = null!;
     private Button _btnClearAll = null!;
 
@@ -36,7 +35,7 @@ public class CsvImportForm : ParratFormBase
     public List<CsvImportMapping> ResultMappings => _mappings.ToList();
 
     /// <summary>Gets the selected record type.</summary>
-    public string RecordType => _cboRecordType.SelectedItem?.ToString() ?? "I";
+    public string RecordType => "A";
 
     public CsvImportForm(
         INaaccrDictionary dictionary,
@@ -86,26 +85,10 @@ public class CsvImportForm : ParratFormBase
             Text = $"{_csvData.ColumnCount} columns, {_csvData.RowCount} data rows"
         };
 
-        var lblRecordType = new Label
-        {
-            Text = "Record Type:",
-            Location = new Point(0, 28),
-            AutoSize = true
-        };
-
-        _cboRecordType = new ComboBox
-        {
-            Location = new Point(85, 25),
-            Width = 50,
-            DropDownStyle = ComboBoxStyle.DropDownList
-        };
-        _cboRecordType.Items.AddRange(new object[] { "I", "A", "M", "C" });
-        _cboRecordType.SelectedIndex = 0;
-
         _btnAutoMatch = new Button
         {
             Text = "Auto-Match",
-            Location = new Point(160, 24),
+            Location = new Point(0, 24),
             Width = 90
         };
         _btnAutoMatch.Click += (_, _) => RunAutoMatch();
@@ -113,12 +96,12 @@ public class CsvImportForm : ParratFormBase
         _btnClearAll = new Button
         {
             Text = "Clear All",
-            Location = new Point(260, 24),
+            Location = new Point(100, 24),
             Width = 80
         };
         _btnClearAll.Click += (_, _) => ClearAllMappings();
 
-        topPanel.Controls.AddRange(new Control[] { _lblFileInfo, lblRecordType, _cboRecordType, _btnAutoMatch, _btnClearAll });
+        topPanel.Controls.AddRange(new Control[] { _lblFileInfo, _btnAutoMatch, _btnClearAll });
 
         // ===== MIDDLE ZONE: Split between mapping grid and preview =====
         var splitContainer = new SplitContainer
