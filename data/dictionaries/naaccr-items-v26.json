@@ -1,0 +1,4628 @@
+﻿[
+  {
+    "id": "abstractedBy",
+    "p": "Tumor",
+    "name": "Abstracted By",
+    "n": "570"
+  },
+  {
+    "id": "accessionNumberHosp",
+    "p": "Tumor",
+    "name": "Accession Number--Hosp",
+    "n": "550"
+  },
+  {
+    "id": "addrAtDxCity",
+    "p": "Tumor",
+    "name": "Addr at DX--City",
+    "n": "70"
+  },
+  {
+    "id": "addrAtDxCountry",
+    "p": "Tumor",
+    "name": "Addr at DX--Country",
+    "n": "102"
+  },
+  {
+    "id": "addrAtDxNoStreet",
+    "p": "Tumor",
+    "name": "Addr at DX--No & Street",
+    "n": "2330"
+  },
+  {
+    "id": "addrAtDxPostalCode",
+    "p": "Tumor",
+    "name": "Addr at DX--Postal Code",
+    "n": "100"
+  },
+  {
+    "id": "addrAtDxState",
+    "p": "Tumor",
+    "name": "Addr at DX--State",
+    "n": "80"
+  },
+  {
+    "id": "addrAtDxSupplementl",
+    "p": "Tumor",
+    "name": "Addr at DX--Supplementl",
+    "n": "2335"
+  },
+  {
+    "id": "addrCurrentCity",
+    "p": "Patient",
+    "name": "Addr Current--City",
+    "n": "1810"
+  },
+  {
+    "id": "addrCurrentCountry",
+    "p": "Patient",
+    "name": "Addr Current--Country",
+    "n": "1832"
+  },
+  {
+    "id": "addrCurrentNoStreet",
+    "p": "Patient",
+    "name": "Addr Current--No & Street",
+    "n": "2350"
+  },
+  {
+    "id": "addrCurrentPostalCode",
+    "p": "Patient",
+    "name": "Addr Current--Postal Code",
+    "n": "1830"
+  },
+  {
+    "id": "addrCurrentState",
+    "p": "Patient",
+    "name": "Addr Current--State",
+    "n": "1820"
+  },
+  {
+    "id": "addrCurrentSupplementl",
+    "p": "Patient",
+    "name": "Addr Current--Supplementl",
+    "n": "2355"
+  },
+  {
+    "id": "adenoidCysticBasaloidPattern",
+    "p": "Tumor",
+    "name": "Adenoid Cystic Basaloid Pattern",
+    "n": "3803"
+  },
+  {
+    "id": "adenopathy",
+    "p": "Tumor",
+    "name": "Adenopathy",
+    "n": "3804"
+  },
+  {
+    "id": "afpPostOrchiectomyLabValue",
+    "p": "Tumor",
+    "name": "AFP Post-Orchiectomy Lab Value",
+    "n": "3805"
+  },
+  {
+    "id": "afpPostOrchiectomyRange",
+    "p": "Tumor",
+    "name": "AFP Post-Orchiectomy Range",
+    "n": "3806"
+  },
+  {
+    "id": "afpPreOrchiectomyLabValue",
+    "p": "Tumor",
+    "name": "AFP Pre-Orchiectomy Lab Value",
+    "n": "3807"
+  },
+  {
+    "id": "afpPreOrchiectomyRange",
+    "p": "Tumor",
+    "name": "AFP Pre-Orchiectomy Range",
+    "n": "3808"
+  },
+  {
+    "id": "afpPretreatmentInterpretation",
+    "p": "Tumor",
+    "name": "AFP Pretreatment Interpretation",
+    "n": "3809"
+  },
+  {
+    "id": "afpPretreatmentLabValue",
+    "p": "Tumor",
+    "name": "AFP Pretreatment Lab Value",
+    "n": "3810"
+  },
+  {
+    "id": "ageAtDiagnosis",
+    "p": "Tumor",
+    "name": "Age at Diagnosis",
+    "n": "230"
+  },
+  {
+    "id": "ajccApiVersionCurrent",
+    "p": "Tumor",
+    "name": "AJCC API Version Current",
+    "n": "2156"
+  },
+  {
+    "id": "ajccApiVersionOriginal",
+    "p": "Tumor",
+    "name": "AJCC API Version Original",
+    "n": "2157"
+  },
+  {
+    "id": "ajccCancerSurvApiVersionCurrent",
+    "p": "Tumor",
+    "name": "AJCC Cancer Surveillance DLL Version Current",
+    "n": "2158"
+  },
+  {
+    "id": "ajccCancerSurvApiVersionOriginal",
+    "p": "Tumor",
+    "name": "AJCC Cancer Surveillance DLL Version Original",
+    "n": "2159"
+  },
+  {
+    "id": "ajccId",
+    "p": "Tumor",
+    "name": "AJCC ID",
+    "n": "995"
+  },
+  {
+    "id": "ajccTnmClinM",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin M",
+    "n": "1003"
+  },
+  {
+    "id": "ajccTnmClinN",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin N",
+    "n": "1002"
+  },
+  {
+    "id": "ajccTnmClinNSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin N Suffix",
+    "n": "1034"
+  },
+  {
+    "id": "ajccTnmClinStageGroup",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin Stage Group",
+    "n": "1004"
+  },
+  {
+    "id": "ajccTnmClinT",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin T",
+    "n": "1001"
+  },
+  {
+    "id": "ajccTnmClinTSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Clin T Suffix",
+    "n": "1031"
+  },
+  {
+    "id": "ajccTnmPathM",
+    "p": "Tumor",
+    "name": "AJCC TNM Path M",
+    "n": "1013"
+  },
+  {
+    "id": "ajccTnmPathN",
+    "p": "Tumor",
+    "name": "AJCC TNM Path N",
+    "n": "1012"
+  },
+  {
+    "id": "ajccTnmPathNSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Path N Suffix",
+    "n": "1035"
+  },
+  {
+    "id": "ajccTnmPathStageGroup",
+    "p": "Tumor",
+    "name": "AJCC TNM Path Stage Group",
+    "n": "1014"
+  },
+  {
+    "id": "ajccTnmPathT",
+    "p": "Tumor",
+    "name": "AJCC TNM Path T",
+    "n": "1011"
+  },
+  {
+    "id": "ajccTnmPathTSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Path T Suffix",
+    "n": "1032"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinM",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) M",
+    "n": "1066"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinN",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) N",
+    "n": "1064"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinNSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) N Suffix",
+    "n": "1065"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinStageGrp",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) Stage Group",
+    "n": "1067"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinT",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) T",
+    "n": "1062"
+  },
+  {
+    "id": "ajccTnmPostTherapyClinTSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Clin (yc) T Suffix",
+    "n": "1063"
+  },
+  {
+    "id": "ajccTnmPostTherapyM",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) M",
+    "n": "1023"
+  },
+  {
+    "id": "ajccTnmPostTherapyN",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) N",
+    "n": "1022"
+  },
+  {
+    "id": "ajccTnmPostTherapyNSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) N Suffix",
+    "n": "1036"
+  },
+  {
+    "id": "ajccTnmPostTherapyStageGroup",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) Stage Group",
+    "n": "1024"
+  },
+  {
+    "id": "ajccTnmPostTherapyT",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) T",
+    "n": "1021"
+  },
+  {
+    "id": "ajccTnmPostTherapyTSuffix",
+    "p": "Tumor",
+    "name": "AJCC TNM Post Therapy Path (yp) T Suffix",
+    "n": "1033"
+  },
+  {
+    "id": "alkRearrangement",
+    "p": "Tumor",
+    "name": "ALK Rearrangement",
+    "n": "3938"
+  },
+  {
+    "id": "ambiguousTerminologyDx",
+    "p": "Tumor",
+    "name": "Ambiguous Terminology DX",
+    "n": "442"
+  },
+  {
+    "id": "anemia",
+    "p": "Tumor",
+    "name": "Anemia",
+    "n": "3811"
+  },
+  {
+    "id": "archiveFin",
+    "p": "Tumor",
+    "name": "Archive FIN",
+    "n": "3100"
+  },
+  {
+    "id": "autopsy",
+    "p": "Patient",
+    "name": "Autopsy",
+    "n": "1930"
+  },
+  {
+    "id": "bSymptoms",
+    "p": "Tumor",
+    "name": "B symptoms",
+    "n": "3812"
+  },
+  {
+    "id": "behaviorCodeIcdO3",
+    "p": "Tumor",
+    "name": "Behavior Code ICD-O-3",
+    "n": "523"
+  },
+  {
+    "id": "behaviorIcdO1",
+    "p": "Tumor",
+    "name": "Behavior (73-91) ICD-O-1",
+    "n": "1972"
+  },
+  {
+    "id": "behaviorIcdO2",
+    "p": "Tumor",
+    "name": "Behavior (92-00) ICD-O-2",
+    "n": "430"
+  },
+  {
+    "id": "bilirubinPretxTotalLabValue",
+    "p": "Tumor",
+    "name": "Bilirubin Pretreatment Total Lab Value",
+    "n": "3813"
+  },
+  {
+    "id": "bilirubinPretxUnitOfMeasure",
+    "p": "Tumor",
+    "name": "Bilirubin Pretreatment Unit of Measure",
+    "n": "3814"
+  },
+  {
+    "id": "birthplaceCountry",
+    "p": "Patient",
+    "name": "Birthplace--Country",
+    "n": "254"
+  },
+  {
+    "id": "birthplaceState",
+    "p": "Patient",
+    "name": "Birthplace--State",
+    "n": "252"
+  },
+  {
+    "id": "boneInvasion",
+    "p": "Tumor",
+    "name": "Bone Invasion",
+    "n": "3815"
+  },
+  {
+    "id": "brafMutationalAnalysis",
+    "p": "Tumor",
+    "name": "BRAF Mutational Analysis",
+    "n": "3940"
+  },
+  {
+    "id": "brainMolecularMarkers",
+    "p": "Tumor",
+    "name": "Brain Molecular Markers",
+    "n": "3816"
+  },
+  {
+    "id": "brainPrimaryTumorLocation",
+    "p": "Tumor",
+    "name": "Brain Primary Tumor Location",
+    "n": "3964"
+  },
+  {
+    "id": "breslowTumorThickness",
+    "p": "Tumor",
+    "name": "Breslow Tumor Thickness",
+    "n": "3817"
+  },
+  {
+    "id": "ca125PretreatmentInterpretation",
+    "p": "Tumor",
+    "name": "CA-125 Pretreatment Interpretation",
+    "n": "3818"
+  },
+  {
+    "id": "ca199PretxLabValue",
+    "p": "Tumor",
+    "name": "CA 19-9 PreTX Lab Value",
+    "n": "3942"
+  },
+  {
+    "id": "cancerStatus",
+    "p": "Tumor",
+    "name": "Cancer Status",
+    "n": "1770"
+  },
+  {
+    "id": "casefindingSource",
+    "p": "Tumor",
+    "name": "Casefinding Source",
+    "n": "501"
+  },
+  {
+    "id": "causeOfDeath",
+    "p": "Patient",
+    "name": "Cause of Death",
+    "n": "1910"
+  },
+  {
+    "id": "ceaPretreatmentInterpretation",
+    "p": "Tumor",
+    "name": "CEA Pretreatment Interpretation",
+    "n": "3819"
+  },
+  {
+    "id": "ceaPretreatmentLabValue",
+    "p": "Tumor",
+    "name": "CEA Pretreatment Lab Value",
+    "n": "3820"
+  },
+  {
+    "id": "censusBlockGroup2000",
+    "p": "Tumor",
+    "name": "Census Block Group 2000",
+    "n": "362"
+  },
+  {
+    "id": "censusBlockGroup2010",
+    "p": "Tumor",
+    "name": "Census Block Group 2010",
+    "n": "363"
+  },
+  {
+    "id": "censusBlockGroup2020",
+    "p": "Tumor",
+    "name": "Census Block Group 2020",
+    "n": "361"
+  },
+  {
+    "id": "censusBlockGrp197090",
+    "p": "Tumor",
+    "name": "Census Block Grp 1970/80/90",
+    "n": "368"
+  },
+  {
+    "id": "censusCodSys19708090",
+    "p": "Tumor",
+    "name": "Census Cod Sys 1970/80/90",
+    "n": "120"
+  },
+  {
+    "id": "censusIndCode2010",
+    "p": "Tumor",
+    "name": "Census Ind Code CDC",
+    "n": "272"
+  },
+  {
+    "id": "censusOccCode2010",
+    "p": "Tumor",
+    "name": "Census Occ Code CDC",
+    "n": "282"
+  },
+  {
+    "id": "censusTrCert19708090",
+    "p": "Tumor",
+    "name": "Census Tr Cert 1970/80/90",
+    "n": "364"
+  },
+  {
+    "id": "censusTrCertainty2000",
+    "p": "Tumor",
+    "name": "Census Tr Certainty 2000",
+    "n": "365"
+  },
+  {
+    "id": "censusTrCertainty2010",
+    "p": "Tumor",
+    "name": "Census Tr Certainty 2010",
+    "n": "367"
+  },
+  {
+    "id": "censusTrPovertyIndictr",
+    "p": "Tumor",
+    "name": "Census Tr Poverty Indictr",
+    "n": "145"
+  },
+  {
+    "id": "censusTract19708090",
+    "p": "Tumor",
+    "name": "Census Tract 1970/80/90",
+    "n": "110"
+  },
+  {
+    "id": "censusTract2000",
+    "p": "Tumor",
+    "name": "Census Tract 2000",
+    "n": "130"
+  },
+  {
+    "id": "censusTract2010",
+    "p": "Tumor",
+    "name": "Census Tract 2010",
+    "n": "135"
+  },
+  {
+    "id": "censusTract2020",
+    "p": "Tumor",
+    "name": "Census Tract 2020",
+    "n": "125"
+  },
+  {
+    "id": "censusTractCertainty2020",
+    "p": "Tumor",
+    "name": "Census Tract Certainty 2020",
+    "n": "369"
+  },
+  {
+    "id": "chromosome16qLossHeterozygosity",
+    "p": "Tumor",
+    "name": "Chromosome 16q: Loss of Heterozygosity",
+    "n": "1189"
+  },
+  {
+    "id": "chromosome19qLossHeterozygosity",
+    "p": "Tumor",
+    "name": "Chromosome 19q: Loss of Heterozygosity (LOH)",
+    "n": "3802"
+  },
+  {
+    "id": "chromosome1pLossHeterozygosity",
+    "p": "Tumor",
+    "name": "Chromosome 1p: Loss of Heterozygosity (LOH)",
+    "n": "3801"
+  },
+  {
+    "id": "chromosome1qStatus",
+    "p": "Tumor",
+    "name": "Chromosome 1q Status",
+    "n": "1190"
+  },
+  {
+    "id": "chromosome3Status",
+    "p": "Tumor",
+    "name": "Chromosome 3 Status",
+    "n": "3821"
+  },
+  {
+    "id": "chromosome8qStatus",
+    "p": "Tumor",
+    "name": "Chromosome 8q Status",
+    "n": "3822"
+  },
+  {
+    "id": "circumferentialResectionMargin",
+    "p": "Tumor",
+    "name": "Circumferential Resection Margin (CRM)",
+    "n": "3823"
+  },
+  {
+    "id": "classOfCase",
+    "p": "Tumor",
+    "name": "Class of Case",
+    "n": "610"
+  },
+  {
+    "id": "clinicalMarginWidth",
+    "p": "Tumor",
+    "name": "Clinical Margin Width",
+    "n": "3961"
+  },
+  {
+    "id": "cocAccreditedFlag",
+    "p": "Tumor",
+    "name": "CoC Accredited Flag",
+    "n": "2152"
+  },
+  {
+    "id": "cocCodingSysCurrent",
+    "p": "Tumor",
+    "name": "CoC Coding Sys--Current",
+    "n": "2140"
+  },
+  {
+    "id": "cocCodingSysOriginal",
+    "p": "Tumor",
+    "name": "CoC Coding Sys--Original",
+    "n": "2150"
+  },
+  {
+    "id": "codingSystemForEod",
+    "p": "Tumor",
+    "name": "Coding System for EOD",
+    "n": "870"
+  },
+  {
+    "id": "computedEthnicity",
+    "p": "Patient",
+    "name": "Computed Ethnicity",
+    "n": "200"
+  },
+  {
+    "id": "computedEthnicitySource",
+    "p": "Patient",
+    "name": "Computed Ethnicity Source",
+    "n": "210"
+  },
+  {
+    "id": "countyAtDx",
+    "p": "Tumor",
+    "name": "County at DX Reported",
+    "n": "90"
+  },
+  {
+    "id": "countyAtDxAnalysis",
+    "p": "Tumor",
+    "name": "County at DX Analysis",
+    "n": "89"
+  },
+  {
+    "id": "countyAtDxGeocode1990",
+    "p": "Tumor",
+    "name": "County at DX Geocode 1970/80/90",
+    "n": "94"
+  },
+  {
+    "id": "countyAtDxGeocode2000",
+    "p": "Tumor",
+    "name": "County at DX Geocode2000",
+    "n": "95"
+  },
+  {
+    "id": "countyAtDxGeocode2010",
+    "p": "Tumor",
+    "name": "County at DX Geocode2010",
+    "n": "96"
+  },
+  {
+    "id": "countyAtDxGeocode2020",
+    "p": "Tumor",
+    "name": "County at DX Geocode2020",
+    "n": "97"
+  },
+  {
+    "id": "countyCurrent",
+    "p": "Patient",
+    "name": "County--Current",
+    "n": "1840"
+  },
+  {
+    "id": "creatininePretreatmentLabValue",
+    "p": "Tumor",
+    "name": "Creatinine Pretreatment Lab Value",
+    "n": "3824"
+  },
+  {
+    "id": "creatininePretxUnitOfMeasure",
+    "p": "Tumor",
+    "name": "Creatinine Pretreatment Unit of Measure",
+    "n": "3825"
+  },
+  {
+    "id": "csExtension",
+    "p": "Tumor",
+    "name": "CS Extension",
+    "n": "2810"
+  },
+  {
+    "id": "csLymphNodes",
+    "p": "Tumor",
+    "name": "CS Lymph Nodes",
+    "n": "2830"
+  },
+  {
+    "id": "csLymphNodesEval",
+    "p": "Tumor",
+    "name": "CS Lymph Nodes Eval",
+    "n": "2840"
+  },
+  {
+    "id": "csMetsAtDx",
+    "p": "Tumor",
+    "name": "CS Mets at DX",
+    "n": "2850"
+  },
+  {
+    "id": "csMetsAtDxBone",
+    "p": "Tumor",
+    "name": "CS Mets at Dx-Bone",
+    "n": "2851"
+  },
+  {
+    "id": "csMetsAtDxBrain",
+    "p": "Tumor",
+    "name": "CS Mets at Dx-Brain",
+    "n": "2852"
+  },
+  {
+    "id": "csMetsAtDxLiver",
+    "p": "Tumor",
+    "name": "CS Mets at Dx-Liver",
+    "n": "2853"
+  },
+  {
+    "id": "csMetsAtDxLung",
+    "p": "Tumor",
+    "name": "CS Mets at Dx-Lung",
+    "n": "2854"
+  },
+  {
+    "id": "csMetsEval",
+    "p": "Tumor",
+    "name": "CS Mets Eval",
+    "n": "2860"
+  },
+  {
+    "id": "csSiteSpecificFactor1",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 1",
+    "n": "2880"
+  },
+  {
+    "id": "csSiteSpecificFactor10",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor10",
+    "n": "2864"
+  },
+  {
+    "id": "csSiteSpecificFactor11",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor11",
+    "n": "2865"
+  },
+  {
+    "id": "csSiteSpecificFactor12",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor12",
+    "n": "2866"
+  },
+  {
+    "id": "csSiteSpecificFactor13",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor13",
+    "n": "2867"
+  },
+  {
+    "id": "csSiteSpecificFactor14",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor14",
+    "n": "2868"
+  },
+  {
+    "id": "csSiteSpecificFactor15",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor15",
+    "n": "2869"
+  },
+  {
+    "id": "csSiteSpecificFactor16",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor16",
+    "n": "2870"
+  },
+  {
+    "id": "csSiteSpecificFactor17",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor17",
+    "n": "2871"
+  },
+  {
+    "id": "csSiteSpecificFactor18",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor18",
+    "n": "2872"
+  },
+  {
+    "id": "csSiteSpecificFactor19",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor19",
+    "n": "2873"
+  },
+  {
+    "id": "csSiteSpecificFactor2",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 2",
+    "n": "2890"
+  },
+  {
+    "id": "csSiteSpecificFactor20",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor20",
+    "n": "2874"
+  },
+  {
+    "id": "csSiteSpecificFactor21",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor21",
+    "n": "2875"
+  },
+  {
+    "id": "csSiteSpecificFactor22",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor22",
+    "n": "2876"
+  },
+  {
+    "id": "csSiteSpecificFactor23",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor23",
+    "n": "2877"
+  },
+  {
+    "id": "csSiteSpecificFactor24",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor24",
+    "n": "2878"
+  },
+  {
+    "id": "csSiteSpecificFactor25",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor25",
+    "n": "2879"
+  },
+  {
+    "id": "csSiteSpecificFactor3",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 3",
+    "n": "2900"
+  },
+  {
+    "id": "csSiteSpecificFactor4",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 4",
+    "n": "2910"
+  },
+  {
+    "id": "csSiteSpecificFactor5",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 5",
+    "n": "2920"
+  },
+  {
+    "id": "csSiteSpecificFactor6",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 6",
+    "n": "2930"
+  },
+  {
+    "id": "csSiteSpecificFactor7",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 7",
+    "n": "2861"
+  },
+  {
+    "id": "csSiteSpecificFactor8",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 8",
+    "n": "2862"
+  },
+  {
+    "id": "csSiteSpecificFactor9",
+    "p": "Tumor",
+    "name": "CS Site-Specific Factor 9",
+    "n": "2863"
+  },
+  {
+    "id": "csTumorSize",
+    "p": "Tumor",
+    "name": "CS Tumor Size",
+    "n": "2800"
+  },
+  {
+    "id": "csTumorSizeExtEval",
+    "p": "Tumor",
+    "name": "CS Tumor Size/Ext Eval",
+    "n": "2820"
+  },
+  {
+    "id": "csVersionDerived",
+    "p": "Tumor",
+    "name": "CS Version Derived",
+    "n": "2936"
+  },
+  {
+    "id": "csVersionInputCurrent",
+    "p": "Tumor",
+    "name": "CS Version Input Current",
+    "n": "2937"
+  },
+  {
+    "id": "csVersionInputOriginal",
+    "p": "Tumor",
+    "name": "CS Version Input Original",
+    "n": "2935"
+  },
+  {
+    "id": "date1stCrsRxCoc",
+    "p": "Tumor",
+    "name": "Date 1st Crs RX CoC",
+    "n": "1270"
+  },
+  {
+    "id": "dateCaseCompleted",
+    "p": "Tumor",
+    "name": "Date Case Completed",
+    "n": "2090"
+  },
+  {
+    "id": "dateCaseCompletedCoc",
+    "p": "Tumor",
+    "name": "Date Case Completed--CoC",
+    "n": "2092"
+  },
+  {
+    "id": "dateCaseInitiated",
+    "p": "Tumor",
+    "name": "Date Case Initiated",
+    "n": "2085"
+  },
+  {
+    "id": "dateCaseLastChanged",
+    "p": "Tumor",
+    "name": "Date Case Last Changed",
+    "n": "2100"
+  },
+  {
+    "id": "dateCaseReportExported",
+    "p": "Tumor",
+    "name": "Date Case Report Exported",
+    "n": "2110"
+  },
+  {
+    "id": "dateCaseReportLoaded",
+    "p": "Tumor",
+    "name": "Date Case Report Loaded",
+    "n": "2112"
+  },
+  {
+    "id": "dateCaseReportReceived",
+    "p": "Tumor",
+    "name": "Date Case Report Received",
+    "n": "2111"
+  },
+  {
+    "id": "dateConclusiveDx",
+    "p": "Tumor",
+    "name": "Date Conclusive DX",
+    "n": "443"
+  },
+  {
+    "id": "dateInitialRxSeer",
+    "p": "Tumor",
+    "name": "Date Initial RX SEER",
+    "n": "1260"
+  },
+  {
+    "id": "dateOf1stContact",
+    "p": "Tumor",
+    "name": "Date of 1st Contact",
+    "n": "580"
+  },
+  {
+    "id": "dateOfBirth",
+    "p": "Patient",
+    "name": "Date of Birth",
+    "n": "240"
+  },
+  {
+    "id": "dateOfDeathCanada",
+    "p": "Patient",
+    "name": "Date of Death--Canada",
+    "n": "1755"
+  },
+  {
+    "id": "dateOfDiagnosis",
+    "p": "Tumor",
+    "name": "Date of Diagnosis",
+    "n": "390"
+  },
+  {
+    "id": "dateOfInptAdm",
+    "p": "Tumor",
+    "name": "Date of Inpt Adm",
+    "n": "590"
+  },
+  {
+    "id": "dateOfInptDisch",
+    "p": "Tumor",
+    "name": "Date of Inpt Disch",
+    "n": "600"
+  },
+  {
+    "id": "dateOfLastCancerStatus",
+    "p": "Tumor",
+    "name": "Date of Last Cancer (tumor) Status",
+    "n": "1772"
+  },
+  {
+    "id": "dateOfLastContact",
+    "p": "Patient",
+    "name": "Date of Last Contact",
+    "n": "1750"
+  },
+  {
+    "id": "dateOfMultTumors",
+    "p": "Tumor",
+    "name": "Date of Mult Tumors",
+    "n": "445"
+  },
+  {
+    "id": "dateRegionalLNDissection",
+    "p": "Tumor",
+    "name": "Date Regional Lymph Node Dissection",
+    "n": "682"
+  },
+  {
+    "id": "dateSentinelLymphNodeBiopsy",
+    "p": "Tumor",
+    "name": "Date of Sentinel Lymph Node Biopsy",
+    "n": "832"
+  },
+  {
+    "id": "dateTumorRecordAvailbl",
+    "p": "Tumor",
+    "name": "Date Tumor Record Availbl",
+    "n": "2113"
+  },
+  {
+    "id": "dcStateFileNumber",
+    "p": "Patient",
+    "name": "DC State File Number",
+    "n": "2380"
+  },
+  {
+    "id": "derivedAjcc6M",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 M",
+    "n": "2980"
+  },
+  {
+    "id": "derivedAjcc6MDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 M Descript",
+    "n": "2990"
+  },
+  {
+    "id": "derivedAjcc6N",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 N",
+    "n": "2960"
+  },
+  {
+    "id": "derivedAjcc6NDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 N Descript",
+    "n": "2970"
+  },
+  {
+    "id": "derivedAjcc6StageGrp",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 Stage Grp",
+    "n": "3000"
+  },
+  {
+    "id": "derivedAjcc6T",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 T",
+    "n": "2940"
+  },
+  {
+    "id": "derivedAjcc6TDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-6 T Descript",
+    "n": "2950"
+  },
+  {
+    "id": "derivedAjcc7M",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 M",
+    "n": "3420"
+  },
+  {
+    "id": "derivedAjcc7MDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 M Descript",
+    "n": "3422"
+  },
+  {
+    "id": "derivedAjcc7N",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 N",
+    "n": "3410"
+  },
+  {
+    "id": "derivedAjcc7NDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 N Descript",
+    "n": "3412"
+  },
+  {
+    "id": "derivedAjcc7StageGrp",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 Stage Grp",
+    "n": "3430"
+  },
+  {
+    "id": "derivedAjcc7T",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 T",
+    "n": "3400"
+  },
+  {
+    "id": "derivedAjcc7TDescript",
+    "p": "Tumor",
+    "name": "Derived AJCC-7 T Descript",
+    "n": "3402"
+  },
+  {
+    "id": "derivedAjccFlag",
+    "p": "Tumor",
+    "name": "Derived AJCC--Flag",
+    "n": "3030"
+  },
+  {
+    "id": "derivedEod2018M",
+    "p": "Tumor",
+    "name": "Derived EOD 2018 M",
+    "n": "795"
+  },
+  {
+    "id": "derivedEod2018N",
+    "p": "Tumor",
+    "name": "Derived EOD 2018 N",
+    "n": "815"
+  },
+  {
+    "id": "derivedEod2018StageGroup",
+    "p": "Tumor",
+    "name": "Derived EOD 2018 Stage Group",
+    "n": "818"
+  },
+  {
+    "id": "derivedEod2018T",
+    "p": "Tumor",
+    "name": "Derived EOD 2018 T",
+    "n": "785"
+  },
+  {
+    "id": "derivedPediatricM",
+    "p": "Tumor",
+    "name": "Derived Pediatric M",
+    "n": "1144"
+  },
+  {
+    "id": "derivedPediatricN",
+    "p": "Tumor",
+    "name": "Derived Pediatric N",
+    "n": "1143"
+  },
+  {
+    "id": "derivedPediatricStageGroup",
+    "p": "Tumor",
+    "name": "Derived Pediatric Stage Group",
+    "n": "1145"
+  },
+  {
+    "id": "derivedPediatricT",
+    "p": "Tumor",
+    "name": "Derived Pediatric T",
+    "n": "1142"
+  },
+  {
+    "id": "derivedRaiStage",
+    "p": "Tumor",
+    "name": "Derived Rai Stage",
+    "n": "3955"
+  },
+  {
+    "id": "derivedSeerClinStgGrp",
+    "p": "Tumor",
+    "name": "Derived SEER Clin Stg Grp",
+    "n": "3610"
+  },
+  {
+    "id": "derivedSeerCmbMSrc",
+    "p": "Tumor",
+    "name": "Derived SEER Cmb M Src",
+    "n": "3626"
+  },
+  {
+    "id": "derivedSeerCmbNSrc",
+    "p": "Tumor",
+    "name": "Derived SEER Cmb N Src",
+    "n": "3624"
+  },
+  {
+    "id": "derivedSeerCmbStgGrp",
+    "p": "Tumor",
+    "name": "Derived SEER Cmb Stg Grp",
+    "n": "3614"
+  },
+  {
+    "id": "derivedSeerCmbTSrc",
+    "p": "Tumor",
+    "name": "Derived SEER Cmb T Src",
+    "n": "3622"
+  },
+  {
+    "id": "derivedSeerCombinedM",
+    "p": "Tumor",
+    "name": "Derived SEER Combined M",
+    "n": "3620"
+  },
+  {
+    "id": "derivedSeerCombinedN",
+    "p": "Tumor",
+    "name": "Derived SEER Combined N",
+    "n": "3618"
+  },
+  {
+    "id": "derivedSeerCombinedT",
+    "p": "Tumor",
+    "name": "Derived SEER Combined T",
+    "n": "3616"
+  },
+  {
+    "id": "derivedSeerPathStgGrp",
+    "p": "Tumor",
+    "name": "Derived SEER Path Stg Grp",
+    "n": "3605"
+  },
+  {
+    "id": "derivedSs1977",
+    "p": "Tumor",
+    "name": "Derived SS1977",
+    "n": "3010"
+  },
+  {
+    "id": "derivedSs1977Flag",
+    "p": "Tumor",
+    "name": "Derived SS1977--Flag",
+    "n": "3040"
+  },
+  {
+    "id": "derivedSs2000",
+    "p": "Tumor",
+    "name": "Derived SS2000",
+    "n": "3020"
+  },
+  {
+    "id": "derivedSs2000Flag",
+    "p": "Tumor",
+    "name": "Derived SS2000--Flag",
+    "n": "3050"
+  },
+  {
+    "id": "derivedSummaryGrade2018",
+    "p": "Tumor",
+    "name": "Derived Summary Grade 2018",
+    "n": "1975"
+  },
+  {
+    "id": "derivedSummaryStage2018",
+    "p": "Tumor",
+    "name": "Derived Summary Stage 2018",
+    "n": "762"
+  },
+  {
+    "id": "diagnosticConfirmation",
+    "p": "Tumor",
+    "name": "Diagnostic Confirmation",
+    "n": "490"
+  },
+  {
+    "id": "edpMdeLink",
+    "p": "Tumor",
+    "name": "EDP MDE Link",
+    "n": "531"
+  },
+  {
+    "id": "edpMdeLinkDate",
+    "p": "Tumor",
+    "name": "EDP MDE Link Date",
+    "n": "530"
+  },
+  {
+    "id": "egfrMutationalAnalysis",
+    "p": "Tumor",
+    "name": "EGFR Mutational Analysis",
+    "n": "3939"
+  },
+  {
+    "id": "ehrReporting",
+    "p": "Tumor",
+    "name": "EHR Reporting",
+    "n": "2508"
+  },
+  {
+    "id": "eodExtension",
+    "p": "Tumor",
+    "name": "EOD--Extension",
+    "n": "790"
+  },
+  {
+    "id": "eodExtensionProstPath",
+    "p": "Tumor",
+    "name": "EOD--Extension Prost Path",
+    "n": "800"
+  },
+  {
+    "id": "eodLymphNodeInvolv",
+    "p": "Tumor",
+    "name": "EOD--Lymph Node Involv",
+    "n": "810"
+  },
+  {
+    "id": "eodMets",
+    "p": "Tumor",
+    "name": "EOD Mets",
+    "n": "776"
+  },
+  {
+    "id": "eodOld13Digit",
+    "p": "Tumor",
+    "name": "EOD--Old 13 Digit",
+    "n": "840"
+  },
+  {
+    "id": "eodOld2Digit",
+    "p": "Tumor",
+    "name": "EOD--Old 2 Digit",
+    "n": "850"
+  },
+  {
+    "id": "eodOld4Digit",
+    "p": "Tumor",
+    "name": "EOD--Old 4 Digit",
+    "n": "860"
+  },
+  {
+    "id": "eodPrimaryTumor",
+    "p": "Tumor",
+    "name": "EOD Primary Tumor",
+    "n": "772"
+  },
+  {
+    "id": "eodRegionalNodes",
+    "p": "Tumor",
+    "name": "EOD Regional Nodes",
+    "n": "774"
+  },
+  {
+    "id": "eodTumorSize",
+    "p": "Tumor",
+    "name": "EOD--Tumor Size",
+    "n": "780"
+  },
+  {
+    "id": "esophagusAndEgjTumorEpicenter",
+    "p": "Tumor",
+    "name": "Esophagus and EGJ Tumor Epicenter",
+    "n": "3829"
+  },
+  {
+    "id": "estrogenReceptorPercntPosOrRange",
+    "p": "Tumor",
+    "name": "Estrogen Receptor Percent Positive or Range",
+    "n": "3826"
+  },
+  {
+    "id": "estrogenReceptorSummary",
+    "p": "Tumor",
+    "name": "Estrogen Receptor Summary",
+    "n": "3827"
+  },
+  {
+    "id": "estrogenReceptorTotalAllredScore",
+    "p": "Tumor",
+    "name": "Estrogen Receptor Total Allred Score",
+    "n": "3828"
+  },
+  {
+    "id": "ewsr1Fli1Fusion",
+    "p": "Tumor",
+    "name": "EWSR1-FLI1 fusion",
+    "n": "1191"
+  },
+  {
+    "id": "extranodalExtensionClin",
+    "p": "Tumor",
+    "name": "Extranodal Extension Clin (non-Head and Neck)",
+    "n": "3830"
+  },
+  {
+    "id": "extranodalExtensionHeadNeckClin",
+    "p": "Tumor",
+    "name": "Extranodal Extension Head and Neck Clinical",
+    "n": "3831"
+  },
+  {
+    "id": "extranodalExtensionHeadNeckPath",
+    "p": "Tumor",
+    "name": "Extranodal Extension Head and Neck Pathological",
+    "n": "3832"
+  },
+  {
+    "id": "extranodalExtensionPath",
+    "p": "Tumor",
+    "name": "Extranodal Extension Path (non-Head and Neck)",
+    "n": "3833"
+  },
+  {
+    "id": "extravascularMatrixPatterns",
+    "p": "Tumor",
+    "name": "Extravascular Matrix Patterns",
+    "n": "3834"
+  },
+  {
+    "id": "fibrosisScore",
+    "p": "Tumor",
+    "name": "Fibrosis Score",
+    "n": "3835"
+  },
+  {
+    "id": "figoStage",
+    "p": "Tumor",
+    "name": "FIGO Stage",
+    "n": "3836"
+  },
+  {
+    "id": "followUpContactCity",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--City",
+    "n": "1842"
+  },
+  {
+    "id": "followUpContactName",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--Name",
+    "n": "2394"
+  },
+  {
+    "id": "followUpContactNost",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--No&St",
+    "n": "2392"
+  },
+  {
+    "id": "followUpContactPostal",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--Postal",
+    "n": "1846"
+  },
+  {
+    "id": "followUpContactState",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--State",
+    "n": "1844"
+  },
+  {
+    "id": "followUpContactSuppl",
+    "p": "Tumor",
+    "name": "Follow-Up Contact--Suppl",
+    "n": "2393"
+  },
+  {
+    "id": "followUpSource",
+    "p": "Tumor",
+    "name": "Follow-Up Source",
+    "n": "1790"
+  },
+  {
+    "id": "followUpSourceCentral",
+    "p": "Patient",
+    "name": "Follow-up Source Central",
+    "n": "1791"
+  },
+  {
+    "id": "followingRegistry",
+    "p": "Tumor",
+    "name": "Following Registry",
+    "n": "2440"
+  },
+  {
+    "id": "followupContactCountry",
+    "p": "Tumor",
+    "name": "FollowUp Contact--Country",
+    "n": "1847"
+  },
+  {
+    "id": "foxo1GeneRearrangements",
+    "p": "Tumor",
+    "name": "FOXO1 Gene Rearrangements",
+    "n": "1193"
+  },
+  {
+    "id": "geocodingAccuracyScore",
+    "p": "Tumor",
+    "name": "Geocoding Accuracy Score",
+    "n": "331"
+  },
+  {
+    "id": "geocodingAccuracyType",
+    "p": "Tumor",
+    "name": "Geocoding Accuracy Type",
+    "n": "332"
+  },
+  {
+    "id": "geocodingQualityCode",
+    "p": "Tumor",
+    "name": "Geocoding Quality Code",
+    "n": "86"
+  },
+  {
+    "id": "geocodingQualityCodeDetail",
+    "p": "Tumor",
+    "name": "Geocoding Quality Code Detail",
+    "n": "87"
+  },
+  {
+    "id": "gestationalTrophoblasticPxIndex",
+    "p": "Tumor",
+    "name": "Gestational Trophoblastic Prognostic Scoring Index",
+    "n": "3837"
+  },
+  {
+    "id": "gisCoordinateQuality",
+    "p": "Tumor",
+    "name": "GIS Coordinate Quality",
+    "n": "366"
+  },
+  {
+    "id": "gleasonPatternsClinical",
+    "p": "Tumor",
+    "name": "Gleason Patterns Clinical",
+    "n": "3838"
+  },
+  {
+    "id": "gleasonPatternsPathological",
+    "p": "Tumor",
+    "name": "Gleason Patterns Pathological",
+    "n": "3839"
+  },
+  {
+    "id": "gleasonScoreClinical",
+    "p": "Tumor",
+    "name": "Gleason Score Clinical",
+    "n": "3840"
+  },
+  {
+    "id": "gleasonScorePathological",
+    "p": "Tumor",
+    "name": "Gleason Score Pathological",
+    "n": "3841"
+  },
+  {
+    "id": "gleasonTertiaryPattern",
+    "p": "Tumor",
+    "name": "Gleason Tertiary Pattern",
+    "n": "3842"
+  },
+  {
+    "id": "grade",
+    "p": "Tumor",
+    "name": "Grade",
+    "n": "440"
+  },
+  {
+    "id": "gradeClinical",
+    "p": "Tumor",
+    "name": "Grade Clinical",
+    "n": "3843"
+  },
+  {
+    "id": "gradeIcdO1",
+    "p": "Tumor",
+    "name": "Grade (73-91) ICD-O-1",
+    "n": "1973"
+  },
+  {
+    "id": "gradePathSystem",
+    "p": "Tumor",
+    "name": "Grade Path System",
+    "n": "449"
+  },
+  {
+    "id": "gradePathValue",
+    "p": "Tumor",
+    "name": "Grade Path Value",
+    "n": "441"
+  },
+  {
+    "id": "gradePathological",
+    "p": "Tumor",
+    "name": "Grade Pathological",
+    "n": "3844"
+  },
+  {
+    "id": "gradePostTherapy",
+    "p": "Tumor",
+    "name": "Grade Post Therapy Path (yp)",
+    "n": "3845"
+  },
+  {
+    "id": "gradePostTherapyClin",
+    "p": "Tumor",
+    "name": "Grade Post Therapy Clin (yc)",
+    "n": "1068"
+  },
+  {
+    "id": "hcgPostOrchiectomyLabValue",
+    "p": "Tumor",
+    "name": "hCG Post-Orchiectomy Lab Value",
+    "n": "3846"
+  },
+  {
+    "id": "hcgPostOrchiectomyRange",
+    "p": "Tumor",
+    "name": "hCG Post-Orchiectomy Range",
+    "n": "3847"
+  },
+  {
+    "id": "hcgPreOrchiectomyLabValue",
+    "p": "Tumor",
+    "name": "hCG Pre-Orchiectomy Lab Value",
+    "n": "3848"
+  },
+  {
+    "id": "hcgPreOrchiectomyRange",
+    "p": "Tumor",
+    "name": "hCG Pre-Orchiectomy Range",
+    "n": "3849"
+  },
+  {
+    "id": "her2IhcSummary",
+    "p": "Tumor",
+    "name": "HER2 IHC Summary",
+    "n": "3850"
+  },
+  {
+    "id": "her2IshDualProbeCopyNumber",
+    "p": "Tumor",
+    "name": "HER2 ISH Dual Probe Copy Number",
+    "n": "3851"
+  },
+  {
+    "id": "her2IshDualProbeRatio",
+    "p": "Tumor",
+    "name": "HER2 ISH Dual Probe Ratio",
+    "n": "3852"
+  },
+  {
+    "id": "her2IshSingleProbeCopyNumber",
+    "p": "Tumor",
+    "name": "HER2 ISH Single Probe Copy Number",
+    "n": "3853"
+  },
+  {
+    "id": "her2IshSummary",
+    "p": "Tumor",
+    "name": "HER2 ISH Summary",
+    "n": "3854"
+  },
+  {
+    "id": "her2OverallSummary",
+    "p": "Tumor",
+    "name": "HER2 Overall Summary",
+    "n": "3855"
+  },
+  {
+    "id": "heritableTrait",
+    "p": "Tumor",
+    "name": "Heritable Trait",
+    "n": "3856"
+  },
+  {
+    "id": "highRiskCytogenetics",
+    "p": "Tumor",
+    "name": "High Risk Cytogenetics",
+    "n": "3857"
+  },
+  {
+    "id": "highRiskHistologicFeatures",
+    "p": "Tumor",
+    "name": "High Risk Histologic Features",
+    "n": "3858"
+  },
+  {
+    "id": "histologicSubtype",
+    "p": "Tumor",
+    "name": "Histologic Subtype",
+    "n": "3960"
+  },
+  {
+    "id": "histologicTypeIcdO3",
+    "p": "Tumor",
+    "name": "Histologic Type ICD-O-3",
+    "n": "522"
+  },
+  {
+    "id": "histologyIcdO1",
+    "p": "Tumor",
+    "name": "Histology (73-91) ICD-O-1",
+    "n": "1971"
+  },
+  {
+    "id": "histologyIcdO2",
+    "p": "Tumor",
+    "name": "Histology (92-00) ICD-O-2",
+    "n": "420"
+  },
+  {
+    "id": "hivStatus",
+    "p": "Tumor",
+    "name": "HIV Status",
+    "n": "3859"
+  },
+  {
+    "id": "iNRProthrombinTime",
+    "p": "Tumor",
+    "name": "International Normalized Ratio Prothrombin Time",
+    "n": "3860"
+  },
+  {
+    "id": "icdO3ConversionFlag",
+    "p": "Tumor",
+    "name": "ICD-O-3 Conversion Flag",
+    "n": "2116"
+  },
+  {
+    "id": "icdRevisionComorbid",
+    "p": "Tumor",
+    "name": "ICD Revision Comorbid",
+    "n": "3165"
+  },
+  {
+    "id": "icdRevisionNumber",
+    "p": "Patient",
+    "name": "ICD Revision Number",
+    "n": "1920"
+  },
+  {
+    "id": "ihsLink",
+    "p": "Patient",
+    "name": "IHS Link",
+    "n": "192"
+  },
+  {
+    "id": "ihsPurchRefCareDeliveryArea",
+    "p": "Tumor",
+    "name": "IHS Purchased/Referred Care Delivery Area",
+    "n": "194"
+  },
+  {
+    "id": "industrySource",
+    "p": "Tumor",
+    "name": "Industry Source",
+    "n": "300"
+  },
+  {
+    "id": "inpc",
+    "p": "Tumor",
+    "name": "Intl Neuroblastoma Path Prog Class (INPC)",
+    "n": "1187"
+  },
+  {
+    "id": "inrgss",
+    "p": "Tumor",
+    "name": "Intl Neuroblastoma Risk Grp Stag Sys (INRGSS)",
+    "n": "1185"
+  },
+  {
+    "id": "institutionReferredFrom",
+    "p": "Tumor",
+    "name": "Institution Referred From",
+    "n": "2410"
+  },
+  {
+    "id": "institutionReferredTo",
+    "p": "Tumor",
+    "name": "Institution Referred To",
+    "n": "2420"
+  },
+  {
+    "id": "invasionBeyondCapsule",
+    "p": "Tumor",
+    "name": "Invasion Beyond Capsule",
+    "n": "3864"
+  },
+  {
+    "id": "ipsilateralAdrenalGlandInvolve",
+    "p": "Tumor",
+    "name": "Ipsilateral Adrenal Gland Involvement",
+    "n": "3861"
+  },
+  {
+    "id": "irssStageForEye2",
+    "p": "Tumor",
+    "name": "IRSS Stage for Eye-2",
+    "n": "1188"
+  },
+  {
+    "id": "jak2",
+    "p": "Tumor",
+    "name": "JAK2",
+    "n": "3862"
+  },
+  {
+    "id": "ki67",
+    "p": "Tumor",
+    "name": "Ki-67",
+    "n": "3863"
+  },
+  {
+    "id": "kitGeneImmunohistochemistry",
+    "p": "Tumor",
+    "name": "KIT Gene Immunohistochemistry",
+    "n": "3865"
+  },
+  {
+    "id": "kras",
+    "p": "Tumor",
+    "name": "KRAS",
+    "n": "3866"
+  },
+  {
+    "id": "laterality",
+    "p": "Tumor",
+    "name": "Laterality",
+    "n": "410"
+  },
+  {
+    "id": "latitude",
+    "p": "Tumor",
+    "name": "Latitude",
+    "n": "2352"
+  },
+  {
+    "id": "ldhPostOrchiectomyRange",
+    "p": "Tumor",
+    "name": "LDH Post-Orchiectomy Range",
+    "n": "3867"
+  },
+  {
+    "id": "ldhPreOrchiectomyRange",
+    "p": "Tumor",
+    "name": "LDH Pre-Orchiectomy Range",
+    "n": "3868"
+  },
+  {
+    "id": "ldhPretreatmentLabValue",
+    "p": "Tumor",
+    "name": "LDH Lab Value",
+    "n": "3932"
+  },
+  {
+    "id": "ldhPretreatmentLevel",
+    "p": "Tumor",
+    "name": "LDH Level",
+    "n": "3869"
+  },
+  {
+    "id": "ldhUpperLimitsOfNormal",
+    "p": "Tumor",
+    "name": "LDH Upper Limits of Normal",
+    "n": "3870"
+  },
+  {
+    "id": "lnAssessMethodFemoralInguinal",
+    "p": "Tumor",
+    "name": "LN Assessment Method Femoral-Inguinal",
+    "n": "3871"
+  },
+  {
+    "id": "lnAssessMethodParaaortic",
+    "p": "Tumor",
+    "name": "LN Assessment Method Para-Aortic",
+    "n": "3872"
+  },
+  {
+    "id": "lnAssessMethodPelvic",
+    "p": "Tumor",
+    "name": "LN Assessment Method Pelvic",
+    "n": "3873"
+  },
+  {
+    "id": "lnDistantAssessMethod",
+    "p": "Tumor",
+    "name": "LN Distant Assessment Method",
+    "n": "3874"
+  },
+  {
+    "id": "lnDistantMediastinalScalene",
+    "p": "Tumor",
+    "name": "LN Distant: Mediastinal, Scalene",
+    "n": "3875"
+  },
+  {
+    "id": "lnHeadAndNeckLevels1To3",
+    "p": "Tumor",
+    "name": "LN Head and Neck Levels I-III",
+    "n": "3876"
+  },
+  {
+    "id": "lnHeadAndNeckLevels4To5",
+    "p": "Tumor",
+    "name": "LN Head and Neck Levels IV-V",
+    "n": "3877"
+  },
+  {
+    "id": "lnHeadAndNeckLevels6To7",
+    "p": "Tumor",
+    "name": "LN Head and Neck Levels VI-VII",
+    "n": "3878"
+  },
+  {
+    "id": "lnHeadAndNeckOther",
+    "p": "Tumor",
+    "name": "LN Head and Neck Other",
+    "n": "3879"
+  },
+  {
+    "id": "lnIsolatedTumorCells",
+    "p": "Tumor",
+    "name": "LN Isolated Tumor Cells (ITC)",
+    "n": "3880"
+  },
+  {
+    "id": "lnLaterality",
+    "p": "Tumor",
+    "name": "LN Laterality",
+    "n": "3881"
+  },
+  {
+    "id": "lnPositiveAxillaryLevel1To2",
+    "p": "Tumor",
+    "name": "LN Positive Axillary Level I-II",
+    "n": "3882"
+  },
+  {
+    "id": "lnSize",
+    "p": "Tumor",
+    "name": "LN Size",
+    "n": "3883"
+  },
+  {
+    "id": "lnStatusFemoralInguinal",
+    "p": "Tumor",
+    "name": "LN Status Femoral-Inguinal",
+    "n": "3959"
+  },
+  {
+    "id": "lnStatusParaAortic",
+    "p": "Tumor",
+    "name": "LN Status Para-Aortic",
+    "n": "3958"
+  },
+  {
+    "id": "lnStatusPelvic",
+    "p": "Tumor",
+    "name": "LN Status Pelvic",
+    "n": "3957"
+  },
+  {
+    "id": "longitude",
+    "p": "Tumor",
+    "name": "Longitude",
+    "n": "2354"
+  },
+  {
+    "id": "lymphVascularInvasion",
+    "p": "Tumor",
+    "name": "Lymphovascular Invasion",
+    "n": "1182"
+  },
+  {
+    "id": "lymphocytosis",
+    "p": "Tumor",
+    "name": "Lymphocytosis",
+    "n": "3885"
+  },
+  {
+    "id": "macroscopicEvalOfTheMesorectum",
+    "p": "Tumor",
+    "name": "Macroscopic Evaluation of Mesorectum",
+    "n": "3950"
+  },
+  {
+    "id": "majorVeinInvolvement",
+    "p": "Tumor",
+    "name": "Major Vein Involvement",
+    "n": "3886"
+  },
+  {
+    "id": "maritalStatusAtDx",
+    "p": "Tumor",
+    "name": "Marital Status at DX",
+    "n": "150"
+  },
+  {
+    "id": "measuredBasalDiameter",
+    "p": "Tumor",
+    "name": "Measured Basal Diameter",
+    "n": "3887"
+  },
+  {
+    "id": "measuredThickness",
+    "p": "Tumor",
+    "name": "Measured Thickness",
+    "n": "3888"
+  },
+  {
+    "id": "medicalRecordNumber",
+    "p": "Tumor",
+    "name": "Medical Record Number",
+    "n": "2300"
+  },
+  {
+    "id": "medicareBeneficiaryIdentifier",
+    "p": "Patient",
+    "name": "Medicare Beneficiary Identifier",
+    "n": "2315"
+  },
+  {
+    "id": "methylationOfO6MGMT",
+    "p": "Tumor",
+    "name": "Methylation of O6-Methylguanine-Methyltransferase",
+    "n": "3889"
+  },
+  {
+    "id": "metsAtDxBone",
+    "p": "Tumor",
+    "name": "Mets at DX-Bone",
+    "n": "1112"
+  },
+  {
+    "id": "metsAtDxBrain",
+    "p": "Tumor",
+    "name": "Mets at DX-Brain",
+    "n": "1113"
+  },
+  {
+    "id": "metsAtDxDistantLn",
+    "p": "Tumor",
+    "name": "Mets at Dx-Distant LN",
+    "n": "1114"
+  },
+  {
+    "id": "metsAtDxLiver",
+    "p": "Tumor",
+    "name": "Mets at DX-Liver",
+    "n": "1115"
+  },
+  {
+    "id": "metsAtDxLung",
+    "p": "Tumor",
+    "name": "Mets at DX-Lung",
+    "n": "1116"
+  },
+  {
+    "id": "metsAtDxOther",
+    "p": "Tumor",
+    "name": "Mets at DX-Other",
+    "n": "1117"
+  },
+  {
+    "id": "microsatelliteInstability",
+    "p": "Tumor",
+    "name": "Microsatellite Instability (MSI)",
+    "n": "3890"
+  },
+  {
+    "id": "microvascularDensity",
+    "p": "Tumor",
+    "name": "Microvascular Density",
+    "n": "3891"
+  },
+  {
+    "id": "mitoticCountUvealMelanoma",
+    "p": "Tumor",
+    "name": "Mitotic Count Uveal Melanoma",
+    "n": "3892"
+  },
+  {
+    "id": "mitoticRateMelanoma",
+    "p": "Tumor",
+    "name": "Mitotic Rate Melanoma",
+    "n": "3893"
+  },
+  {
+    "id": "morphCodingSysCurrent",
+    "p": "Tumor",
+    "name": "Morph Coding Sys--Current",
+    "n": "470"
+  },
+  {
+    "id": "morphCodingSysOriginl",
+    "p": "Tumor",
+    "name": "Morph Coding Sys--Originl",
+    "n": "480"
+  },
+  {
+    "id": "multTumRptAsOnePrim",
+    "p": "Tumor",
+    "name": "Mult Tum Rpt as One Prim",
+    "n": "444"
+  },
+  {
+    "id": "multigeneSignatureMethod",
+    "p": "Tumor",
+    "name": "Multigene Signature Method",
+    "n": "3894"
+  },
+  {
+    "id": "multigeneSignatureResults",
+    "p": "Tumor",
+    "name": "Multigene Signature Results",
+    "n": "3895"
+  },
+  {
+    "id": "multiplicityCounter",
+    "p": "Tumor",
+    "name": "Multiplicity Counter",
+    "n": "446"
+  },
+  {
+    "id": "nMycAmplification",
+    "p": "Tumor",
+    "name": "n-MYC Amplification",
+    "n": "1186"
+  },
+  {
+    "id": "naaccrRecordVersion",
+    "p": "NaaccrData",
+    "name": "NAACCR Record Version",
+    "n": "50"
+  },
+  {
+    "id": "nameAlias",
+    "p": "Patient",
+    "name": "Name--Alias",
+    "n": "2280"
+  },
+  {
+    "id": "nameBirthSurname",
+    "p": "Patient",
+    "name": "Name--Birth Surname",
+    "n": "2232"
+  },
+  {
+    "id": "nameFirst",
+    "p": "Patient",
+    "name": "Name--First",
+    "n": "2240"
+  },
+  {
+    "id": "nameLast",
+    "p": "Patient",
+    "name": "Name--Last",
+    "n": "2230"
+  },
+  {
+    "id": "nameMiddle",
+    "p": "Patient",
+    "name": "Name--Middle",
+    "n": "2250"
+  },
+  {
+    "id": "namePrefix",
+    "p": "Patient",
+    "name": "Name--Prefix",
+    "n": "2260"
+  },
+  {
+    "id": "nameSpouseParent",
+    "p": "Tumor",
+    "name": "Name--Spouse/Parent",
+    "n": "2290"
+  },
+  {
+    "id": "nameSuffix",
+    "p": "Patient",
+    "name": "Name--Suffix",
+    "n": "2270"
+  },
+  {
+    "id": "nccnInternationalPrognosticIndex",
+    "p": "Tumor",
+    "name": "NCCN International Prognostic Index (IPI)",
+    "n": "3896"
+  },
+  {
+    "id": "ncdbCovid19TxImpact",
+    "p": "Tumor",
+    "name": "NCDB--COVID19--Tx Impact",
+    "n": "3946"
+  },
+  {
+    "id": "ncdbSarsCov2Pos",
+    "p": "Patient",
+    "name": "NCDB--SARSCoV2--Pos",
+    "n": "3944"
+  },
+  {
+    "id": "ncdbSarsCov2PosDate",
+    "p": "Patient",
+    "name": "NCDB--SARSCoV2--Pos Date",
+    "n": "3945"
+  },
+  {
+    "id": "ncdbSarsCov2Test",
+    "p": "Patient",
+    "name": "NCDB--SARSCoV2--Test",
+    "n": "3943"
+  },
+  {
+    "id": "neoadjuvTherapyClinicalResponse",
+    "p": "Tumor",
+    "name": "Neoadjuvant Therapy-Clinical Response",
+    "n": "1633"
+  },
+  {
+    "id": "neoadjuvTherapyTreatmentEffect",
+    "p": "Tumor",
+    "name": "Neoadjuvant Therapy-Treatment Effect",
+    "n": "1634"
+  },
+  {
+    "id": "neoadjuvantTherapy",
+    "p": "Tumor",
+    "name": "Neoadjuvant Therapy",
+    "n": "1632"
+  },
+  {
+    "id": "nextFollowUpSource",
+    "p": "Tumor",
+    "name": "Next Follow-Up Source",
+    "n": "1800"
+  },
+  {
+    "id": "nhiaDerivedHispOrigin",
+    "p": "Patient",
+    "name": "NHIA Derived Hisp Origin",
+    "n": "191"
+  },
+  {
+    "id": "noPatientContactFlag",
+    "p": "Patient",
+    "name": "No Patient Contact Flag",
+    "n": "1854"
+  },
+  {
+    "id": "npiArchiveFin",
+    "p": "Tumor",
+    "name": "NPI--Archive FIN",
+    "n": "3105"
+  },
+  {
+    "id": "npiFollowingRegistry",
+    "p": "Tumor",
+    "name": "NPI--Following Registry",
+    "n": "2445"
+  },
+  {
+    "id": "npiInstReferredFrom",
+    "p": "Tumor",
+    "name": "NPI--Inst Referred From",
+    "n": "2415"
+  },
+  {
+    "id": "npiInstReferredTo",
+    "p": "Tumor",
+    "name": "NPI--Inst Referred To",
+    "n": "2425"
+  },
+  {
+    "id": "npiPhysician3",
+    "p": "Tumor",
+    "name": "NPI--Physician 3",
+    "n": "2495"
+  },
+  {
+    "id": "npiPhysician4",
+    "p": "Tumor",
+    "name": "NPI--Physician 4",
+    "n": "2505"
+  },
+  {
+    "id": "npiPhysicianFollowUp",
+    "p": "Tumor",
+    "name": "NPI--Physician--Follow-Up",
+    "n": "2475"
+  },
+  {
+    "id": "npiPhysicianManaging",
+    "p": "Tumor",
+    "name": "NPI--Physician--Managing",
+    "n": "2465"
+  },
+  {
+    "id": "npiPhysicianPrimarySurg",
+    "p": "Tumor",
+    "name": "NPI--Physician--Primary Surg",
+    "n": "2485"
+  },
+  {
+    "id": "npiRegistryId",
+    "p": "NaaccrData",
+    "name": "NPI--Registry ID",
+    "n": "45"
+  },
+  {
+    "id": "npiReportingFacility",
+    "p": "Tumor",
+    "name": "NPI--Reporting Facility",
+    "n": "545"
+  },
+  {
+    "id": "nrasMutationalAnalysis",
+    "p": "Tumor",
+    "name": "NRAS Mutational Analysis",
+    "n": "3941"
+  },
+  {
+    "id": "numberOfCoresExamined",
+    "p": "Tumor",
+    "name": "Number of Cores Examined",
+    "n": "3897"
+  },
+  {
+    "id": "numberOfCoresPositive",
+    "p": "Tumor",
+    "name": "Number of Cores Positive",
+    "n": "3898"
+  },
+  {
+    "id": "numberOfExaminedParaAorticNodes",
+    "p": "Tumor",
+    "name": "Number of Examined Para-Aortic Nodes",
+    "n": "3899"
+  },
+  {
+    "id": "numberOfExaminedPelvicNodes",
+    "p": "Tumor",
+    "name": "Number of Examined Pelvic Nodes",
+    "n": "3900"
+  },
+  {
+    "id": "numberOfPositiveParaAorticNodes",
+    "p": "Tumor",
+    "name": "Number of Positive Para-Aortic Nodes",
+    "n": "3901"
+  },
+  {
+    "id": "numberOfPositivePelvicNodes",
+    "p": "Tumor",
+    "name": "Number of Positive Pelvic Nodes",
+    "n": "3902"
+  },
+  {
+    "id": "numberPhasesOfRadTxToVolume",
+    "p": "Tumor",
+    "name": "Number of Phases of Rad Treatment to this Volume",
+    "n": "1532"
+  },
+  {
+    "id": "occupationSource",
+    "p": "Tumor",
+    "name": "Occupation Source",
+    "n": "290"
+  },
+  {
+    "id": "oncotypeDxRecurrenceScoreDcis",
+    "p": "Tumor",
+    "name": "Oncotype Dx Recurrence Score-DCIS",
+    "n": "3903"
+  },
+  {
+    "id": "oncotypeDxRecurrenceScoreInvasiv",
+    "p": "Tumor",
+    "name": "Oncotype Dx Recurrence Score-Invasive",
+    "n": "3904"
+  },
+  {
+    "id": "oncotypeDxRiskLevelDcis",
+    "p": "Tumor",
+    "name": "Oncotype Dx Risk Level-DCIS",
+    "n": "3905"
+  },
+  {
+    "id": "oncotypeDxRiskLevelInvasive",
+    "p": "Tumor",
+    "name": "Oncotype Dx Risk Level-Invasive",
+    "n": "3906"
+  },
+  {
+    "id": "organomegaly",
+    "p": "Tumor",
+    "name": "Organomegaly",
+    "n": "3907"
+  },
+  {
+    "id": "overRideAcsnClassSeq",
+    "p": "Tumor",
+    "name": "Over-ride Acsn/Class/Seq",
+    "n": "1985"
+  },
+  {
+    "id": "overRideAgeSiteMorph",
+    "p": "Tumor",
+    "name": "Over-ride Age/Site/Morph",
+    "n": "1990"
+  },
+  {
+    "id": "overRideCocSiteType",
+    "p": "Tumor",
+    "name": "Over-ride CoC-Site/Type",
+    "n": "1987"
+  },
+  {
+    "id": "overRideCs1",
+    "p": "Tumor",
+    "name": "Over-ride CS 1",
+    "n": "3750"
+  },
+  {
+    "id": "overRideCs10",
+    "p": "Tumor",
+    "name": "Over-ride CS 10",
+    "n": "3759"
+  },
+  {
+    "id": "overRideCs11",
+    "p": "Tumor",
+    "name": "Over-ride CS 11",
+    "n": "3760"
+  },
+  {
+    "id": "overRideCs12",
+    "p": "Tumor",
+    "name": "Over-ride CS 12",
+    "n": "3761"
+  },
+  {
+    "id": "overRideCs13",
+    "p": "Tumor",
+    "name": "Over-ride CS 13",
+    "n": "3762"
+  },
+  {
+    "id": "overRideCs14",
+    "p": "Tumor",
+    "name": "Over-ride CS 14",
+    "n": "3763"
+  },
+  {
+    "id": "overRideCs15",
+    "p": "Tumor",
+    "name": "Over-ride CS 15",
+    "n": "3764"
+  },
+  {
+    "id": "overRideCs16",
+    "p": "Tumor",
+    "name": "Over-ride CS 16",
+    "n": "3765"
+  },
+  {
+    "id": "overRideCs17",
+    "p": "Tumor",
+    "name": "Over-ride CS 17",
+    "n": "3766"
+  },
+  {
+    "id": "overRideCs18",
+    "p": "Tumor",
+    "name": "Over-ride CS 18",
+    "n": "3767"
+  },
+  {
+    "id": "overRideCs19",
+    "p": "Tumor",
+    "name": "Over-ride CS 19",
+    "n": "3768"
+  },
+  {
+    "id": "overRideCs2",
+    "p": "Tumor",
+    "name": "Over-ride CS 2",
+    "n": "3751"
+  },
+  {
+    "id": "overRideCs20",
+    "p": "Tumor",
+    "name": "Over-ride CS 20",
+    "n": "3769"
+  },
+  {
+    "id": "overRideCs3",
+    "p": "Tumor",
+    "name": "Over-ride CS 3",
+    "n": "3752"
+  },
+  {
+    "id": "overRideCs4",
+    "p": "Tumor",
+    "name": "Over-ride CS 4",
+    "n": "3753"
+  },
+  {
+    "id": "overRideCs5",
+    "p": "Tumor",
+    "name": "Over-ride CS 5",
+    "n": "3754"
+  },
+  {
+    "id": "overRideCs6",
+    "p": "Tumor",
+    "name": "Over-ride CS 6",
+    "n": "3755"
+  },
+  {
+    "id": "overRideCs7",
+    "p": "Tumor",
+    "name": "Over-ride CS 7",
+    "n": "3756"
+  },
+  {
+    "id": "overRideCs8",
+    "p": "Tumor",
+    "name": "Over-ride CS 8",
+    "n": "3757"
+  },
+  {
+    "id": "overRideCs9",
+    "p": "Tumor",
+    "name": "Over-ride CS 9",
+    "n": "3758"
+  },
+  {
+    "id": "overRideHistology",
+    "p": "Tumor",
+    "name": "Over-ride Histology",
+    "n": "2040"
+  },
+  {
+    "id": "overRideHospseqDxconf",
+    "p": "Tumor",
+    "name": "Over-ride HospSeq/DxConf",
+    "n": "1986"
+  },
+  {
+    "id": "overRideHospseqSite",
+    "p": "Tumor",
+    "name": "Over-ride HospSeq/Site",
+    "n": "1988"
+  },
+  {
+    "id": "overRideIllDefineSite",
+    "p": "Tumor",
+    "name": "Over-ride Ill-define Site",
+    "n": "2060"
+  },
+  {
+    "id": "overRideLeukLymphoma",
+    "p": "Tumor",
+    "name": "Over-ride Leuk, Lymphoma",
+    "n": "2070"
+  },
+  {
+    "id": "overRideNameSex",
+    "p": "Patient",
+    "name": "Over-ride Name/Sex Assigned at Birth",
+    "n": "2078"
+  },
+  {
+    "id": "overRideReportSource",
+    "p": "Tumor",
+    "name": "Over-ride Report Source",
+    "n": "2050"
+  },
+  {
+    "id": "overRideSeqnoDxconf",
+    "p": "Tumor",
+    "name": "Over-ride SeqNo/DxConf",
+    "n": "2000"
+  },
+  {
+    "id": "overRideSiteBehavior",
+    "p": "Tumor",
+    "name": "Over-ride Site/Behavior",
+    "n": "2071"
+  },
+  {
+    "id": "overRideSiteEodDxDt",
+    "p": "Tumor",
+    "name": "Over-ride Site/EOD/DX Dt",
+    "n": "2072"
+  },
+  {
+    "id": "overRideSiteLatEod",
+    "p": "Tumor",
+    "name": "Over-ride Site/Lat/EOD",
+    "n": "2073"
+  },
+  {
+    "id": "overRideSiteLatMorph",
+    "p": "Tumor",
+    "name": "Over-ride Site/Lat/Morph",
+    "n": "2074"
+  },
+  {
+    "id": "overRideSiteLatSeqno",
+    "p": "Tumor",
+    "name": "Over-ride Site/Lat/SeqNo",
+    "n": "2010"
+  },
+  {
+    "id": "overRideSiteTnmStggrp",
+    "p": "Tumor",
+    "name": "Over-ride Site/TNM-StgGrp",
+    "n": "1989"
+  },
+  {
+    "id": "overRideSiteType",
+    "p": "Tumor",
+    "name": "Over-ride Site/Type",
+    "n": "2030"
+  },
+  {
+    "id": "overRideSsNodespos",
+    "p": "Tumor",
+    "name": "Over-ride SS/NodesPos",
+    "n": "1981"
+  },
+  {
+    "id": "overRideSsTnmM",
+    "p": "Tumor",
+    "name": "Over-ride SS/TNM-M",
+    "n": "1983"
+  },
+  {
+    "id": "overRideSsTnmN",
+    "p": "Tumor",
+    "name": "Over-ride SS/TNM-N",
+    "n": "1982"
+  },
+  {
+    "id": "overRideSurgDxconf",
+    "p": "Tumor",
+    "name": "Over-ride Surg/DxConf",
+    "n": "2020"
+  },
+  {
+    "id": "overRideTnm3",
+    "p": "Tumor",
+    "name": "Over-ride TNM 3",
+    "n": "1994"
+  },
+  {
+    "id": "overRideTnmStage",
+    "p": "Tumor",
+    "name": "Over-ride TNM Stage",
+    "n": "1992"
+  },
+  {
+    "id": "overRideTnmTis",
+    "p": "Tumor",
+    "name": "Over-ride TNM Tis",
+    "n": "1993"
+  },
+  {
+    "id": "p16",
+    "p": "Tumor",
+    "name": "p16",
+    "n": "3956"
+  },
+  {
+    "id": "pathDateSpecCollect1",
+    "p": "Tumor",
+    "name": "Path Date Spec Collect 1",
+    "n": "7320"
+  },
+  {
+    "id": "pathDateSpecCollect2",
+    "p": "Tumor",
+    "name": "Path Date Spec Collect 2",
+    "n": "7321"
+  },
+  {
+    "id": "pathDateSpecCollect3",
+    "p": "Tumor",
+    "name": "Path Date Spec Collect 3",
+    "n": "7322"
+  },
+  {
+    "id": "pathDateSpecCollect4",
+    "p": "Tumor",
+    "name": "Path Date Spec Collect 4",
+    "n": "7323"
+  },
+  {
+    "id": "pathDateSpecCollect5",
+    "p": "Tumor",
+    "name": "Path Date Spec Collect 5",
+    "n": "7324"
+  },
+  {
+    "id": "pathOrderPhysLicNo1",
+    "p": "Tumor",
+    "name": "Path Order Phys Lic No 1",
+    "n": "7100"
+  },
+  {
+    "id": "pathOrderPhysLicNo2",
+    "p": "Tumor",
+    "name": "Path Order Phys Lic No 2",
+    "n": "7101"
+  },
+  {
+    "id": "pathOrderPhysLicNo3",
+    "p": "Tumor",
+    "name": "Path Order Phys Lic No 3",
+    "n": "7102"
+  },
+  {
+    "id": "pathOrderPhysLicNo4",
+    "p": "Tumor",
+    "name": "Path Order Phys Lic No 4",
+    "n": "7103"
+  },
+  {
+    "id": "pathOrderPhysLicNo5",
+    "p": "Tumor",
+    "name": "Path Order Phys Lic No 5",
+    "n": "7104"
+  },
+  {
+    "id": "pathOrderingFacNo1",
+    "p": "Tumor",
+    "name": "Path Ordering Fac No 1",
+    "n": "7190"
+  },
+  {
+    "id": "pathOrderingFacNo2",
+    "p": "Tumor",
+    "name": "Path Ordering Fac No 2",
+    "n": "7191"
+  },
+  {
+    "id": "pathOrderingFacNo3",
+    "p": "Tumor",
+    "name": "Path Ordering Fac No 3",
+    "n": "7192"
+  },
+  {
+    "id": "pathOrderingFacNo4",
+    "p": "Tumor",
+    "name": "Path Ordering Fac No 4",
+    "n": "7193"
+  },
+  {
+    "id": "pathOrderingFacNo5",
+    "p": "Tumor",
+    "name": "Path Ordering Fac No 5",
+    "n": "7194"
+  },
+  {
+    "id": "pathReportNumber1",
+    "p": "Tumor",
+    "name": "Path Report Number 1",
+    "n": "7090"
+  },
+  {
+    "id": "pathReportNumber2",
+    "p": "Tumor",
+    "name": "Path Report Number 2",
+    "n": "7091"
+  },
+  {
+    "id": "pathReportNumber3",
+    "p": "Tumor",
+    "name": "Path Report Number 3",
+    "n": "7092"
+  },
+  {
+    "id": "pathReportNumber4",
+    "p": "Tumor",
+    "name": "Path Report Number 4",
+    "n": "7093"
+  },
+  {
+    "id": "pathReportNumber5",
+    "p": "Tumor",
+    "name": "Path Report Number 5",
+    "n": "7094"
+  },
+  {
+    "id": "pathReportType1",
+    "p": "Tumor",
+    "name": "Path Report Type 1",
+    "n": "7480"
+  },
+  {
+    "id": "pathReportType2",
+    "p": "Tumor",
+    "name": "Path Report Type 2",
+    "n": "7481"
+  },
+  {
+    "id": "pathReportType3",
+    "p": "Tumor",
+    "name": "Path Report Type 3",
+    "n": "7482"
+  },
+  {
+    "id": "pathReportType4",
+    "p": "Tumor",
+    "name": "Path Report Type 4",
+    "n": "7483"
+  },
+  {
+    "id": "pathReportType5",
+    "p": "Tumor",
+    "name": "Path Report Type 5",
+    "n": "7484"
+  },
+  {
+    "id": "pathReportingFacId1",
+    "p": "Tumor",
+    "name": "Path Reporting Fac ID 1",
+    "n": "7010"
+  },
+  {
+    "id": "pathReportingFacId2",
+    "p": "Tumor",
+    "name": "Path Reporting Fac ID 2",
+    "n": "7011"
+  },
+  {
+    "id": "pathReportingFacId3",
+    "p": "Tumor",
+    "name": "Path Reporting Fac ID 3",
+    "n": "7012"
+  },
+  {
+    "id": "pathReportingFacId4",
+    "p": "Tumor",
+    "name": "Path Reporting Fac ID 4",
+    "n": "7013"
+  },
+  {
+    "id": "pathReportingFacId5",
+    "p": "Tumor",
+    "name": "Path Reporting Fac ID 5",
+    "n": "7014"
+  },
+  {
+    "id": "patientIdNumber",
+    "p": "Patient",
+    "name": "Patient ID Number",
+    "n": "20"
+  },
+  {
+    "id": "patientSystemIdHosp",
+    "p": "Tumor",
+    "name": "Patient System ID-Hosp",
+    "n": "21"
+  },
+  {
+    "id": "pdl1",
+    "p": "Tumor",
+    "name": "PD-L1",
+    "n": "1174"
+  },
+  {
+    "id": "pediatricId",
+    "p": "Tumor",
+    "name": "Pediatric ID",
+    "n": "1132"
+  },
+  {
+    "id": "pediatricIdVersionCurrent",
+    "p": "Tumor",
+    "name": "Pediatric ID Version Current",
+    "n": "1133"
+  },
+  {
+    "id": "pediatricIdVersionOriginal",
+    "p": "Tumor",
+    "name": "Pediatric ID Version Original",
+    "n": "1134"
+  },
+  {
+    "id": "pediatricMets",
+    "p": "Tumor",
+    "name": "Pediatric Mets",
+    "n": "1138"
+  },
+  {
+    "id": "pediatricPrimaryTumor",
+    "p": "Tumor",
+    "name": "Pediatric Primary Tumor",
+    "n": "1136"
+  },
+  {
+    "id": "pediatricRegionalNodes",
+    "p": "Tumor",
+    "name": "Pediatric Regional Nodes",
+    "n": "1137"
+  },
+  {
+    "id": "percentNecrosisPostNeoadjuvant",
+    "p": "Tumor",
+    "name": "Percent Necrosis Post Neoadjuvant",
+    "n": "3908"
+  },
+  {
+    "id": "perineuralInvasion",
+    "p": "Tumor",
+    "name": "Perineural Invasion",
+    "n": "3909"
+  },
+  {
+    "id": "peripheralBloodInvolvement",
+    "p": "Tumor",
+    "name": "Peripheral Blood Involvement",
+    "n": "3910"
+  },
+  {
+    "id": "peritonealCytology",
+    "p": "Tumor",
+    "name": "Peritoneal Cytology",
+    "n": "3911"
+  },
+  {
+    "id": "phase1DosePerFraction",
+    "p": "Tumor",
+    "name": "Phase I Dose per Fraction",
+    "n": "1501"
+  },
+  {
+    "id": "phase1NumberOfFractions",
+    "p": "Tumor",
+    "name": "Phase I Number of Fractions",
+    "n": "1503"
+  },
+  {
+    "id": "phase1RadiationExternalBeamTech",
+    "p": "Tumor",
+    "name": "Phase I Radiation External Beam Planning Tech",
+    "n": "1502"
+  },
+  {
+    "id": "phase1RadiationPrimaryTxVolume",
+    "p": "Tumor",
+    "name": "Phase I Radiation Primary Treatment Volume",
+    "n": "1504"
+  },
+  {
+    "id": "phase1RadiationToDrainingLN",
+    "p": "Tumor",
+    "name": "Phase I Radiation to Draining Lymph Nodes",
+    "n": "1505"
+  },
+  {
+    "id": "phase1RadiationTreatmentModality",
+    "p": "Tumor",
+    "name": "Phase I Radiation Treatment Modality",
+    "n": "1506"
+  },
+  {
+    "id": "phase1TotalDose",
+    "p": "Tumor",
+    "name": "Phase I Total Dose",
+    "n": "1507"
+  },
+  {
+    "id": "phase2DosePerFraction",
+    "p": "Tumor",
+    "name": "Phase II Dose per Fraction",
+    "n": "1511"
+  },
+  {
+    "id": "phase2NumberOfFractions",
+    "p": "Tumor",
+    "name": "Phase II Number of Fractions",
+    "n": "1513"
+  },
+  {
+    "id": "phase2RadiationExternalBeamTech",
+    "p": "Tumor",
+    "name": "Phase II Radiation External Beam Planning Tech",
+    "n": "1512"
+  },
+  {
+    "id": "phase2RadiationPrimaryTxVolume",
+    "p": "Tumor",
+    "name": "Phase II Radiation Primary Treatment Volume",
+    "n": "1514"
+  },
+  {
+    "id": "phase2RadiationToDrainingLN",
+    "p": "Tumor",
+    "name": "Phase II Radiation to Draining Lymph Nodes",
+    "n": "1515"
+  },
+  {
+    "id": "phase2RadiationTreatmentModality",
+    "p": "Tumor",
+    "name": "Phase II Radiation Treatment Modality",
+    "n": "1516"
+  },
+  {
+    "id": "phase2TotalDose",
+    "p": "Tumor",
+    "name": "Phase II Total Dose",
+    "n": "1517"
+  },
+  {
+    "id": "phase3DosePerFraction",
+    "p": "Tumor",
+    "name": "Phase III Dose per Fraction",
+    "n": "1521"
+  },
+  {
+    "id": "phase3NumberOfFractions",
+    "p": "Tumor",
+    "name": "Phase III Number of Fractions",
+    "n": "1523"
+  },
+  {
+    "id": "phase3RadiationExternalBeamTech",
+    "p": "Tumor",
+    "name": "Phase III Radiation External Beam Planning Tech",
+    "n": "1522"
+  },
+  {
+    "id": "phase3RadiationPrimaryTxVolume",
+    "p": "Tumor",
+    "name": "Phase III Radiation Primary Treatment Volume",
+    "n": "1524"
+  },
+  {
+    "id": "phase3RadiationToDrainingLN",
+    "p": "Tumor",
+    "name": "Phase III Radiation to Draining Lymph Nodes",
+    "n": "1525"
+  },
+  {
+    "id": "phase3RadiationTreatmentModality",
+    "p": "Tumor",
+    "name": "Phase III Radiation Treatment Modality",
+    "n": "1526"
+  },
+  {
+    "id": "phase3TotalDose",
+    "p": "Tumor",
+    "name": "Phase III Total Dose",
+    "n": "1527"
+  },
+  {
+    "id": "physician3",
+    "p": "Tumor",
+    "name": "Physician 3",
+    "n": "2490"
+  },
+  {
+    "id": "physician4",
+    "p": "Tumor",
+    "name": "Physician 4",
+    "n": "2500"
+  },
+  {
+    "id": "physicianFollowUp",
+    "p": "Tumor",
+    "name": "Physician--Follow-Up",
+    "n": "2470"
+  },
+  {
+    "id": "physicianManaging",
+    "p": "Tumor",
+    "name": "Physician--Managing",
+    "n": "2460"
+  },
+  {
+    "id": "physicianPrimarySurg",
+    "p": "Tumor",
+    "name": "Physician--Primary Surg",
+    "n": "2480"
+  },
+  {
+    "id": "placeOfDeathCountry",
+    "p": "Patient",
+    "name": "Place of Death--Country",
+    "n": "1944"
+  },
+  {
+    "id": "placeOfDeathState",
+    "p": "Patient",
+    "name": "Place of Death--State",
+    "n": "1942"
+  },
+  {
+    "id": "pleuralEffusion",
+    "p": "Tumor",
+    "name": "Pleural Effusion",
+    "n": "3913"
+  },
+  {
+    "id": "pretextClinicalStaging",
+    "p": "Tumor",
+    "name": "Pretext Clinical Staging",
+    "n": "1192"
+  },
+  {
+    "id": "primaryPayerAtDx",
+    "p": "Tumor",
+    "name": "Primary Payer at DX",
+    "n": "630"
+  },
+  {
+    "id": "primarySclerosingCholangitis",
+    "p": "Tumor",
+    "name": "Primary Sclerosing Cholangitis",
+    "n": "3917"
+  },
+  {
+    "id": "primarySite",
+    "p": "Tumor",
+    "name": "Primary Site",
+    "n": "400"
+  },
+  {
+    "id": "profoundImmuneSuppression",
+    "p": "Tumor",
+    "name": "Profound Immune Suppression",
+    "n": "3918"
+  },
+  {
+    "id": "progesteroneRecepPrcntPosOrRange",
+    "p": "Tumor",
+    "name": "Progesterone Receptor Percent Positive or Range",
+    "n": "3914"
+  },
+  {
+    "id": "progesteroneRecepSummary",
+    "p": "Tumor",
+    "name": "Progesterone Receptor Summary",
+    "n": "3915"
+  },
+  {
+    "id": "progesteroneRecepTotalAllredScor",
+    "p": "Tumor",
+    "name": "Progesterone Receptor Total Allred Score",
+    "n": "3916"
+  },
+  {
+    "id": "prostatePathologicalExtension",
+    "p": "Tumor",
+    "name": "EOD Prostate Pathologic Extension",
+    "n": "3919"
+  },
+  {
+    "id": "psaLabValue",
+    "p": "Tumor",
+    "name": "PSA (Prostatic Specific Antigen) Lab Value",
+    "n": "3920"
+  },
+  {
+    "id": "ptld",
+    "p": "Tumor",
+    "name": "Post Transplant Lymphoproliferative Disorder-PTLD",
+    "n": "1172"
+  },
+  {
+    "id": "race1",
+    "p": "Patient",
+    "name": "Race 1",
+    "n": "160"
+  },
+  {
+    "id": "race2",
+    "p": "Patient",
+    "name": "Race 2",
+    "n": "161"
+  },
+  {
+    "id": "race3",
+    "p": "Patient",
+    "name": "Race 3",
+    "n": "162"
+  },
+  {
+    "id": "race4",
+    "p": "Patient",
+    "name": "Race 4",
+    "n": "163"
+  },
+  {
+    "id": "race5",
+    "p": "Patient",
+    "name": "Race 5",
+    "n": "164"
+  },
+  {
+    "id": "raceNapiia",
+    "p": "Patient",
+    "name": "Race--NAPIIA(derived API)",
+    "n": "193"
+  },
+  {
+    "id": "radLocationOfRx",
+    "p": "Tumor",
+    "name": "Rad--Location of RX",
+    "n": "1550"
+  },
+  {
+    "id": "radRegionalRxModality",
+    "p": "Tumor",
+    "name": "Rad--Regional RX Modality",
+    "n": "1570"
+  },
+  {
+    "id": "radiationTxDiscontinuedEarly",
+    "p": "Tumor",
+    "name": "Radiation Treatment Discontinued Early",
+    "n": "1531"
+  },
+  {
+    "id": "readmSameHosp30Days",
+    "p": "Tumor",
+    "name": "Readm Same Hosp 30 Days",
+    "n": "3190"
+  },
+  {
+    "id": "reasonForNoRadiation",
+    "p": "Tumor",
+    "name": "Reason for No Radiation",
+    "n": "1430"
+  },
+  {
+    "id": "reasonForNoSurgery",
+    "p": "Tumor",
+    "name": "Reason for No Surgery",
+    "n": "1340"
+  },
+  {
+    "id": "recordNumberRecode",
+    "p": "Tumor",
+    "name": "Record Number Recode",
+    "n": "1775"
+  },
+  {
+    "id": "recordType",
+    "p": "NaaccrData",
+    "name": "Record Type",
+    "n": "10"
+  },
+  {
+    "id": "recurrenceDate1st",
+    "p": "Tumor",
+    "name": "Recurrence Date--1st",
+    "n": "1860"
+  },
+  {
+    "id": "recurrenceType1st",
+    "p": "Tumor",
+    "name": "Recurrence Type--1st",
+    "n": "1880"
+  },
+  {
+    "id": "regionalNodesExamined",
+    "p": "Tumor",
+    "name": "Regional Nodes Examined",
+    "n": "830"
+  },
+  {
+    "id": "regionalNodesPositive",
+    "p": "Tumor",
+    "name": "Regional Nodes Positive",
+    "n": "820"
+  },
+  {
+    "id": "registryId",
+    "p": "NaaccrData",
+    "name": "Registry ID",
+    "n": "40"
+  },
+  {
+    "id": "registryType",
+    "p": "NaaccrData",
+    "name": "Registry Type",
+    "n": "30"
+  },
+  {
+    "id": "reportingFacility",
+    "p": "Tumor",
+    "name": "Reporting Facility",
+    "n": "540"
+  },
+  {
+    "id": "reportingFacilityRestrictionFlag",
+    "p": "Tumor",
+    "name": "Reporting Facility Restriction Flag",
+    "n": "1856"
+  },
+  {
+    "id": "residualCancerBurdenClass",
+    "p": "Tumor",
+    "name": "Residual Cancer Burden Class",
+    "n": "1179"
+  },
+  {
+    "id": "residualCancerBurdenRCB",
+    "p": "Tumor",
+    "name": "Residual Cancer Burden (RCB)",
+    "n": "1178"
+  },
+  {
+    "id": "residualTumVolPostCytoreduction",
+    "p": "Tumor",
+    "name": "Residual Tumor Volume Post Cytoreduction",
+    "n": "3921"
+  },
+  {
+    "id": "responseToNeoadjuvantTherapy",
+    "p": "Tumor",
+    "name": "Response to Neoadjuvant Therapy",
+    "n": "3922"
+  },
+  {
+    "id": "ruca2000",
+    "p": "Tumor",
+    "name": "RUCA 2000",
+    "n": "339"
+  },
+  {
+    "id": "ruca2010",
+    "p": "Tumor",
+    "name": "RUCA 2010",
+    "n": "341"
+  },
+  {
+    "id": "ruca2020",
+    "p": "Tumor",
+    "name": "RUCA 2020",
+    "n": "342"
+  },
+  {
+    "id": "ruralurbanContinuum1993",
+    "p": "Tumor",
+    "name": "RuralUrban Continuum 1993",
+    "n": "3300"
+  },
+  {
+    "id": "ruralurbanContinuum2003",
+    "p": "Tumor",
+    "name": "RuralUrban Continuum 2003",
+    "n": "3310"
+  },
+  {
+    "id": "ruralurbanContinuum2013",
+    "p": "Tumor",
+    "name": "RuralUrban Continuum 2013",
+    "n": "3312"
+  },
+  {
+    "id": "rxCodingSystemCurrent",
+    "p": "Tumor",
+    "name": "RX Coding System--Current",
+    "n": "1460"
+  },
+  {
+    "id": "rxDateBrm",
+    "p": "Tumor",
+    "name": "RX Date BRM",
+    "n": "1240"
+  },
+  {
+    "id": "rxDateChemo",
+    "p": "Tumor",
+    "name": "RX Date Chemo",
+    "n": "1220"
+  },
+  {
+    "id": "rxDateDxStgProc",
+    "p": "Tumor",
+    "name": "RX Date DX/Stg Proc",
+    "n": "1280"
+  },
+  {
+    "id": "rxDateHormone",
+    "p": "Tumor",
+    "name": "RX Date Hormone",
+    "n": "1230"
+  },
+  {
+    "id": "rxDateMostDefinSurg",
+    "p": "Tumor",
+    "name": "RX Date Mst Defn Srg",
+    "n": "3170"
+  },
+  {
+    "id": "rxDateOther",
+    "p": "Tumor",
+    "name": "RX Date Other",
+    "n": "1250"
+  },
+  {
+    "id": "rxDateRadiation",
+    "p": "Tumor",
+    "name": "RX Date Radiation",
+    "n": "1210"
+  },
+  {
+    "id": "rxDateRadiationEnded",
+    "p": "Tumor",
+    "name": "RX Date Rad Ended",
+    "n": "3220"
+  },
+  {
+    "id": "rxDateSurgery",
+    "p": "Tumor",
+    "name": "RX Date Surgery",
+    "n": "1200"
+  },
+  {
+    "id": "rxDateSurgicalDisch",
+    "p": "Tumor",
+    "name": "RX Date Surg Disch",
+    "n": "3180"
+  },
+  {
+    "id": "rxDateSystemic",
+    "p": "Tumor",
+    "name": "RX Date Systemic",
+    "n": "3230"
+  },
+  {
+    "id": "rxHospBrm",
+    "p": "Tumor",
+    "name": "RX Hosp--BRM",
+    "n": "720"
+  },
+  {
+    "id": "rxHospChemo",
+    "p": "Tumor",
+    "name": "RX Hosp--Chemo",
+    "n": "700"
+  },
+  {
+    "id": "rxHospDxStgProc",
+    "p": "Tumor",
+    "name": "RX Hosp--DX/Stg Proc",
+    "n": "740"
+  },
+  {
+    "id": "rxHospHormone",
+    "p": "Tumor",
+    "name": "RX Hosp--Hormone",
+    "n": "710"
+  },
+  {
+    "id": "rxHospOther",
+    "p": "Tumor",
+    "name": "RX Hosp--Other",
+    "n": "730"
+  },
+  {
+    "id": "rxHospPalliativeProc",
+    "p": "Tumor",
+    "name": "RX Hosp--Palliative Proc",
+    "n": "3280"
+  },
+  {
+    "id": "rxHospRadiation",
+    "p": "Tumor",
+    "name": "RX Hosp--Radiation",
+    "n": "690"
+  },
+  {
+    "id": "rxHospReconBreast",
+    "p": "Tumor",
+    "name": "RX Hosp--Recon Breast",
+    "n": "751"
+  },
+  {
+    "id": "rxHospRegLnRemoved",
+    "p": "Tumor",
+    "name": "RX Hosp--Reg LN Removed",
+    "n": "676"
+  },
+  {
+    "id": "rxHospScopeReg9802",
+    "p": "Tumor",
+    "name": "RX Hosp--Scope Reg 98-02",
+    "n": "747"
+  },
+  {
+    "id": "rxHospScopeRegLnSur",
+    "p": "Tumor",
+    "name": "RX Hosp--Scope Reg LN Sur",
+    "n": "672"
+  },
+  {
+    "id": "rxHospSurgApp2010",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg App 2010",
+    "n": "668"
+  },
+  {
+    "id": "rxHospSurgOth9802",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg Oth 98-02",
+    "n": "748"
+  },
+  {
+    "id": "rxHospSurgOthRegDis",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg Oth Reg/Dis",
+    "n": "674"
+  },
+  {
+    "id": "rxHospSurgPrimSite",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg Prim Site 03-2022",
+    "n": "670"
+  },
+  {
+    "id": "rxHospSurgPrimSite2023",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg Prim Site 2023",
+    "n": "671"
+  },
+  {
+    "id": "rxHospSurgSite9802",
+    "p": "Tumor",
+    "name": "RX Hosp--Surg Site 98-02",
+    "n": "746"
+  },
+  {
+    "id": "rxSummBrm",
+    "p": "Tumor",
+    "name": "RX Summ--BRM",
+    "n": "1410"
+  },
+  {
+    "id": "rxSummChemo",
+    "p": "Tumor",
+    "name": "RX Summ--Chemo",
+    "n": "1390"
+  },
+  {
+    "id": "rxSummDxStgProc",
+    "p": "Tumor",
+    "name": "RX Summ--DX/Stg Proc",
+    "n": "1350"
+  },
+  {
+    "id": "rxSummHormone",
+    "p": "Tumor",
+    "name": "RX Summ--Hormone",
+    "n": "1400"
+  },
+  {
+    "id": "rxSummOther",
+    "p": "Tumor",
+    "name": "RX Summ--Other",
+    "n": "1420"
+  },
+  {
+    "id": "rxSummPalliativeProc",
+    "p": "Tumor",
+    "name": "RX Summ--Palliative Proc",
+    "n": "3270"
+  },
+  {
+    "id": "rxSummRadToCns",
+    "p": "Tumor",
+    "name": "RX Summ--Rad to CNS",
+    "n": "1370"
+  },
+  {
+    "id": "rxSummRadiation",
+    "p": "Tumor",
+    "name": "RX Summ--Radiation",
+    "n": "1360"
+  },
+  {
+    "id": "rxSummReconBreast",
+    "p": "Tumor",
+    "name": "RX Summ--Recon Breast",
+    "n": "1335"
+  },
+  {
+    "id": "rxSummReconstruct1st",
+    "p": "Tumor",
+    "name": "RX Summ--Reconstruct 1st",
+    "n": "1330"
+  },
+  {
+    "id": "rxSummRegLnExamined",
+    "p": "Tumor",
+    "name": "RX Summ--Reg LN Examined",
+    "n": "1296"
+  },
+  {
+    "id": "rxSummScopeReg9802",
+    "p": "Tumor",
+    "name": "RX Summ--Scope Reg 98-02",
+    "n": "1647"
+  },
+  {
+    "id": "rxSummScopeRegLnSur",
+    "p": "Tumor",
+    "name": "RX Summ--Scope Reg LN Sur",
+    "n": "1292"
+  },
+  {
+    "id": "rxSummSurgOth9802",
+    "p": "Tumor",
+    "name": "RX Summ--Surg Oth 98-02",
+    "n": "1648"
+  },
+  {
+    "id": "rxSummSurgOthRegDis",
+    "p": "Tumor",
+    "name": "RX Summ--Surg Oth Reg/Dis",
+    "n": "1294"
+  },
+  {
+    "id": "rxSummSurgPrimSite",
+    "p": "Tumor",
+    "name": "RX Summ--Surg Prim Site 03-2022",
+    "n": "1290"
+  },
+  {
+    "id": "rxSummSurgPrimSite2023",
+    "p": "Tumor",
+    "name": "RX Summ--Surg Prim Site 2023",
+    "n": "1291"
+  },
+  {
+    "id": "rxSummSurgRadSeq",
+    "p": "Tumor",
+    "name": "RX Summ--Surg/Rad Seq",
+    "n": "1380"
+  },
+  {
+    "id": "rxSummSurgSite9802",
+    "p": "Tumor",
+    "name": "RX Summ--Surg Site 98-02",
+    "n": "1646"
+  },
+  {
+    "id": "rxSummSurgeryType",
+    "p": "Tumor",
+    "name": "RX Summ--Surgery Type",
+    "n": "1640"
+  },
+  {
+    "id": "rxSummSurgicalApproch",
+    "p": "Tumor",
+    "name": "RX Summ--Surgical Approch",
+    "n": "1310"
+  },
+  {
+    "id": "rxSummSurgicalMargins",
+    "p": "Tumor",
+    "name": "RX Summ--Surgical Margins",
+    "n": "1320"
+  },
+  {
+    "id": "rxSummSystemicSurSeq",
+    "p": "Tumor",
+    "name": "RX Summ--Systemic/Sur Seq",
+    "n": "1639"
+  },
+  {
+    "id": "rxSummTransplntEndocr",
+    "p": "Tumor",
+    "name": "RX Summ--Transplnt/Endocr",
+    "n": "3250"
+  },
+  {
+    "id": "rxSummTreatmentStatus",
+    "p": "Tumor",
+    "name": "RX Summ--Treatment Status",
+    "n": "1285"
+  },
+  {
+    "id": "rxTextBrm",
+    "p": "Tumor",
+    "name": "RX Text--BRM",
+    "n": "2660"
+  },
+  {
+    "id": "rxTextChemo",
+    "p": "Tumor",
+    "name": "RX Text--Chemo",
+    "n": "2640"
+  },
+  {
+    "id": "rxTextHormone",
+    "p": "Tumor",
+    "name": "RX Text--Hormone",
+    "n": "2650"
+  },
+  {
+    "id": "rxTextOther",
+    "p": "Tumor",
+    "name": "RX Text--Other",
+    "n": "2670"
+  },
+  {
+    "id": "rxTextRadiation",
+    "p": "Tumor",
+    "name": "RX Text--Radiation (Beam)",
+    "n": "2620"
+  },
+  {
+    "id": "rxTextRadiationOther",
+    "p": "Tumor",
+    "name": "RX Text--Radiation Other",
+    "n": "2630"
+  },
+  {
+    "id": "rxTextSurgery",
+    "p": "Tumor",
+    "name": "RX Text--Surgery",
+    "n": "2610"
+  },
+  {
+    "id": "sCategoryClinical",
+    "p": "Tumor",
+    "name": "S Category Clinical",
+    "n": "3923"
+  },
+  {
+    "id": "sCategoryPathological",
+    "p": "Tumor",
+    "name": "S Category Pathological",
+    "n": "3924"
+  },
+  {
+    "id": "sarcomatoidFeatures",
+    "p": "Tumor",
+    "name": "Sarcomatoid Features",
+    "n": "3925"
+  },
+  {
+    "id": "schemaDiscriminator1",
+    "p": "Tumor",
+    "name": "Schema Discriminator 1",
+    "n": "3926"
+  },
+  {
+    "id": "schemaDiscriminator2",
+    "p": "Tumor",
+    "name": "Schema Discriminator 2",
+    "n": "3927"
+  },
+  {
+    "id": "schemaDiscriminator3",
+    "p": "Tumor",
+    "name": "Schema Discriminator 3",
+    "n": "3928"
+  },
+  {
+    "id": "schemaId",
+    "p": "Tumor",
+    "name": "Schema ID",
+    "n": "3800"
+  },
+  {
+    "id": "schemaIdVersionCurrent",
+    "p": "Tumor",
+    "name": "Schema ID Version Current",
+    "n": "2117"
+  },
+  {
+    "id": "schemaIdVersionOriginal",
+    "p": "Tumor",
+    "name": "Schema ID Version Original",
+    "n": "2118"
+  },
+  {
+    "id": "secondaryDiagnosis1",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 1",
+    "n": "3780"
+  },
+  {
+    "id": "secondaryDiagnosis10",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 10",
+    "n": "3798"
+  },
+  {
+    "id": "secondaryDiagnosis2",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 2",
+    "n": "3782"
+  },
+  {
+    "id": "secondaryDiagnosis3",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 3",
+    "n": "3784"
+  },
+  {
+    "id": "secondaryDiagnosis4",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 4",
+    "n": "3786"
+  },
+  {
+    "id": "secondaryDiagnosis5",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 5",
+    "n": "3788"
+  },
+  {
+    "id": "secondaryDiagnosis6",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 6",
+    "n": "3790"
+  },
+  {
+    "id": "secondaryDiagnosis7",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 7",
+    "n": "3792"
+  },
+  {
+    "id": "secondaryDiagnosis8",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 8",
+    "n": "3794"
+  },
+  {
+    "id": "secondaryDiagnosis9",
+    "p": "Tumor",
+    "name": "Secondary Diagnosis 9",
+    "n": "3796"
+  },
+  {
+    "id": "seerCauseSpecificCod",
+    "p": "Tumor",
+    "name": "SEER Cause Specific COD",
+    "n": "1914"
+  },
+  {
+    "id": "seerOtherCod",
+    "p": "Tumor",
+    "name": "SEER Other COD",
+    "n": "1915"
+  },
+  {
+    "id": "seerSiteSpecificFact1",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 1",
+    "n": "3700"
+  },
+  {
+    "id": "seerSiteSpecificFact2",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 2",
+    "n": "3702"
+  },
+  {
+    "id": "seerSiteSpecificFact3",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 3",
+    "n": "3704"
+  },
+  {
+    "id": "seerSiteSpecificFact4",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 4",
+    "n": "3706"
+  },
+  {
+    "id": "seerSiteSpecificFact5",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 5",
+    "n": "3708"
+  },
+  {
+    "id": "seerSiteSpecificFact6",
+    "p": "Tumor",
+    "name": "SEER Site-Specific Fact 6",
+    "n": "3710"
+  },
+  {
+    "id": "seerSummaryStage1977",
+    "p": "Tumor",
+    "name": "SEER Summary Stage 1977",
+    "n": "760"
+  },
+  {
+    "id": "seerSummaryStage2000",
+    "p": "Tumor",
+    "name": "SEER Summary Stage 2000",
+    "n": "759"
+  },
+  {
+    "id": "sentinelLymphNodesExamined",
+    "p": "Tumor",
+    "name": "Sentinel Lymph Nodes Examined",
+    "n": "834"
+  },
+  {
+    "id": "sentinelLymphNodesPositive",
+    "p": "Tumor",
+    "name": "Sentinel Lymph Nodes Positive",
+    "n": "835"
+  },
+  {
+    "id": "separateTumorNodules",
+    "p": "Tumor",
+    "name": "Separate Tumor Nodules",
+    "n": "3929"
+  },
+  {
+    "id": "sequenceNumberCentral",
+    "p": "Tumor",
+    "name": "Sequence Number--Central",
+    "n": "380"
+  },
+  {
+    "id": "sequenceNumberHospital",
+    "p": "Tumor",
+    "name": "Sequence Number--Hospital",
+    "n": "560"
+  },
+  {
+    "id": "serumAlbuminPretreatmentLevel",
+    "p": "Tumor",
+    "name": "Serum Albumin Pretreatment Level",
+    "n": "3930"
+  },
+  {
+    "id": "serumBeta2MicroglobulinPretxLvl",
+    "p": "Tumor",
+    "name": "Serum Beta-2 Microglobulin Pretreatment Level",
+    "n": "3931"
+  },
+  {
+    "id": "sexAssignedAtBirth",
+    "p": "Patient",
+    "name": "Sex Assigned at Birth",
+    "n": "225"
+  },
+  {
+    "id": "siteCodingSysCurrent",
+    "p": "Tumor",
+    "name": "Site Coding Sys--Current",
+    "n": "450"
+  },
+  {
+    "id": "siteCodingSysOriginal",
+    "p": "Tumor",
+    "name": "Site Coding Sys--Original",
+    "n": "460"
+  },
+  {
+    "id": "siteIcdO1",
+    "p": "Tumor",
+    "name": "Site (73-91) ICD-O-1",
+    "n": "1960"
+  },
+  {
+    "id": "socialSecurityNumber",
+    "p": "Patient",
+    "name": "Social Security Number",
+    "n": "2320"
+  },
+  {
+    "id": "spanishHispanicOrigin",
+    "p": "Patient",
+    "name": "Spanish/Hispanic Origin",
+    "n": "190"
+  },
+  {
+    "id": "spreadThroughAirSpacesStas",
+    "p": "Tumor",
+    "name": "Spread Through Air Spaces (STAS)",
+    "n": "1176"
+  },
+  {
+    "id": "stateAtDxGeocode19708090",
+    "p": "Tumor",
+    "name": "State at DX Geocode 1970/80/90",
+    "n": "81"
+  },
+  {
+    "id": "stateAtDxGeocode2000",
+    "p": "Tumor",
+    "name": "State at DX Geocode 2000",
+    "n": "82"
+  },
+  {
+    "id": "stateAtDxGeocode2010",
+    "p": "Tumor",
+    "name": "State at DX Geocode 2010",
+    "n": "83"
+  },
+  {
+    "id": "stateAtDxGeocode2020",
+    "p": "Tumor",
+    "name": "State at DX Geocode 2020",
+    "n": "84"
+  },
+  {
+    "id": "subsqRx2ndCourseBrm",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course BRM",
+    "n": "1675"
+  },
+  {
+    "id": "subsqRx2ndCourseChemo",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Chemo",
+    "n": "1673"
+  },
+  {
+    "id": "subsqRx2ndCourseDate",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Date",
+    "n": "1660"
+  },
+  {
+    "id": "subsqRx2ndCourseHorm",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Horm",
+    "n": "1674"
+  },
+  {
+    "id": "subsqRx2ndCourseOth",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Oth",
+    "n": "1676"
+  },
+  {
+    "id": "subsqRx2ndCourseRad",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Rad",
+    "n": "1672"
+  },
+  {
+    "id": "subsqRx2ndCourseSurg",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd Course Surg",
+    "n": "1671"
+  },
+  {
+    "id": "subsqRx2ndRegLnRem",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd--Reg LN Rem",
+    "n": "1679"
+  },
+  {
+    "id": "subsqRx2ndScopeLnSu",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd--Scope LN SU",
+    "n": "1677"
+  },
+  {
+    "id": "subsqRx2ndSurgOth",
+    "p": "Tumor",
+    "name": "Subsq RX 2nd--Surg Oth",
+    "n": "1678"
+  },
+  {
+    "id": "subsqRx3rdCourseBrm",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course BRM",
+    "n": "1695"
+  },
+  {
+    "id": "subsqRx3rdCourseChemo",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Chemo",
+    "n": "1693"
+  },
+  {
+    "id": "subsqRx3rdCourseDate",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Date",
+    "n": "1680"
+  },
+  {
+    "id": "subsqRx3rdCourseHorm",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Horm",
+    "n": "1694"
+  },
+  {
+    "id": "subsqRx3rdCourseOth",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Oth",
+    "n": "1696"
+  },
+  {
+    "id": "subsqRx3rdCourseRad",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Rad",
+    "n": "1692"
+  },
+  {
+    "id": "subsqRx3rdCourseSurg",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd Course Surg",
+    "n": "1691"
+  },
+  {
+    "id": "subsqRx3rdRegLnRem",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd--Reg LN Rem",
+    "n": "1699"
+  },
+  {
+    "id": "subsqRx3rdScopeLnSu",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd--Scope LN Su",
+    "n": "1697"
+  },
+  {
+    "id": "subsqRx3rdSurgOth",
+    "p": "Tumor",
+    "name": "Subsq RX 3rd--Surg Oth",
+    "n": "1698"
+  },
+  {
+    "id": "subsqRx4thCourseBrm",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course BRM",
+    "n": "1715"
+  },
+  {
+    "id": "subsqRx4thCourseChemo",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Chemo",
+    "n": "1713"
+  },
+  {
+    "id": "subsqRx4thCourseDate",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Date",
+    "n": "1700"
+  },
+  {
+    "id": "subsqRx4thCourseHorm",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Horm",
+    "n": "1714"
+  },
+  {
+    "id": "subsqRx4thCourseOth",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Oth",
+    "n": "1716"
+  },
+  {
+    "id": "subsqRx4thCourseRad",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Rad",
+    "n": "1712"
+  },
+  {
+    "id": "subsqRx4thCourseSurg",
+    "p": "Tumor",
+    "name": "Subsq RX 4th Course Surg",
+    "n": "1711"
+  },
+  {
+    "id": "subsqRx4thRegLnRem",
+    "p": "Tumor",
+    "name": "Subsq RX 4th--Reg LN Rem",
+    "n": "1719"
+  },
+  {
+    "id": "subsqRx4thScopeLnSu",
+    "p": "Tumor",
+    "name": "Subsq RX 4th--Scope LN Su",
+    "n": "1717"
+  },
+  {
+    "id": "subsqRx4thSurgOth",
+    "p": "Tumor",
+    "name": "Subsq RX 4th--Surg Oth",
+    "n": "1718"
+  },
+  {
+    "id": "summaryStage2018",
+    "p": "Tumor",
+    "name": "Summary Stage 2018",
+    "n": "764"
+  },
+  {
+    "id": "survDateActiveFollowup",
+    "p": "Tumor",
+    "name": "Surv-Date Active Followup",
+    "n": "1782"
+  },
+  {
+    "id": "survDateDxRecode",
+    "p": "Tumor",
+    "name": "Surv-Date DX Recode",
+    "n": "1788"
+  },
+  {
+    "id": "survDatePresumedAlive",
+    "p": "Tumor",
+    "name": "Surv-Date Presumed Alive",
+    "n": "1785"
+  },
+  {
+    "id": "survFlagActiveFollowup",
+    "p": "Tumor",
+    "name": "Surv-Flag Active Followup",
+    "n": "1783"
+  },
+  {
+    "id": "survFlagPresumedAlive",
+    "p": "Tumor",
+    "name": "Surv-Flag Presumed Alive",
+    "n": "1786"
+  },
+  {
+    "id": "survMosActiveFollowup",
+    "p": "Tumor",
+    "name": "Surv-Mos Active Followup",
+    "n": "1784"
+  },
+  {
+    "id": "survMosPresumedAlive",
+    "p": "Tumor",
+    "name": "Surv-Mos Presumed Alive",
+    "n": "1787"
+  },
+  {
+    "id": "telephone",
+    "p": "Patient",
+    "name": "Telephone",
+    "n": "2360"
+  },
+  {
+    "id": "textDxProcLabTests",
+    "p": "Tumor",
+    "name": "Text--DX Proc--Lab Tests",
+    "n": "2550"
+  },
+  {
+    "id": "textDxProcOp",
+    "p": "Tumor",
+    "name": "Text--DX Proc--Op",
+    "n": "2560"
+  },
+  {
+    "id": "textDxProcPath",
+    "p": "Tumor",
+    "name": "Text--DX Proc--Path",
+    "n": "2570"
+  },
+  {
+    "id": "textDxProcPe",
+    "p": "Tumor",
+    "name": "Text--DX Proc--PE",
+    "n": "2520"
+  },
+  {
+    "id": "textDxProcScopes",
+    "p": "Tumor",
+    "name": "Text--DX Proc--Scopes",
+    "n": "2540"
+  },
+  {
+    "id": "textDxProcXRayScan",
+    "p": "Tumor",
+    "name": "Text--DX Proc--X-ray/Scan",
+    "n": "2530"
+  },
+  {
+    "id": "textHistologyTitle",
+    "p": "Tumor",
+    "name": "Text--Histology Title",
+    "n": "2590"
+  },
+  {
+    "id": "textPlaceOfDiagnosis",
+    "p": "Tumor",
+    "name": "Text--Place of Diagnosis",
+    "n": "2690"
+  },
+  {
+    "id": "textPrimarySiteTitle",
+    "p": "Tumor",
+    "name": "Text--Primary Site Title",
+    "n": "2580"
+  },
+  {
+    "id": "textRemarks",
+    "p": "Tumor",
+    "name": "Text--Remarks",
+    "n": "2680"
+  },
+  {
+    "id": "textStaging",
+    "p": "Tumor",
+    "name": "Text--Staging",
+    "n": "2600"
+  },
+  {
+    "id": "textUsualIndustry",
+    "p": "Tumor",
+    "name": "Text--Usual Industry",
+    "n": "320"
+  },
+  {
+    "id": "textUsualOccupation",
+    "p": "Tumor",
+    "name": "Text--Usual Occupation",
+    "n": "310"
+  },
+  {
+    "id": "thrombocytopenia",
+    "p": "Tumor",
+    "name": "Thrombocytopenia",
+    "n": "3933"
+  },
+  {
+    "id": "tnmClinDescriptor",
+    "p": "Tumor",
+    "name": "TNM Clin Descriptor",
+    "n": "980"
+  },
+  {
+    "id": "tnmClinM",
+    "p": "Tumor",
+    "name": "TNM Clin M",
+    "n": "960"
+  },
+  {
+    "id": "tnmClinN",
+    "p": "Tumor",
+    "name": "TNM Clin N",
+    "n": "950"
+  },
+  {
+    "id": "tnmClinStageGroup",
+    "p": "Tumor",
+    "name": "TNM Clin Stage Group",
+    "n": "970"
+  },
+  {
+    "id": "tnmClinStagedBy",
+    "p": "Tumor",
+    "name": "TNM Clin Staged By",
+    "n": "990"
+  },
+  {
+    "id": "tnmClinT",
+    "p": "Tumor",
+    "name": "TNM Clin T",
+    "n": "940"
+  },
+  {
+    "id": "tnmEditionNumber",
+    "p": "Tumor",
+    "name": "TNM Edition Number",
+    "n": "1060"
+  },
+  {
+    "id": "tnmPathDescriptor",
+    "p": "Tumor",
+    "name": "TNM Path Descriptor",
+    "n": "920"
+  },
+  {
+    "id": "tnmPathM",
+    "p": "Tumor",
+    "name": "TNM Path M",
+    "n": "900"
+  },
+  {
+    "id": "tnmPathN",
+    "p": "Tumor",
+    "name": "TNM Path N",
+    "n": "890"
+  },
+  {
+    "id": "tnmPathStageGroup",
+    "p": "Tumor",
+    "name": "TNM Path Stage Group",
+    "n": "910"
+  },
+  {
+    "id": "tnmPathStagedBy",
+    "p": "Tumor",
+    "name": "TNM Path Staged By",
+    "n": "930"
+  },
+  {
+    "id": "tnmPathT",
+    "p": "Tumor",
+    "name": "TNM Path T",
+    "n": "880"
+  },
+  {
+    "id": "tobaccoUseSmokingStatus",
+    "p": "Tumor",
+    "name": "Tobacco Use Smoking Status",
+    "n": "344"
+  },
+  {
+    "id": "torontoM",
+    "p": "Tumor",
+    "name": "Toronto M",
+    "n": "1148"
+  },
+  {
+    "id": "torontoN",
+    "p": "Tumor",
+    "name": "Toronto N",
+    "n": "1147"
+  },
+  {
+    "id": "torontoStageGroup",
+    "p": "Tumor",
+    "name": "Toronto Stage Group",
+    "n": "1149"
+  },
+  {
+    "id": "torontoT",
+    "p": "Tumor",
+    "name": "Toronto T",
+    "n": "1146"
+  },
+  {
+    "id": "torontoVersionNumber",
+    "p": "Tumor",
+    "name": "Toronto Version Number",
+    "n": "1135"
+  },
+  {
+    "id": "totalDose",
+    "p": "Tumor",
+    "name": "Total Dose",
+    "n": "1533"
+  },
+  {
+    "id": "tumorDeposits",
+    "p": "Tumor",
+    "name": "Tumor Deposits",
+    "n": "3934"
+  },
+  {
+    "id": "tumorGrowthPattern",
+    "p": "Tumor",
+    "name": "Tumor Growth Pattern",
+    "n": "3935"
+  },
+  {
+    "id": "tumorMarker1",
+    "p": "Tumor",
+    "name": "Tumor Marker 1",
+    "n": "1150"
+  },
+  {
+    "id": "tumorMarker2",
+    "p": "Tumor",
+    "name": "Tumor Marker 2",
+    "n": "1160"
+  },
+  {
+    "id": "tumorMarker3",
+    "p": "Tumor",
+    "name": "Tumor Marker 3",
+    "n": "1170"
+  },
+  {
+    "id": "tumorRecordNumber",
+    "p": "Tumor",
+    "name": "Tumor Record Number",
+    "n": "60"
+  },
+  {
+    "id": "tumorSizeClinical",
+    "p": "Tumor",
+    "name": "Tumor Size Clinical",
+    "n": "752"
+  },
+  {
+    "id": "tumorSizePathologic",
+    "p": "Tumor",
+    "name": "Tumor Size Pathologic",
+    "n": "754"
+  },
+  {
+    "id": "tumorSizeSummary",
+    "p": "Tumor",
+    "name": "Tumor Size Summary",
+    "n": "756"
+  },
+  {
+    "id": "typeOfReportingSource",
+    "p": "Tumor",
+    "name": "Type of Reporting Source",
+    "n": "500"
+  },
+  {
+    "id": "uihoFacility",
+    "p": "Tumor",
+    "name": "Urban Indian Organization (UIO) Service Area",
+    "n": "285"
+  },
+  {
+    "id": "ulceration",
+    "p": "Tumor",
+    "name": "Ulceration",
+    "n": "3936"
+  },
+  {
+    "id": "unusualFollowUpMethod",
+    "p": "Tumor",
+    "name": "Unusual Follow-Up Method",
+    "n": "1850"
+  },
+  {
+    "id": "urbanIndianHealthOrganization",
+    "p": "Tumor",
+    "name": "Urban Indian Organization (UIO)",
+    "n": "284"
+  },
+  {
+    "id": "uric2000",
+    "p": "Tumor",
+    "name": "URIC 2000",
+    "n": "345"
+  },
+  {
+    "id": "uric2010",
+    "p": "Tumor",
+    "name": "URIC 2010",
+    "n": "346"
+  },
+  {
+    "id": "uric2020",
+    "p": "Tumor",
+    "name": "URIC 2020",
+    "n": "347"
+  },
+  {
+    "id": "vendorName",
+    "p": "Tumor",
+    "name": "Vendor Name",
+    "n": "2170"
+  },
+  {
+    "id": "visceralParietalPleuralInvasion",
+    "p": "Tumor",
+    "name": "Visceral and Parietal Pleural Invasion",
+    "n": "3937"
+  },
+  {
+    "id": "vitalStatus",
+    "p": "Patient",
+    "name": "Vital Status",
+    "n": "1760"
+  },
+  {
+    "id": "vitalStatusRecode",
+    "p": "Patient",
+    "name": "Vital Status Recode",
+    "n": "1762"
+  },
+  {
+    "id": "whiteBloodCellCount",
+    "p": "Tumor",
+    "name": "White Blood Cell Count",
+    "n": "1184"
+  }
+]
