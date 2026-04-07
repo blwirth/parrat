@@ -45,7 +45,9 @@ public partial class MainForm : ParratFormBase
         ISplitFileService splitFileService,
         IConcatenateService concatenateService,
         IConfigService configService,
-        INaaccrDictionary naaccrDictionary)
+        INaaccrDictionary naaccrDictionary,
+        ICsvParserService csvParserService,
+        ICsvImportService csvImportService)
     {
         _state = state;
         _menuBuilder = menuBuilder;
@@ -71,6 +73,8 @@ public partial class MainForm : ParratFormBase
         _concatenateService = concatenateService;
         _configService = configService;
         _naaccrDictionary = naaccrDictionary;
+        _csvParserService = csvParserService;
+        _csvImportService = csvImportService;
 
         InitializeComponent();
         InitializeMenu();

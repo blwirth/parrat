@@ -74,6 +74,8 @@ internal static class Program
         services.AddSingleton<IFacilityAssignmentService, FacilityAssignmentService>();
         services.AddSingleton<IPidAssignmentService, PidAssignmentService>();
         services.AddSingleton<IExportService, ExportService>();
+        services.AddSingleton<ICsvParserService, CsvParserService>();
+        services.AddSingleton<ICsvImportService, CsvImportService>();
         services.AddSingleton<IGridSettingsService, GridSettingsService>();
         services.AddSingleton<INoahService, NoahService>();
         services.AddSingleton<IRemoveVariableService, RemoveVariableService>();

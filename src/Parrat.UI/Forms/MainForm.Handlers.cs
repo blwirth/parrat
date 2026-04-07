@@ -32,6 +32,8 @@ public partial class MainForm
     private IConcatenateService _concatenateService = null!;
     private IConfigService _configService = null!;
     private INaaccrDictionary _naaccrDictionary = null!;
+    private ICsvParserService _csvParserService = null!;
+    private ICsvImportService _csvImportService = null!;
 
     /// <summary>
     /// Wires all menu item Click handlers to the appropriate handler methods.
@@ -51,6 +53,7 @@ public partial class MainForm
         mb.MenuItemConcatenateTxt.Click += (s, e) => OnConcatenateTxt();
         mb.MnuSplit.Click += (s, e) => OnSplitFile();
         mb.MnuConvertTxt.Click += (s, e) => OnConvertTxt();
+        mb.MnuImportCsv.Click += (s, e) => OnImportCsv();
 
         // ── Edit ──────────────────────────────────────────────────────────
         mb.MnuAssign.Click += (s, e) => OnAssignUnified();
@@ -743,6 +746,102 @@ public partial class MainForm
             _logger.LogError("Text converter failed", "CONVERT", ex);
             MessageBox.Show($"Error during conversion: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>Import CSV — parse CSV, map columns to NAACCR fields, generate XML.</summary>
+    private void OnImportCsv()
+    {
+        try
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*",
+                Title = "Select CSV File to Import"
+            };
+
+            if (ofd.ShowDialog(this) != DialogResult.OK) return;
+
+            SetStatusText("Parsing CSV...");
+            Refresh();
+
+            var csvData = _csvParserService.Parse(ofd.FileName);
+
+            if (csvData.ColumnCount == 0)
+            {
+                MessageBox.Show("The CSV file has no columns.", "Import CSV",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                SetStatusText("Ready");
+                return;
+            }
+
+            if (csvData.RowCount == 0)
+            {
+                MessageBox.Show("The CSV file has headers but no data rows.", "Import CSV",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                SetStatusText("Ready");
+                return;
+            }
+
+            // Auto-match columns
+            var mappings = _csvImportService.AutoMatch(csvData.Headers);
+
+            // Show mapping form
+            using var importForm = new CsvImportForm(_naaccrDictionary, csvData, mappings);
+            if (importForm.ShowDialog(this) != DialogResult.OK) return;
+
+            var finalMappings = importForm.ResultMappings;
+            var recordType = importForm.RecordType;
+
+            // Check that at least one column is mapped
+            if (finalMappings.All(m => m.IsSkipped))
+            {
+                MessageBox.Show("No columns are mapped. Import cancelled.", "Import CSV",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            SetStatusText("Generating NAACCR XML...");
+            Refresh();
+
+            var xmlDoc = _csvImportService.GenerateNaaccrXml(csvData, finalMappings, recordType);
+
+            // Save
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "NAACCR XML (*.xml)|*.xml|All files (*.*)|*.*",
+                Title = "Save Generated NAACCR XML",
+                FileName = Path.GetFileNameWithoutExtension(ofd.FileName) + "_naaccr.xml",
+                InitialDirectory = Path.GetDirectoryName(ofd.FileName) ?? ""
+            };
+
+            if (sfd.ShowDialog(this) != DialogResult.OK) return;
+
+            // Format and save
+            var formattedXml = Parrat.Core.Helpers.XmlFormattingHelper.FormatXml(xmlDoc.OuterXml);
+            File.WriteAllText(sfd.FileName, formattedXml, System.Text.Encoding.UTF8);
+
+            _logger.Log("INFO", $"CSV imported: {csvData.RowCount} rows → {sfd.FileName}", "IMPORT");
+
+            var openResult = MessageBox.Show(
+                $"NAACCR XML saved to:\n{sfd.FileName}\n\nOpen in PARRAT?",
+                "Import Complete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (openResult == DialogResult.Yes)
+            {
+                _fileHandlers.OpenFile(sfd.FileName, this);
+            }
+
+            SetStatusText("Ready");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("CSV import failed", "IMPORT", ex);
+            MessageBox.Show($"Error importing CSV: {ex.Message}", "Import Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatusText("Error importing CSV");
         }
     }
 

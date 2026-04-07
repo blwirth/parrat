@@ -27,6 +27,7 @@ public class MenuBuilder
     public ToolStripMenuItem MnuConcatenate { get; private set; } = null!;
     public ToolStripMenuItem MnuSplit { get; private set; } = null!;
     public ToolStripMenuItem MnuConvertTxt { get; private set; } = null!;
+    public ToolStripMenuItem MnuImportCsv { get; private set; } = null!;
     public ToolStripMenuItem MnuRestart { get; private set; } = null!;
 
     // Concatenate submenu
@@ -163,6 +164,10 @@ public class MenuBuilder
         MnuConvertTxt = new ToolStripMenuItem("Convert .txt");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertTxt);
+
+        MnuImportCsv = new ToolStripMenuItem("Import CSV...");
+        // Click handler wired by MainForm.Handlers.cs
+        mnuFile.DropDownItems.Add(MnuImportCsv);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
