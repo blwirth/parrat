@@ -34,6 +34,7 @@ public partial class MainForm
     private INaaccrDictionary _naaccrDictionary = null!;
     private ICsvParserService _csvParserService = null!;
     private ICsvImportService _csvImportService = null!;
+    private IXlsxParserService _xlsxParserService = null!;
 
     /// <summary>
     /// Wires all menu item Click handlers to the appropriate handler methods.
@@ -756,16 +757,19 @@ public partial class MainForm
         {
             using var ofd = new OpenFileDialog
             {
-                Filter = "CSV Files (*.csv)|*.csv|All files (*.*)|*.*",
-                Title = "Select CSV File to Import"
+                Filter = "Spreadsheet Files (*.csv;*.xlsx)|*.csv;*.xlsx|CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                Title = "Select CSV or Excel File to Import"
             };
 
             if (ofd.ShowDialog(this) != DialogResult.OK) return;
 
-            SetStatusText("Parsing CSV...");
+            SetStatusText("Parsing file...");
             Refresh();
 
-            var csvData = _csvParserService.Parse(ofd.FileName);
+            var extension = Path.GetExtension(ofd.FileName).ToLowerInvariant();
+            var csvData = extension == ".xlsx"
+                ? _xlsxParserService.Parse(ofd.FileName)
+                : _csvParserService.Parse(ofd.FileName);
 
             if (csvData.ColumnCount == 0)
             {

@@ -47,7 +47,8 @@ public partial class MainForm : ParratFormBase
         IConfigService configService,
         INaaccrDictionary naaccrDictionary,
         ICsvParserService csvParserService,
-        ICsvImportService csvImportService)
+        ICsvImportService csvImportService,
+        IXlsxParserService xlsxParserService)
     {
         _state = state;
         _menuBuilder = menuBuilder;
@@ -75,6 +76,7 @@ public partial class MainForm : ParratFormBase
         _naaccrDictionary = naaccrDictionary;
         _csvParserService = csvParserService;
         _csvImportService = csvImportService;
+        _xlsxParserService = xlsxParserService;
 
         InitializeComponent();
         InitializeMenu();

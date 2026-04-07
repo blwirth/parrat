@@ -165,7 +165,7 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertTxt);
 
-        MnuImportCsv = new ToolStripMenuItem("Import CSV...");
+        MnuImportCsv = new ToolStripMenuItem("Import CSV/Excel...");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuImportCsv);
 
