@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml;
 using Parrat.Core.Helpers;
 using Parrat.Core.Models;
@@ -379,6 +380,270 @@ public class CsvImportServiceTests : IDisposable
 
         var doc = _service.GenerateNaaccrXml(csv, mappings, recordType: "A");
         Assert.Equal("A", doc.DocumentElement!.GetAttribute("recordType"));
+    }
+
+    // ── Incompatible Mapping Tests ─────────────────────────────────────
+
+    [Fact]
+    public void GenerateNaaccrXml_IncompatibleMappings_AreExcluded()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast", "primarySite" },
+            Rows = new List<string[]>
+            {
+                new[] { "Smith", "C509" }
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" },
+            new() { CsvColumnIndex = 1, CsvHeader = "primarySite", MappedNaaccrId = "primarySite", IsIncompatible = true }
+        };
+
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+        var nsMgr = CreateNsMgr(doc);
+
+        // Only nameLast should be present — primarySite is incompatible
+        var allItems = doc.SelectNodes("//n:Item", nsMgr)!;
+        Assert.Equal(1, allItems.Count);
+        Assert.Equal("nameLast", allItems[0]!.Attributes!["naaccrId"]!.Value);
+    }
+
+    [Fact]
+    public void GenerateNaaccrXml_MixOfSkippedAndIncompatible_BothExcluded()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast", "junk", "primarySite" },
+            Rows = new List<string[]>
+            {
+                new[] { "Smith", "ignored", "C509" }
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" },
+            new() { CsvColumnIndex = 1, CsvHeader = "junk", MappedNaaccrId = null }, // skipped
+            new() { CsvColumnIndex = 2, CsvHeader = "primarySite", MappedNaaccrId = "primarySite", IsIncompatible = true }
+        };
+
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+        var nsMgr = CreateNsMgr(doc);
+
+        var allItems = doc.SelectNodes("//n:Item", nsMgr)!;
+        Assert.Equal(1, allItems.Count);
+    }
+
+    [Fact]
+    public void IsExportable_ReflectsSkippedAndIncompatible()
+    {
+        var exportable = new CsvImportMapping { MappedNaaccrId = "nameLast", IsIncompatible = false };
+        var skipped = new CsvImportMapping { MappedNaaccrId = null };
+        var incompatible = new CsvImportMapping { MappedNaaccrId = "sex", IsIncompatible = true };
+
+        Assert.True(exportable.IsExportable);
+        Assert.False(skipped.IsExportable);
+        Assert.False(incompatible.IsExportable);
+    }
+
+    // ── Version Incompatibility Tests ───────────────────────────────────
+
+    [Fact]
+    public void AutoMatch_V25_SexField_ExistsInDictionary()
+    {
+        _dictionary.Initialize(25);
+        var dict = _dictionary.GetDictionary();
+        Assert.True(dict.ContainsKey("sex"));
+    }
+
+    [Fact]
+    public void AutoMatch_V26_SexField_DoesNotExistInDictionary()
+    {
+        _dictionary.Initialize(26);
+        var dict = _dictionary.GetDictionary();
+        Assert.False(dict.ContainsKey("sex"));
+        Assert.True(dict.ContainsKey("sexAssignedAtBirth"));
+    }
+
+    [Fact]
+    public void GenerateNaaccrXml_V25MappingSwitchedToV26_IncompatibleFieldExcluded()
+    {
+        // Simulate: user mapped "sex" in v25, then switched to v26
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "sex", "nameLast" },
+            Rows = new List<string[]>
+            {
+                new[] { "1", "Smith" }
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "sex", MappedNaaccrId = "sex", IsIncompatible = true },
+            new() { CsvColumnIndex = 1, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" }
+        };
+
+        _dictionary.Initialize(26);
+        var doc = _service.GenerateNaaccrXml(csv, mappings, naaccrVersion: 26);
+        var nsMgr = CreateNsMgr(doc);
+
+        // sex should NOT be in the output
+        var sexItem = doc.SelectSingleNode("//n:Item[@naaccrId='sex']", nsMgr);
+        Assert.Null(sexItem);
+
+        // nameLast should still be there
+        var nameItem = doc.SelectSingleNode("//n:Item[@naaccrId='nameLast']", nsMgr);
+        Assert.NotNull(nameItem);
+        Assert.Equal("Smith", nameItem!.InnerText);
+    }
+
+    // ── Full Round-Trip Tests ───────────────────────────────────────────
+
+    [Fact]
+    public void RoundTrip_FormatXmlAndWriteUtf8_LoadableByXmlFileService()
+    {
+        // This tests the actual save path: GenerateNaaccrXml → FormatXml → File.WriteAllText(UTF8) → LoadNaaccrXml
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "patientIdNumber", "nameLast", "nameFirst", "primarySite", "dateOfDiagnosis" },
+            Rows = new List<string[]>
+            {
+                new[] { "P001", "Smith", "John", "C509", "20240101" },
+                new[] { "P001", "Smith", "John", "C504", "20240320" },
+                new[] { "P002", "Jones", "Maria", "C180", "20240201" }
+            }
+        };
+
+        var mappings = _service.AutoMatch(csv.Headers);
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+
+        // Use the actual save pipeline: FormatXml + WriteAllText with UTF-8
+        var formattedXml = XmlFormattingHelper.FormatXml(doc.OuterXml);
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(tempPath, formattedXml, Encoding.UTF8);
+
+            var xmlService = new XmlFileService();
+            var (loadedDoc, tumors, nsMgr) = xmlService.LoadNaaccrXml(tempPath);
+
+            Assert.Equal(3, tumors.Count);
+
+            // Verify patient grouping survived
+            var patients = loadedDoc.SelectNodes("//n:Patient", nsMgr)!;
+            Assert.Equal(2, patients.Count);
+
+            // Verify values
+            Assert.Equal("C509", xmlService.GetItemValue(tumors[0]!, "primarySite", nsMgr));
+            Assert.Equal("C504", xmlService.GetItemValue(tumors[1]!, "primarySite", nsMgr));
+            Assert.Equal("C180", xmlService.GetItemValue(tumors[2]!, "dateOfDiagnosis", nsMgr) != "" ? xmlService.GetItemValue(tumors[2]!, "primarySite", nsMgr) : "");
+
+            var patient1 = xmlService.GetPatientForTumor(tumors[0]!);
+            Assert.Equal("Smith", xmlService.GetItemValue(patient1!, "nameLast", nsMgr));
+            Assert.Equal("John", xmlService.GetItemValue(patient1!, "nameFirst", nsMgr));
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    // ── Comprehensive All-Fields Test ───────────────────────────────────
+
+    [Fact]
+    public void GenerateNaaccrXml_AllMappedValues_PresentAtCorrectLevel()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "patientIdNumber", "nameLast", "nameFirst", "dateOfBirth", "primarySite", "dateOfDiagnosis", "behaviorCodeIcdO3" },
+            Rows = new List<string[]>
+            {
+                new[] { "P001", "Smith", "John", "19650315", "C509", "20240115", "3" },
+                new[] { "P001", "Smith", "John", "19650315", "C504", "20240320", "3" },
+                new[] { "P002", "Jones", "Maria", "19780822", "C180", "20240201", "3" }
+            }
+        };
+
+        var mappings = _service.AutoMatch(csv.Headers);
+        Assert.All(mappings, m => Assert.True(m.IsAutoMatched));
+
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+        var nsMgr = CreateNsMgr(doc);
+
+        var patients = doc.SelectNodes("//n:Patient", nsMgr)!;
+        Assert.Equal(2, patients.Count);
+
+        // ── Patient 1 (P001, 2 tumors) ──
+        var p1 = patients[0]!;
+        Assert.Equal("P001", GetItemValue(p1, "patientIdNumber", nsMgr));
+        Assert.Equal("Smith", GetItemValue(p1, "nameLast", nsMgr));
+        Assert.Equal("John", GetItemValue(p1, "nameFirst", nsMgr));
+        Assert.Equal("19650315", GetItemValue(p1, "dateOfBirth", nsMgr));
+
+        var p1Tumors = p1.SelectNodes("./n:Tumor", nsMgr)!;
+        Assert.Equal(2, p1Tumors.Count);
+
+        Assert.Equal("C509", GetItemValue(p1Tumors[0]!, "primarySite", nsMgr));
+        Assert.Equal("20240115", GetItemValue(p1Tumors[0]!, "dateOfDiagnosis", nsMgr));
+        Assert.Equal("3", GetItemValue(p1Tumors[0]!, "behaviorCodeIcdO3", nsMgr));
+
+        Assert.Equal("C504", GetItemValue(p1Tumors[1]!, "primarySite", nsMgr));
+        Assert.Equal("20240320", GetItemValue(p1Tumors[1]!, "dateOfDiagnosis", nsMgr));
+
+        // ── Patient 2 (P002, 1 tumor) ──
+        var p2 = patients[1]!;
+        Assert.Equal("P002", GetItemValue(p2, "patientIdNumber", nsMgr));
+        Assert.Equal("Jones", GetItemValue(p2, "nameLast", nsMgr));
+        Assert.Equal("Maria", GetItemValue(p2, "nameFirst", nsMgr));
+
+        var p2Tumors = p2.SelectNodes("./n:Tumor", nsMgr)!;
+        Assert.Equal(1, p2Tumors.Count);
+        Assert.Equal("C180", GetItemValue(p2Tumors[0]!, "primarySite", nsMgr));
+        Assert.Equal("20240201", GetItemValue(p2Tumors[0]!, "dateOfDiagnosis", nsMgr));
+    }
+
+    [Fact]
+    public void GenerateNaaccrXml_PatientLevelFields_NotDuplicatedOnTumors()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "patientIdNumber", "nameLast", "primarySite" },
+            Rows = new List<string[]>
+            {
+                new[] { "P001", "Smith", "C509" },
+                new[] { "P001", "Smith", "C504" }
+            }
+        };
+
+        var mappings = _service.AutoMatch(csv.Headers);
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+        var nsMgr = CreateNsMgr(doc);
+
+        // nameLast is Patient-level — should be on Patient, not on Tumor
+        var patient = doc.SelectSingleNode("//n:Patient", nsMgr)!;
+        Assert.Equal("Smith", GetItemValue(patient, "nameLast", nsMgr));
+
+        var tumors = patient.SelectNodes("./n:Tumor", nsMgr)!;
+        for (int i = 0; i < tumors.Count; i++)
+        {
+            var tumorNameLast = tumors[i]!.SelectSingleNode("./n:Item[@naaccrId='nameLast']", nsMgr);
+            Assert.Null(tumorNameLast); // Should NOT be on Tumor
+        }
+
+        // primarySite is Tumor-level — should be on each Tumor
+        Assert.Equal("C509", GetItemValue(tumors[0]!, "primarySite", nsMgr));
+        Assert.Equal("C504", GetItemValue(tumors[1]!, "primarySite", nsMgr));
+    }
+
+    // ── Helper ──────────────────────────────────────────────────────────
+
+    private static string GetItemValue(XmlNode node, string naaccrId, XmlNamespaceManager nsMgr)
+    {
+        return node.SelectSingleNode($"./n:Item[@naaccrId='{naaccrId}']", nsMgr)?.InnerText ?? "";
     }
 
     private static XmlNamespaceManager CreateNsMgr(XmlDocument doc)
