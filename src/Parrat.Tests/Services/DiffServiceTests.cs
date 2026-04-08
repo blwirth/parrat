@@ -161,8 +161,8 @@ public class DiffServiceTests
         var result = _service.GetDiffLines(new[] { "a" }, new[] { "b" });
 
         Assert.Equal(2, result.Count);
-        Assert.Single(result.Where(r => r.Status == DiffStatus.Deleted));
-        Assert.Single(result.Where(r => r.Status == DiffStatus.Added));
+        Assert.Single(result, r => r.Status == DiffStatus.Deleted);
+        Assert.Single(result, r => r.Status == DiffStatus.Added);
     }
 
     // =====================================================================
