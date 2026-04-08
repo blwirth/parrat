@@ -7,4 +7,6 @@ public class NaaccrItem
     public string Name { get; set; } = string.Empty;
     public string XmlId { get; set; } = string.Empty;
     public string ParentElement { get; set; } = string.Empty;
+    public int? Length { get; set; }
+    public string DataType { get; set; } = "text";
 }

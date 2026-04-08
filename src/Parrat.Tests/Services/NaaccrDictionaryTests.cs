@@ -140,4 +140,49 @@ public class NaaccrDictionaryTests
         var name = dict.GetDisplayName("unknownField");
         Assert.Equal("unknownField (custom)", name);
     }
+
+    // ── XML Dictionary Enrichment ───────────────────────────────────────
+
+    [Theory]
+    [InlineData(25)]
+    [InlineData(26)]
+    public void Initialize_EnrichesLengthFromXmlDictionary(int version)
+    {
+        var dict = CreateDictionary(version);
+
+        var item = dict.GetItemByXmlId("primarySite");
+        Assert.NotNull(item);
+        Assert.Equal(4, item!.Length);
+    }
+
+    [Theory]
+    [InlineData(25)]
+    [InlineData(26)]
+    public void Initialize_EnrichesDataTypeFromXmlDictionary(int version)
+    {
+        var dict = CreateDictionary(version);
+
+        var dateItem = dict.GetItemByXmlId("dateOfDiagnosis");
+        Assert.NotNull(dateItem);
+        Assert.Equal("date", dateItem!.DataType);
+        Assert.Equal(8, dateItem.Length);
+
+        var digitsItem = dict.GetItemByXmlId("patientIdNumber");
+        Assert.NotNull(digitsItem);
+        Assert.Equal("digits", digitsItem!.DataType);
+    }
+
+    [Theory]
+    [InlineData(25)]
+    [InlineData(26)]
+    public void Initialize_TextFieldsHaveDefaultDataType(int version)
+    {
+        var dict = CreateDictionary(version);
+
+        // nameLast has no explicit dataType in XML, should default to "text"
+        var item = dict.GetItemByXmlId("nameLast");
+        Assert.NotNull(item);
+        Assert.Equal("text", item!.DataType);
+        Assert.NotNull(item.Length);
+    }
 }
