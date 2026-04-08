@@ -73,7 +73,7 @@ public class CsvImportForm : ParratFormBase
 
     private void InitializeComponents()
     {
-        Text = "Import CSV — Map Columns to NAACCR Fields";
+        Text = "Convert CSV — Map Columns to NAACCR Fields";
         Width = 1100;
         Height = 700;
         MinimumSize = new Size(900, 550);
