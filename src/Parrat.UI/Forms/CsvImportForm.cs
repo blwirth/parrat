@@ -267,9 +267,25 @@ public class CsvImportForm : ParratFormBase
         foreach (var m in _mappings)
         {
             var samples = GetSampleData(m.CsvColumnIndex, 3);
-            var naaccrDisplay = m.IsSkipped ? "(unmapped — click to map)" : _dictionary.GetDisplayName(m.MappedNaaccrId!);
-            var status = m.IsSkipped ? "" : (m.IsAutoMatched ? "Auto" : "Manual");
-            var parent = m.IsSkipped ? "" : _dictionary.GetParentElement(m.MappedNaaccrId!);
+            string naaccrDisplay, status, parent;
+            if (m.IsSkipped)
+            {
+                naaccrDisplay = "(unmapped — click to map)";
+                status = "";
+                parent = "";
+            }
+            else if (m.IsIncompatible)
+            {
+                naaccrDisplay = $"{m.MappedNaaccrId} (not in v{NaaccrVersion})";
+                status = "Incompat.";
+                parent = "";
+            }
+            else
+            {
+                naaccrDisplay = _dictionary.GetDisplayName(m.MappedNaaccrId!);
+                status = m.IsAutoMatched ? "Auto" : "Manual";
+                parent = _dictionary.GetParentElement(m.MappedNaaccrId!);
+            }
 
             table.Rows.Add(m.CsvHeader, samples, naaccrDisplay, status, parent);
         }
@@ -295,17 +311,25 @@ public class CsvImportForm : ParratFormBase
         for (int i = 0; i < _gridMappings.Rows.Count && i < _mappings.Count; i++)
         {
             var row = _gridMappings.Rows[i];
-            if (_mappings[i].IsSkipped)
+            if (_mappings[i].IsIncompatible)
+            {
+                row.DefaultCellStyle.BackColor = Color.FromArgb(255, 210, 210); // Red — incompatible with version
+                row.DefaultCellStyle.ForeColor = Color.FromArgb(160, 0, 0);
+            }
+            else if (_mappings[i].IsSkipped)
             {
                 row.DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 230); // Light yellow
+                row.DefaultCellStyle.ForeColor = Color.Black;
             }
             else if (_mappings[i].IsAutoMatched)
             {
                 row.DefaultCellStyle.BackColor = Color.FromArgb(230, 255, 230); // Light green
+                row.DefaultCellStyle.ForeColor = Color.Black;
             }
             else
             {
                 row.DefaultCellStyle.BackColor = Color.FromArgb(230, 240, 255); // Light blue
+                row.DefaultCellStyle.ForeColor = Color.Black;
             }
         }
     }
@@ -349,6 +373,7 @@ public class CsvImportForm : ParratFormBase
                 {
                     _mappings[idx].MappedNaaccrId = null;
                     _mappings[idx].IsAutoMatched = false;
+                    _mappings[idx].IsIncompatible = false;
                     PopulateMappingGrid();
                     UpdatePreviewAndValidation();
                 }
@@ -369,11 +394,13 @@ public class CsvImportForm : ParratFormBase
             // User chose "unmapped"
             mapping.MappedNaaccrId = null;
             mapping.IsAutoMatched = false;
+            mapping.IsIncompatible = false;
         }
         else
         {
             mapping.MappedNaaccrId = selectedId;
             mapping.IsAutoMatched = false; // Manual selection
+            mapping.IsIncompatible = false;
         }
 
         PopulateMappingGrid();
@@ -384,16 +411,23 @@ public class CsvImportForm : ParratFormBase
 
     private void OnVersionChanged()
     {
-        // Re-initialize dictionary for the selected version
         _dictionary.Initialize(NaaccrVersion);
+        var dict = _dictionary.GetDictionary();
 
-        // Clear all mappings and re-run auto-match with the new version's dictionary
+        // Validate existing mappings against the new version's dictionary
         foreach (var m in _mappings)
         {
-            m.MappedNaaccrId = null;
-            m.IsAutoMatched = false;
+            if (!m.IsSkipped)
+            {
+                m.IsIncompatible = !dict.ContainsKey(m.MappedNaaccrId!);
+            }
+            else
+            {
+                m.IsIncompatible = false;
+            }
         }
 
+        // Auto-match any still-unmapped columns with the new version
         RunAutoMatch();
     }
 
@@ -438,6 +472,7 @@ public class CsvImportForm : ParratFormBase
         {
             m.MappedNaaccrId = null;
             m.IsAutoMatched = false;
+            m.IsIncompatible = false;
         }
 
         PopulateMappingGrid();
@@ -449,7 +484,8 @@ public class CsvImportForm : ParratFormBase
     private void UpdatePreviewAndValidation()
     {
         var warnings = new List<string>();
-        var activeMappings = _mappings.Where(m => !m.IsSkipped).ToList();
+        var activeMappings = _mappings.Where(m => m.IsExportable).ToList();
+        var incompatibleCount = _mappings.Count(m => m.IsIncompatible);
         var unmappedCount = _mappings.Count(m => m.IsSkipped);
 
         // Check for patient ID
@@ -466,6 +502,9 @@ public class CsvImportForm : ParratFormBase
             var cols = string.Join(", ", dupe.Select(m => m.CsvHeader));
             warnings.Add($"Duplicate: '{dupe.Key}' mapped from columns: {cols}");
         }
+
+        if (incompatibleCount > 0)
+            warnings.Add($"{incompatibleCount} column(s) incompatible with v{NaaccrVersion} (will not be exported).");
 
         if (unmappedCount > 0)
             warnings.Add($"{unmappedCount} column(s) unmapped (will be skipped).");

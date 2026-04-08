@@ -74,7 +74,7 @@ public class CsvImportService : ICsvImportService
         nsMgr.AddNamespace("n", NaaccrNamespace);
 
         // Partition mappings by parent element
-        var activeMappings = mappings.Where(m => !m.IsSkipped).ToList();
+        var activeMappings = mappings.Where(m => m.IsExportable).ToList();
         var naaccrDataMappings = new List<CsvImportMapping>();
         var patientMappings = new List<CsvImportMapping>();
         var tumorMappings = new List<CsvImportMapping>();
