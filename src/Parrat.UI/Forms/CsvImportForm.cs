@@ -154,7 +154,7 @@ public class CsvImportForm : ParratFormBase
         _gridMappings = new DataGridView
         {
             Location = new Point(0, 22),
-            Dock = DockStyle.None,
+            Size = new Size(600, 500),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             ReadOnly = true,
             AllowUserToAddRows = false,
@@ -192,16 +192,16 @@ public class CsvImportForm : ParratFormBase
         _lblWarnings = new Label
         {
             Location = new Point(0, 22),
-            AutoSize = false,
-            Size = new Size(400, 60),
+            AutoSize = true,
+            MaximumSize = new Size(400, 60),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = Color.FromArgb(180, 0, 0)
         };
 
         _gridPreview = new DataGridView
         {
-            Location = new Point(0, 85),
-            Dock = DockStyle.None,
+            Location = new Point(0, 45),
+            Size = new Size(400, 480),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             ReadOnly = true,
             AllowUserToAddRows = false,
@@ -219,7 +219,7 @@ public class CsvImportForm : ParratFormBase
             var w = splitContainer.Panel2.ClientSize.Width;
             _lblPreviewSummary.Width = w;
             _lblWarnings.Width = w;
-            _gridPreview.Size = new Size(w, splitContainer.Panel2.ClientSize.Height - 88);
+            _gridPreview.Size = new Size(w, splitContainer.Panel2.ClientSize.Height - 48);
         };
 
         // ===== BOTTOM ZONE =====

@@ -21,17 +21,20 @@ public static class XmlFormattingHelper
         doc.PreserveWhitespace = false;
         doc.LoadXml(xml);
 
+        var utf8NoBom = new System.Text.UTF8Encoding(false);
         var settings = new XmlWriterSettings
         {
             Indent = true,
             NewLineChars = "\r\n",
-            NewLineHandling = NewLineHandling.Replace
+            NewLineHandling = NewLineHandling.Replace,
+            Encoding = utf8NoBom
         };
 
-        using var sw = new System.IO.StringWriter();
-        using var xw = XmlWriter.Create(sw, settings);
-        doc.Save(xw);
-        xw.Flush();
-        return sw.ToString();
+        using var ms = new System.IO.MemoryStream();
+        using (var xw = XmlWriter.Create(ms, settings))
+        {
+            doc.Save(xw);
+        }
+        return utf8NoBom.GetString(ms.ToArray());
     }
 }
