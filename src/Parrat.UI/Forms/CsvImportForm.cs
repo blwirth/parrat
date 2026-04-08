@@ -1,6 +1,7 @@
 using System.Data;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
+using Parrat.Core.Services;
 
 namespace Parrat.UI.Forms;
 
@@ -557,6 +558,35 @@ public class CsvImportForm : ParratFormBase
             col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             col.MinimumWidth = 50;
             col.Width = Math.Max(Math.Min(w, 200), 50);
+        }
+
+        // ── Field validation ──
+        var validationWarnings = NaaccrFieldValidator.ValidateDataSet(
+            _csvData, _mappings.Where(m => m.IsExportable).ToList(), _dictionary);
+
+        // Add summarized warnings to the warning label
+        var validationSummaries = NaaccrFieldValidator.Summarize(validationWarnings);
+        warnings.AddRange(validationSummaries);
+        _lblWarnings.Text = string.Join("\n", warnings);
+
+        // Highlight invalid cells in the preview grid
+        var previewWarningLookup = validationWarnings
+            .Where(w => w.RowIndex < 20)
+            .ToLookup(w => (w.RowIndex, w.NaaccrId));
+
+        for (int r = 0; r < _gridPreview.Rows.Count; r++)
+        {
+            for (int c = 0; c < _gridPreview.Columns.Count; c++)
+            {
+                var colName = _gridPreview.Columns[c].Name;
+                if (previewWarningLookup[(r, colName)].Any())
+                {
+                    var cell = _gridPreview.Rows[r].Cells[c];
+                    cell.Style.BackColor = Color.FromArgb(255, 235, 200);
+                    cell.ToolTipText = string.Join("\n",
+                        previewWarningLookup[(r, colName)].Select(w => w.Message));
+                }
+            }
         }
     }
 }
