@@ -215,20 +215,8 @@ public class EpathParserService : IEpathParserService
             $"|||||||||||||" +
             $"{Esc(Get(m, 7300))}^{Esc(Get(m, 7260))}^{Esc(Get(m, 7270))}^{Esc(Get(m, 7280))}^{Esc(Get(m, 7290))}^^^^{Esc(Get(m, 7310))}");
 
-        // OBX segments
+        // OBX segments — TX only, matching our other HL7 output formats
         int obxSetId = 1;
-
-        var snomed = Get(m, 7340);
-        if (!string.IsNullOrEmpty(snomed))
-            sb.AppendLine($"OBX|{obxSetId++}|CE|SNOMED^SNOMED CT Code||{Esc(snomed)}||||||F|||{Get(m, 7350)}");
-
-        var icd = Get(m, 7360);
-        if (!string.IsNullOrEmpty(icd))
-            sb.AppendLine($"OBX|{obxSetId++}|CE|ICD^ICD-CM Code||{Esc(icd)}||||||F|||{Get(m, 7370)}");
-
-        var cpt = Get(m, 7380);
-        if (!string.IsNullOrEmpty(cpt))
-            sb.AppendLine($"OBX|{obxSetId++}|CE|CPT^CPT Code||{Esc(cpt)}||||||F|||{Get(m, 7390)}");
 
         var textFields = new (int item, string code, string name)[]
         {
@@ -249,19 +237,6 @@ public class EpathParserService : IEpathParserService
             if (!string.IsNullOrEmpty(text))
                 sb.AppendLine($"OBX|{obxSetId++}|TX|{code}^{name}||{Esc(text)}||||||F");
         }
-
-        var producerId = Get(m, 7515);
-        if (!string.IsNullOrEmpty(producerId))
-            sb.AppendLine($"OBX|{obxSetId++}|CE|PRODUCER^Producer ID (CLIA)||{Esc(producerId)}||||||F");
-
-        var age = Get(m, 7080);
-        var ageUnits = Get(m, 7540);
-        if (!string.IsNullOrEmpty(age))
-            sb.AppendLine($"OBX|{obxSetId++}|NM|AGE^Patient Age at Specimen||{age}|{ageUnits}|||||F");
-
-        var reportType = Get(m, 7480);
-        if (!string.IsNullOrEmpty(reportType))
-            sb.AppendLine($"OBX|{obxSetId++}|CE|RPT_TYPE^Path Report Type||{reportType}||||||F");
 
         return sb.ToString().TrimEnd('\r', '\n');
     }

@@ -516,23 +516,30 @@ public class EpathParserServiceTests
     }
 
     [Fact]
-    public void ConvertToHl7_SnomedIcdCptCodes()
+    public void ConvertToHl7_OnlyTxObxSegments()
     {
         SetupPathHelper();
 
         var fields = MakeV22Fields();
-        fields[47] = "M8500/3";
-        fields[49] = "C50.911";
-        fields[51] = "88305";
+        fields[47] = "M8500/3";   // SNOMED
+        fields[49] = "C50.911";   // ICD
+        fields[51] = "88305";     // CPT
+        fields[58] = "Final Diagnosis: Carcinoma";
 
         var records = ParseSingleLine(fields);
         var parser = new EpathParserService();
         var hl7 = parser.ConvertToHl7(records);
         var raw = hl7[0].RawContent;
 
-        Assert.Contains("SNOMED^SNOMED CT Code", raw);
-        Assert.Contains("ICD^ICD-CM Code", raw);
-        Assert.Contains("CPT^CPT Code", raw);
+        // TX text fields should be present
+        Assert.Contains("FINAL_DX^Final Diagnosis", raw);
+
+        // CE and NM OBX segments should not be generated
+        Assert.DoesNotContain("SNOMED^SNOMED CT Code", raw);
+        Assert.DoesNotContain("ICD^ICD-CM Code", raw);
+        Assert.DoesNotContain("CPT^CPT Code", raw);
+        Assert.DoesNotContain("|CE|", raw);
+        Assert.DoesNotContain("|NM|", raw);
     }
 
     [Fact]
