@@ -138,7 +138,7 @@ public class CsvImportForm : ParratFormBase
         var splitContainer = new SplitContainer
         {
             Location = new Point(10, 70),
-            Size = new Size(1060, 535),
+            Size = new Size(1060, 470),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             Orientation = Orientation.Vertical,
             SplitterDistance = 620,
@@ -193,19 +193,10 @@ public class CsvImportForm : ParratFormBase
             Font = new Font("Segoe UI", 9, FontStyle.Bold)
         };
 
-        _lblWarnings = new Label
-        {
-            Location = new Point(0, 22),
-            AutoSize = true,
-            MaximumSize = new Size(400, 60),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            ForeColor = Color.FromArgb(180, 0, 0)
-        };
-
         _gridPreview = new DataGridView
         {
-            Location = new Point(0, 45),
-            Size = new Size(400, 480),
+            Location = new Point(0, 22),
+            Size = new Size(400, 440),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
@@ -228,15 +219,25 @@ public class CsvImportForm : ParratFormBase
                 _gridPreview.CommitEdit(DataGridViewDataErrorContexts.Commit);
         };
 
-        splitContainer.Panel2.Controls.AddRange(new Control[] { _lblPreviewSummary, _lblWarnings, _gridPreview });
+        splitContainer.Panel2.Controls.AddRange(new Control[] { _lblPreviewSummary, _gridPreview });
 
         // Resize preview grid when panel resizes
         splitContainer.Panel2.Resize += (_, _) =>
         {
             var w = splitContainer.Panel2.ClientSize.Width;
             _lblPreviewSummary.Width = w;
-            _lblWarnings.Width = w;
-            _gridPreview.Size = new Size(w, splitContainer.Panel2.ClientSize.Height - 48);
+            _gridPreview.Size = new Size(w, splitContainer.Panel2.ClientSize.Height - 25);
+        };
+
+        // ===== WARNINGS ZONE (below grids, above buttons) =====
+        _lblWarnings = new Label
+        {
+            Location = new Point(10, 545),
+            AutoSize = false,
+            Size = new Size(1060, 60),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            ForeColor = Color.FromArgb(180, 0, 0),
+            AutoEllipsis = true
         };
 
         // ===== BOTTOM ZONE =====
@@ -265,7 +266,7 @@ public class CsvImportForm : ParratFormBase
 
         bottomPanel.Controls.AddRange(new Control[] { _btnImport, _btnCancel });
 
-        Controls.AddRange(new Control[] { topPanel, splitContainer, bottomPanel });
+        Controls.AddRange(new Control[] { topPanel, splitContainer, _lblWarnings, bottomPanel });
         AcceptButton = _btnImport;
         CancelButton = _btnCancel;
     }
