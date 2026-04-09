@@ -183,7 +183,12 @@ public class Hl7Parser : IHl7Parser
     {
         var fields = (obrSegment ?? "").Split('|');
 
-        // OBR-3: Filler Order Number (accession/path report number)
+        // OBR-3: Filler Order Number — this is the lab's path report number.
+        // IMPORTANT for future HL7→NAACCR XML mapping:
+        //   HL7 AccessionNumber (OBR-3) = NAACCR pathReportNumber1 (item 7090)
+        //   HL7 AccessionNumber (OBR-3) ≠ NAACCR accessionNumberHosp (item 380)
+        //   accessionNumberHosp is a registry-assigned patient ID (YYYY + 5-digit seq),
+        //   NOT the lab's specimen/report number.
         var accessionNumber = fields.Length > 3 ? fields[3] : "";
 
         var orderDateTime = fields.Length > 7 ? fields[7] : "";
