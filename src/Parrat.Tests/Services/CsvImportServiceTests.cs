@@ -639,6 +639,32 @@ public class CsvImportServiceTests : IDisposable
         Assert.Equal("C504", GetItemValue(tumors[1]!, "primarySite", nsMgr));
     }
 
+    [Fact]
+    public void GenerateNaaccrXml_WhitespaceInValues_IsTrimmed()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast", "nameFirst" },
+            Rows = new List<string[]>
+            {
+                new[] { "  Smith  ", "  Jane " }
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" },
+            new() { CsvColumnIndex = 1, CsvHeader = "nameFirst", MappedNaaccrId = "nameFirst" }
+        };
+
+        var doc = _service.GenerateNaaccrXml(csv, mappings);
+        var nsMgr = CreateNsMgr(doc);
+        var patient = doc.SelectSingleNode("//n:Patient", nsMgr)!;
+
+        Assert.Equal("Smith", GetItemValue(patient, "nameLast", nsMgr));
+        Assert.Equal("Jane", GetItemValue(patient, "nameFirst", nsMgr));
+    }
+
     // ── Helper ──────────────────────────────────────────────────────────
 
     private static string GetItemValue(XmlNode node, string naaccrId, XmlNamespaceManager nsMgr)

@@ -236,7 +236,7 @@ public class CsvImportService : ICsvImportService
 
     private static string GetCellValue(string[] row, int columnIndex)
     {
-        return columnIndex < row.Length ? row[columnIndex] : "";
+        return columnIndex < row.Length ? row[columnIndex].Trim() : "";
     }
 
     private static void AddItem(XmlDocument doc, XmlElement parent, string naaccrId, string value)

@@ -339,7 +339,7 @@ public class CsvImportForm : ParratFormBase
     {
         var samples = _csvData.Rows
             .Take(maxRows)
-            .Select(r => columnIndex < r.Length ? r[columnIndex] : "")
+            .Select(r => columnIndex < r.Length ? r[columnIndex].Trim() : "")
             .Where(v => !string.IsNullOrEmpty(v));
         return string.Join(" | ", samples);
     }
@@ -543,7 +543,7 @@ public class CsvImportForm : ParratFormBase
             var dataRow = previewTable.NewRow();
             foreach (var m in activeMappings)
             {
-                dataRow[m.MappedNaaccrId!] = m.CsvColumnIndex < row.Length ? row[m.CsvColumnIndex] : "";
+                dataRow[m.MappedNaaccrId!] = m.CsvColumnIndex < row.Length ? row[m.CsvColumnIndex].Trim() : "";
             }
             previewTable.Rows.Add(dataRow);
         }
