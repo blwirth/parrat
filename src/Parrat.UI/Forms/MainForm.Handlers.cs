@@ -852,26 +852,53 @@ public partial class MainForm
         }
     }
 
-    /// <summary>Convert loaded ePath .dat data to HL7 file on disk.</summary>
+    /// <summary>Convert ePath .dat data to HL7 file on disk. Prompts for a file if none loaded.</summary>
     private void OnConvertDatToHl7()
     {
         try
         {
-            if (_state.FileType != "epath" || _state.EpathRecords.Count == 0)
+            List<EpathRecord> records;
+            string? inputPath;
+
+            if (_state.FileType == "epath" && _state.EpathRecords.Count > 0)
             {
-                MessageBox.Show("No ePath .dat data loaded to convert.", "Convert .dat to .hl7",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                // Use already-loaded records
+                records = _state.EpathRecords;
+                inputPath = _state.CurrentFilePath;
+            }
+            else
+            {
+                // Prompt for a .dat file (same UX as Convert .txt)
+                using var ofd = new OpenFileDialog
+                {
+                    Filter = "ePath Flat Files (*.dat)|*.dat|All files (*.*)|*.*",
+                    Title = "Select ePath .dat File"
+                };
+
+                if (ofd.ShowDialog(this) != DialogResult.OK) return;
+
+                inputPath = ofd.FileName;
+                SetStatusText("Parsing .dat file...");
+                Refresh();
+
+                records = _epathParserService.ParseDatFile(inputPath);
+                if (records.Count == 0)
+                {
+                    MessageBox.Show("No ePath records found in this file.", "Convert .dat to .hl7",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    SetStatusText("Ready");
+                    return;
+                }
             }
 
-            var defaultName = Path.GetFileNameWithoutExtension(_state.CurrentFilePath ?? "epath") + ".hl7";
+            var defaultName = Path.GetFileNameWithoutExtension(inputPath ?? "epath") + ".hl7";
 
             using var sfd = new SaveFileDialog
             {
                 Filter = "HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*",
                 Title = "Convert .dat to .hl7",
                 FileName = defaultName,
-                InitialDirectory = Path.GetDirectoryName(_state.CurrentFilePath) ?? ""
+                InitialDirectory = Path.GetDirectoryName(inputPath) ?? ""
             };
 
             if (sfd.ShowDialog(this) != DialogResult.OK) return;
@@ -879,10 +906,10 @@ public partial class MainForm
             SetStatusText("Converting to HL7...");
             Refresh();
 
-            var hl7Messages = _epathParserService.ConvertToHl7(_state.EpathRecords);
+            var hl7Messages = _epathParserService.ConvertToHl7(records);
             _hl7FileService.SaveHl7File(sfd.FileName, hl7Messages);
 
-            var version = _state.EpathRecords[0].FormatVersion == "NOAH v2" ? "2.5.1" : "2.3.1";
+            var version = records[0].FormatVersion == "NOAH v2" ? "2.5.1" : "2.3.1";
             _logger.Log("INFO", $"Converted {hl7Messages.Count} ePath records to HL7 v{version}: {sfd.FileName}", "EPATH_CONVERT");
 
             var openResult = MessageBox.Show(

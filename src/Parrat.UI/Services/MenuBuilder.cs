@@ -170,7 +170,7 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuImportCsv);
 
-        MnuConvertDatToHl7 = new ToolStripMenuItem("Convert .dat to .hl7...") { Enabled = false };
+        MnuConvertDatToHl7 = new ToolStripMenuItem("Convert .dat to .hl7...");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertDatToHl7);
 
@@ -398,7 +398,5 @@ public class MenuBuilder
 
         bool isHl7 = fileType == "hl7";
         MnuModifyHl7.Enabled = isHl7;
-
-        MnuConvertDatToHl7.Enabled = fileType == "epath";
     }
 }
