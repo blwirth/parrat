@@ -454,7 +454,7 @@ public class NavigationService
             record.PatientLastName,
             record.PatientFirstName,
             record.DateOfBirth,
-            record.AccessionNumber
+            record.PathReportNumber
         );
 
         int selectedCount = GetSelectedCount();

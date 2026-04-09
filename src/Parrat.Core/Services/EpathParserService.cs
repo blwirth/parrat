@@ -53,7 +53,7 @@ public class EpathParserService : IEpathParserService
                     DateOfBirth = Get(fieldMap, 240),
                     Sex = Get(fieldMap, 220),
                     PatientId = Get(fieldMap, 2300),
-                    AccessionNumber = Get(fieldMap, 7090),
+                    PathReportNumber = Get(fieldMap, 7090),
                     SendingFacility = Get(fieldMap, 7020),
                     FormatVersion = isNoahV2 ? "NOAH v2" : "v2.2"
                 };
@@ -116,7 +116,7 @@ public class EpathParserService : IEpathParserService
                 MessageDateTime = Get(m, 7490),
                 SendingApplication = "EPATH",
                 SendingFacility = $"{record.SendingFacility}^{Get(m, 7010)}",
-                AccessionNumber = record.AccessionNumber,
+                AccessionNumber = record.PathReportNumber,
                 OrderDateTime = Get(m, 7320),
                 OrderingProvider = BuildProviderDisplay(ordLic, ordLast, ordFirst)
             });

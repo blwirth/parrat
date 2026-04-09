@@ -361,7 +361,7 @@ public class FileHandlers
             table.Columns.Add("nameLast", typeof(string));
             table.Columns.Add("nameFirst", typeof(string));
             table.Columns.Add("dateOfBirth", typeof(string));
-            table.Columns.Add("accessionNumber", typeof(string));
+            table.Columns.Add("pathReportNumber", typeof(string));
             table.Columns.Add("patientId", typeof(string));
             table.Columns.Add("sendingFacility", typeof(string));
             table.Columns.Add("formatVersion", typeof(string));
@@ -375,7 +375,7 @@ public class FileHandlers
                 row["nameLast"] = rec.PatientLastName;
                 row["nameFirst"] = rec.PatientFirstName;
                 row["dateOfBirth"] = rec.DateOfBirth;
-                row["accessionNumber"] = rec.AccessionNumber;
+                row["pathReportNumber"] = rec.PathReportNumber;
                 row["patientId"] = rec.PatientId;
                 row["sendingFacility"] = rec.SendingFacility;
                 row["formatVersion"] = rec.FormatVersion;

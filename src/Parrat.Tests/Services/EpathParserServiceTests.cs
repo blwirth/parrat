@@ -121,7 +121,7 @@ public class EpathParserServiceTests
         Assert.Equal("19850315", rec.DateOfBirth);
         Assert.Equal("F", rec.Sex);
         Assert.Equal("MRN001", rec.PatientId);
-        Assert.Equal("SP-2024-001", rec.AccessionNumber);
+        Assert.Equal("SP-2024-001", rec.PathReportNumber);
         Assert.Equal("Test Lab", rec.SendingFacility);
         Assert.Equal("v2.2", rec.FormatVersion);
     }
@@ -283,7 +283,7 @@ public class EpathParserServiceTests
         Assert.Equal("NOAH v2", records[0].FormatVersion);
         Assert.Equal("Johnson", records[0].PatientLastName);
         Assert.Equal("MRN-NOAH", records[0].PatientId);
-        Assert.Equal("NOAH-SP-001", records[0].AccessionNumber);
+        Assert.Equal("NOAH-SP-001", records[0].PathReportNumber);
     }
 
     [Fact]

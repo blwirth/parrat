@@ -21,7 +21,7 @@ public class EpathRecord
     public string DateOfBirth { get; set; } = string.Empty;
     public string Sex { get; set; } = string.Empty;
     public string PatientId { get; set; } = string.Empty;
-    public string AccessionNumber { get; set; } = string.Empty;
+    public string PathReportNumber { get; set; } = string.Empty;
     public string SendingFacility { get; set; } = string.Empty;
     public string FormatVersion { get; set; } = string.Empty; // "v2.2" or "NOAH v2"
 }
