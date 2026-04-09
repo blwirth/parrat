@@ -56,7 +56,8 @@ public class CsvImportService : ICsvImportService
         CsvParseResult csvData,
         List<CsvImportMapping> mappings,
         int naaccrVersion = 25,
-        string recordType = "A")
+        string recordType = "A",
+        HashSet<int>? excludedRows = null)
     {
         _dictionary.Initialize(naaccrVersion);
         var baseDictionaryUri = BaseDictionaryUris.GetValueOrDefault(naaccrVersion,
@@ -107,11 +108,16 @@ public class CsvImportService : ICsvImportService
             }
         }
 
+        // Filter out excluded rows
+        var rows = csvData.Rows;
+        if (excludedRows != null && excludedRows.Count > 0)
+            rows = rows.Where((_, i) => !excludedRows.Contains(i)).ToList();
+
         // Group rows into patients
         var patientIdMapping = patientMappings
             .FirstOrDefault(m => m.MappedNaaccrId == "patientIdNumber");
 
-        var patientGroups = GroupRowsByPatient(csvData.Rows, patientIdMapping);
+        var patientGroups = GroupRowsByPatient(rows, patientIdMapping);
 
         foreach (var group in patientGroups)
         {
@@ -232,6 +238,28 @@ public class CsvImportService : ICsvImportService
         }
 
         return groups;
+    }
+
+    /// <summary>
+    /// Returns indices of rows where all mapped columns are empty (after trimming).
+    /// These are likely trailing blank rows or formula-only rows.
+    /// </summary>
+    public static HashSet<int> DetectEmptyRows(CsvParseResult csvData, List<CsvImportMapping> mappings)
+    {
+        var activeMappings = mappings.Where(m => m.IsExportable).ToList();
+        var emptyRows = new HashSet<int>();
+
+        for (int i = 0; i < csvData.Rows.Count; i++)
+        {
+            var row = csvData.Rows[i];
+            bool allEmpty = activeMappings.All(m =>
+                string.IsNullOrWhiteSpace(GetCellValue(row, m.CsvColumnIndex)));
+
+            if (allEmpty)
+                emptyRows.Add(i);
+        }
+
+        return emptyRows;
     }
 
     private static string GetCellValue(string[] row, int columnIndex)

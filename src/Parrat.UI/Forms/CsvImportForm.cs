@@ -44,6 +44,9 @@ public class CsvImportForm : ParratFormBase
     /// <summary>Gets the selected NAACCR version.</summary>
     public int NaaccrVersion => int.TryParse(_cboVersion.SelectedItem?.ToString()?.Replace("v", ""), out var v) ? v : 25;
 
+    /// <summary>Gets row indices that the user excluded from conversion.</summary>
+    public HashSet<int> ExcludedRows { get; private set; } = new();
+
     public CsvImportForm(
         INaaccrDictionary dictionary,
         ICsvImportService importService,
@@ -204,12 +207,25 @@ public class CsvImportForm : ParratFormBase
             Location = new Point(0, 45),
             Size = new Size(400, 480),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-            ReadOnly = true,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
             RowHeadersVisible = false,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
             ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        };
+        _gridPreview.CellValueChanged += (_, e) =>
+        {
+            if (e.ColumnIndex >= 0 && _gridPreview.Columns[e.ColumnIndex].Name == "Include")
+            {
+                UpdateExcludedRows();
+                UpdateCountsAndRowStyles();
+            }
+        };
+        _gridPreview.CurrentCellDirtyStateChanged += (_, _) =>
+        {
+            // Commit checkbox changes immediately
+            if (_gridPreview.IsCurrentCellDirty)
+                _gridPreview.CommitEdit(DataGridViewDataErrorContexts.Commit);
         };
 
         splitContainer.Panel2.Controls.AddRange(new Control[] { _lblPreviewSummary, _lblWarnings, _gridPreview });
@@ -510,37 +526,24 @@ public class CsvImportForm : ParratFormBase
         if (unmappedCount > 0)
             warnings.Add($"{unmappedCount} column(s) unmapped (will be skipped).");
 
-        // Compute patient/tumor counts
-        int patientCount, tumorCount;
-        if (hasPatientId)
-        {
-            var pidMapping = activeMappings.First(m => m.MappedNaaccrId == "patientIdNumber");
-            var groups = _csvData.Rows
-                .GroupBy(r => pidMapping.CsvColumnIndex < r.Length ? r[pidMapping.CsvColumnIndex] : "")
-                .Count();
-            patientCount = groups;
-            tumorCount = _csvData.RowCount;
-        }
-        else
-        {
-            patientCount = _csvData.RowCount;
-            tumorCount = _csvData.RowCount;
-        }
+        // Detect empty rows and update excluded set
+        var emptyRows = CsvImportService.DetectEmptyRows(_csvData, _mappings);
 
-        _lblPreviewSummary.Text = $"Preview: {patientCount} patient(s), {tumorCount} tumor(s)";
-        _lblWarnings.Text = string.Join("\n", warnings);
-
-        // Build preview table (first 20 rows, mapped columns only)
+        // Build preview table with Include checkbox
         var previewTable = new DataTable();
+        previewTable.Columns.Add("Include", typeof(bool));
+        previewTable.Columns.Add("Row", typeof(int));
         foreach (var m in activeMappings)
         {
             previewTable.Columns.Add(m.MappedNaaccrId, typeof(string));
         }
 
-        var previewRows = _csvData.Rows.Take(20);
-        foreach (var row in previewRows)
+        for (int i = 0; i < _csvData.Rows.Count; i++)
         {
+            var row = _csvData.Rows[i];
             var dataRow = previewTable.NewRow();
+            dataRow["Include"] = !emptyRows.Contains(i);
+            dataRow["Row"] = i + 1;
             foreach (var m in activeMappings)
             {
                 dataRow[m.MappedNaaccrId!] = m.CsvColumnIndex < row.Length ? row[m.CsvColumnIndex].Trim() : "";
@@ -550,15 +553,57 @@ public class CsvImportForm : ParratFormBase
 
         _gridPreview.DataSource = previewTable;
 
-        // Auto-fit with constraints
-        _gridPreview.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
+        // Configure columns
+        if (_gridPreview.Columns.Contains("Include"))
+        {
+            _gridPreview.Columns["Include"].ReadOnly = false;
+            _gridPreview.Columns["Include"].Width = 55;
+        }
+        if (_gridPreview.Columns.Contains("Row"))
+        {
+            _gridPreview.Columns["Row"].ReadOnly = true;
+            _gridPreview.Columns["Row"].Width = 40;
+        }
+
+        // Auto-fit data columns with constraints
         foreach (DataGridViewColumn col in _gridPreview.Columns)
         {
+            if (col.Name == "Include" || col.Name == "Row") continue;
+            col.ReadOnly = true;
+            col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
             var w = col.Width;
             col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             col.MinimumWidth = 50;
             col.Width = Math.Max(Math.Min(w, 200), 50);
         }
+
+        // Update ExcludedRows from checkbox state
+        UpdateExcludedRows();
+
+        // Recompute counts based on included rows only
+        var includedCount = _csvData.RowCount - ExcludedRows.Count;
+        int patientCount, tumorCount;
+        if (hasPatientId)
+        {
+            var pidMapping = activeMappings.First(m => m.MappedNaaccrId == "patientIdNumber");
+            var groups = _csvData.Rows
+                .Where((_, i) => !ExcludedRows.Contains(i))
+                .GroupBy(r => pidMapping.CsvColumnIndex < r.Length ? r[pidMapping.CsvColumnIndex].Trim() : "")
+                .Count();
+            patientCount = groups;
+            tumorCount = includedCount;
+        }
+        else
+        {
+            patientCount = includedCount;
+            tumorCount = includedCount;
+        }
+
+        if (emptyRows.Count > 0)
+            warnings.Add($"{emptyRows.Count} empty row(s) auto-excluded (uncheck Include to restore).");
+
+        _lblPreviewSummary.Text = $"Preview: {patientCount} patient(s), {tumorCount} tumor(s)" +
+            (ExcludedRows.Count > 0 ? $" ({ExcludedRows.Count} row(s) excluded)" : "");
 
         // ── Field validation ──
         var validationWarnings = NaaccrFieldValidator.ValidateDataSet(
@@ -571,14 +616,21 @@ public class CsvImportForm : ParratFormBase
 
         // Highlight invalid cells in the preview grid
         var previewWarningLookup = validationWarnings
-            .Where(w => w.RowIndex < 20)
             .ToLookup(w => (w.RowIndex, w.NaaccrId));
 
         for (int r = 0; r < _gridPreview.Rows.Count; r++)
         {
+            // Gray out excluded rows
+            if (ExcludedRows.Contains(r))
+            {
+                _gridPreview.Rows[r].DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+                _gridPreview.Rows[r].DefaultCellStyle.ForeColor = Color.Gray;
+            }
+
             for (int c = 0; c < _gridPreview.Columns.Count; c++)
             {
                 var colName = _gridPreview.Columns[c].Name;
+                if (colName == "Include" || colName == "Row") continue;
                 if (previewWarningLookup[(r, colName)].Any())
                 {
                     var cell = _gridPreview.Rows[r].Cells[c];
@@ -586,6 +638,61 @@ public class CsvImportForm : ParratFormBase
                     cell.ToolTipText = string.Join("\n",
                         previewWarningLookup[(r, colName)].Select(w => w.Message));
                 }
+            }
+        }
+    }
+
+    private void UpdateCountsAndRowStyles()
+    {
+        var activeMappings = _mappings.Where(m => m.IsExportable).ToList();
+        bool hasPatientId = activeMappings.Any(m => m.MappedNaaccrId == "patientIdNumber");
+
+        var includedCount = _csvData.RowCount - ExcludedRows.Count;
+        int patientCount, tumorCount;
+        if (hasPatientId)
+        {
+            var pidMapping = activeMappings.First(m => m.MappedNaaccrId == "patientIdNumber");
+            var groups = _csvData.Rows
+                .Where((_, i) => !ExcludedRows.Contains(i))
+                .GroupBy(r => pidMapping.CsvColumnIndex < r.Length ? r[pidMapping.CsvColumnIndex].Trim() : "")
+                .Count();
+            patientCount = groups;
+            tumorCount = includedCount;
+        }
+        else
+        {
+            patientCount = includedCount;
+            tumorCount = includedCount;
+        }
+
+        _lblPreviewSummary.Text = $"Preview: {patientCount} patient(s), {tumorCount} tumor(s)" +
+            (ExcludedRows.Count > 0 ? $" ({ExcludedRows.Count} row(s) excluded)" : "");
+
+        // Update row styling
+        for (int r = 0; r < _gridPreview.Rows.Count; r++)
+        {
+            if (ExcludedRows.Contains(r))
+            {
+                _gridPreview.Rows[r].DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+                _gridPreview.Rows[r].DefaultCellStyle.ForeColor = Color.Gray;
+            }
+            else
+            {
+                _gridPreview.Rows[r].DefaultCellStyle.BackColor = Color.White;
+                _gridPreview.Rows[r].DefaultCellStyle.ForeColor = Color.Black;
+            }
+        }
+    }
+
+    private void UpdateExcludedRows()
+    {
+        ExcludedRows.Clear();
+        if (_gridPreview.DataSource is DataTable table)
+        {
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                if (table.Rows[i]["Include"] is bool include && !include)
+                    ExcludedRows.Add(i);
             }
         }
     }

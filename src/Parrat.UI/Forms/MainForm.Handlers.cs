@@ -800,6 +800,7 @@ public partial class MainForm
             var finalMappings = importForm.ResultMappings;
             var recordType = importForm.RecordType;
             var naaccrVersion = importForm.NaaccrVersion;
+            var excludedRows = importForm.ExcludedRows;
 
             // Check that at least one column is mapped
             if (finalMappings.All(m => m.IsSkipped))
@@ -812,7 +813,7 @@ public partial class MainForm
             SetStatusText("Generating NAACCR XML...");
             Refresh();
 
-            var xmlDoc = _csvImportService.GenerateNaaccrXml(csvData, finalMappings, naaccrVersion, recordType);
+            var xmlDoc = _csvImportService.GenerateNaaccrXml(csvData, finalMappings, naaccrVersion, recordType, excludedRows);
 
             // Save
             using var sfd = new SaveFileDialog

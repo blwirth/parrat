@@ -10,5 +10,6 @@ public interface ICsvImportService
         CsvParseResult csvData,
         List<CsvImportMapping> mappings,
         int naaccrVersion = 25,
-        string recordType = "A");
+        string recordType = "A",
+        HashSet<int>? excludedRows = null);
 }

@@ -665,6 +665,76 @@ public class CsvImportServiceTests : IDisposable
         Assert.Equal("Jane", GetItemValue(patient, "nameFirst", nsMgr));
     }
 
+    [Fact]
+    public void GenerateNaaccrXml_ExcludedRows_AreSkipped()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast" },
+            Rows = new List<string[]>
+            {
+                new[] { "Smith" },
+                new[] { "SUMMARY ROW" },
+                new[] { "Jones" }
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" }
+        };
+
+        var excluded = new HashSet<int> { 1 }; // Exclude "SUMMARY ROW"
+        var doc = _service.GenerateNaaccrXml(csv, mappings, excludedRows: excluded);
+        var nsMgr = CreateNsMgr(doc);
+
+        var patients = doc.SelectNodes("//n:Patient", nsMgr)!;
+        Assert.Equal(2, patients.Count);
+
+        var tumors = doc.SelectNodes("//n:Tumor", nsMgr)!;
+        Assert.Equal(2, tumors.Count);
+
+        // Verify the excluded row's data is not present
+        var allNames = patients.Cast<XmlNode>()
+            .Select(p => GetItemValue(p, "nameLast", nsMgr))
+            .ToList();
+        Assert.Contains("Smith", allNames);
+        Assert.Contains("Jones", allNames);
+        Assert.DoesNotContain("SUMMARY ROW", allNames);
+    }
+
+    [Fact]
+    public void DetectEmptyRows_FindsAllEmptyMappedRows()
+    {
+        var csv = new CsvParseResult
+        {
+            Headers = new[] { "nameLast", "nameFirst", "notes" },
+            Rows = new List<string[]>
+            {
+                new[] { "Smith", "Jane", "some notes" },
+                new[] { "", "", "formula result" },     // mapped cols empty
+                new[] { "Jones", "Bob", "" },
+                new[] { "", "", "" },                    // all empty
+                new[] { "  ", "  ", "trailing spaces" }  // mapped cols whitespace-only
+            }
+        };
+
+        var mappings = new List<CsvImportMapping>
+        {
+            new() { CsvColumnIndex = 0, CsvHeader = "nameLast", MappedNaaccrId = "nameLast" },
+            new() { CsvColumnIndex = 1, CsvHeader = "nameFirst", MappedNaaccrId = "nameFirst" }
+            // notes column is unmapped
+        };
+
+        var emptyRows = CsvImportService.DetectEmptyRows(csv, mappings);
+
+        Assert.Contains(1, emptyRows);  // mapped cols empty (notes has data but unmapped)
+        Assert.Contains(3, emptyRows);  // all empty
+        Assert.Contains(4, emptyRows);  // whitespace-only in mapped cols
+        Assert.DoesNotContain(0, emptyRows);
+        Assert.DoesNotContain(2, emptyRows);
+    }
+
     // ── Helper ──────────────────────────────────────────────────────────
 
     private static string GetItemValue(XmlNode node, string naaccrId, XmlNamespaceManager nsMgr)
