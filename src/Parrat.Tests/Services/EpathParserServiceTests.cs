@@ -343,6 +343,57 @@ public class EpathParserServiceTests
     }
 
     [Fact]
+    public void ConvertToHl7_PidFieldPositionsCorrect()
+    {
+        SetupPathHelper();
+
+        var fields = MakeV22Fields();
+        fields[9] = "Smith";       // Name Last (item 2230)
+        fields[10] = "Jane";       // Name First (item 2240)
+        fields[11] = "M";          // Name Middle (item 2250)
+        fields[17] = "19850315";   // Date of Birth (item 240)
+        fields[20] = "F";          // Sex (item 220)
+        fields[21] = "MRN001";     // Medical Record Number (item 2300)
+
+        var records = ParseSingleLine(fields);
+        var parser = new EpathParserService();
+        var hl7 = parser.ConvertToHl7(records);
+        var pid = hl7[0].Segments["PID"][0];
+        var pidFields = pid.Split('|');
+
+        // PID-1: Set ID
+        Assert.Equal("1", pidFields[1]);
+        // PID-3: Patient Identifier (MRN)
+        Assert.Equal("MRN001", pidFields[3]);
+        // PID-5: Patient Name (Last^First^Middle^^Prefix)
+        Assert.StartsWith("Smith^Jane^M", pidFields[5]);
+        // PID-7: Date of Birth
+        Assert.Equal("19850315", pidFields[7]);
+        // PID-8: Sex
+        Assert.Equal("F", pidFields[8]);
+    }
+
+    [Fact]
+    public void ConvertToHl7_ObrPathReportNumberInFillerOnly()
+    {
+        SetupPathHelper();
+
+        var fields = MakeV22Fields();
+        fields[22] = "SP-2024-001"; // Path Report Number (item 7090)
+
+        var records = ParseSingleLine(fields);
+        var parser = new EpathParserService();
+        var hl7 = parser.ConvertToHl7(records);
+        var obr = hl7[0].Segments["OBR"][0];
+        var obrFields = obr.Split('|');
+
+        // OBR-2: Placer Order Number — should be empty
+        Assert.Equal("", obrFields[2]);
+        // OBR-3: Filler Order Number — should be path report number
+        Assert.Equal("SP-2024-001", obrFields[3]);
+    }
+
+    [Fact]
     public void ConvertToHl7_V22ProducesHl7Version231()
     {
         SetupPathHelper();

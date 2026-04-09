@@ -171,7 +171,7 @@ public class EpathParserService : IEpathParserService
 
         // PID
         sb.AppendLine(
-            $"PID|1||{Esc(Get(m, 2300))}|||" +
+            $"PID|1||{Esc(Get(m, 2300))}||" +
             $"{Esc(Get(m, 2230))}^{Esc(Get(m, 2240))}^{Esc(Get(m, 2250))}^^{Esc(Get(m, 2220))}" +
             $"|{Esc(Get(m, 2280))}" +
             $"|{Get(m, 240)}|{Get(m, 220)}" +
@@ -202,7 +202,7 @@ public class EpathParserService : IEpathParserService
 
         // OBR
         sb.AppendLine(
-            $"OBR|1|{Esc(Get(m, 7090))}|{Esc(Get(m, 7090))}" +
+            $"OBR|1||{Esc(Get(m, 7090))}" +
             $"|PATH^Pathology Report" +
             $"|||{Get(m, 7320)}" +
             $"|||||||{Get(m, 7560)}" +
