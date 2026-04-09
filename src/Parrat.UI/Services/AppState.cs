@@ -13,6 +13,7 @@ public class AppState
     public List<Hl7Message> Hl7Messages { get; set; } = new();
     public string? CurrentFilePath { get; set; }
     public string? FileType { get; set; } // "xml" or "hl7"
+    public string? SourceFormat { get; set; } // "xml", "hl7", or "epath" — tracks original file format
 
     // Navigation state
     public int CurrentIndex { get; set; } = -1;
@@ -39,6 +40,7 @@ public class AppState
         Hl7Messages.Clear();
         CurrentFilePath = null;
         FileType = null;
+        SourceFormat = null;
         CurrentIndex = -1;
         NavTable = null;
         SearchIndex = Array.Empty<string>();

@@ -48,7 +48,8 @@ public partial class MainForm : ParratFormBase
         INaaccrDictionary naaccrDictionary,
         ICsvParserService csvParserService,
         ICsvImportService csvImportService,
-        IXlsxParserService xlsxParserService)
+        IXlsxParserService xlsxParserService,
+        IEpathParserService epathParserService)
     {
         _state = state;
         _menuBuilder = menuBuilder;
@@ -77,6 +78,7 @@ public partial class MainForm : ParratFormBase
         _csvParserService = csvParserService;
         _csvImportService = csvImportService;
         _xlsxParserService = xlsxParserService;
+        _epathParserService = epathParserService;
 
         InitializeComponent();
         InitializeMenu();
