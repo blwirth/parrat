@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
@@ -55,8 +56,30 @@ public class NaaccrDictionary : INaaccrDictionary
             };
         }
 
+        EnrichFromXmlDictionary(version, dict);
+
         _versions[version] = dict;
         _activeVersion = version;
+    }
+
+    private static void EnrichFromXmlDictionary(int version, Dictionary<string, NaaccrItem> dict)
+    {
+        var xmlPath = PathHelper.GetDictionaryPath($"naaccr-dictionary-{version}0.xml");
+        if (!File.Exists(xmlPath)) return;
+
+        XNamespace ns = "http://naaccr.org/naaccrxml";
+        var xdoc = XDocument.Load(xmlPath);
+
+        foreach (var itemDef in xdoc.Descendants(ns + "ItemDef"))
+        {
+            var xmlId = itemDef.Attribute("naaccrId")?.Value;
+            if (xmlId == null || !dict.TryGetValue(xmlId, out var item)) continue;
+
+            if (int.TryParse(itemDef.Attribute("length")?.Value, out var len))
+                item.Length = len;
+
+            item.DataType = itemDef.Attribute("dataType")?.Value ?? "text";
+        }
     }
 
     public Dictionary<string, NaaccrItem> GetDictionary()

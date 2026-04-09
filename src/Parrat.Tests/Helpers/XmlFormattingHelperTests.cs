@@ -72,4 +72,37 @@ public class XmlFormattingHelperTests
 
         Assert.Contains("\r\n", result);
     }
+
+    [Fact]
+    public void FormatXml_DeclaresUtf8Encoding()
+    {
+        var input = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><child>val</child></root>";
+        var result = XmlFormattingHelper.FormatXml(input);
+
+        Assert.Contains("encoding=\"utf-8\"", result);
+        Assert.DoesNotContain("utf-16", result);
+    }
+
+    [Fact]
+    public void FormatXml_OutputLoadableFromUtf8File()
+    {
+        var input = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><child>val</child></root>";
+        var result = XmlFormattingHelper.FormatXml(input);
+
+        // Simulate the actual save path: WriteAllText with UTF-8 → Load from file
+        var tempPath = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(tempPath, result, System.Text.Encoding.UTF8);
+
+            var doc = new System.Xml.XmlDocument();
+            var ex = Record.Exception(() => doc.Load(tempPath));
+            Assert.Null(ex);
+            Assert.Equal("val", doc.SelectSingleNode("//child")!.InnerText);
+        }
+        finally
+        {
+            System.IO.File.Delete(tempPath);
+        }
+    }
 }

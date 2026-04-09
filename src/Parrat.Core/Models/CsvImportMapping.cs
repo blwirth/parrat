@@ -7,4 +7,6 @@ public class CsvImportMapping
     public string? MappedNaaccrId { get; set; }
     public bool IsAutoMatched { get; set; }
     public bool IsSkipped => MappedNaaccrId == null;
+    public bool IsIncompatible { get; set; }
+    public bool IsExportable => !IsSkipped && !IsIncompatible;
 }

@@ -775,7 +775,7 @@ public partial class MainForm
 
             if (csvData.ColumnCount == 0)
             {
-                MessageBox.Show("The CSV file has no columns.", "Import CSV",
+                MessageBox.Show("The CSV file has no columns.", "Convert CSV",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 SetStatusText("Ready");
                 return;
@@ -783,7 +783,7 @@ public partial class MainForm
 
             if (csvData.RowCount == 0)
             {
-                MessageBox.Show("The CSV file has headers but no data rows.", "Import CSV",
+                MessageBox.Show("The CSV file has headers but no data rows.", "Convert CSV",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 SetStatusText("Ready");
                 return;
@@ -803,7 +803,7 @@ public partial class MainForm
             // Check that at least one column is mapped
             if (finalMappings.All(m => m.IsSkipped))
             {
-                MessageBox.Show("No columns are mapped. Import cancelled.", "Import CSV",
+                MessageBox.Show("No columns are mapped. Import cancelled.", "Convert CSV",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -846,9 +846,9 @@ public partial class MainForm
         catch (Exception ex)
         {
             _logger.LogError("CSV import failed", "IMPORT", ex);
-            MessageBox.Show($"Error importing CSV: {ex.Message}", "Import Error",
+            MessageBox.Show($"Error converting CSV: {ex.Message}", "Convert Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
-            SetStatusText("Error importing CSV");
+            SetStatusText("Error converting CSV");
         }
     }
 
