@@ -321,6 +321,154 @@ public class NavigationService
         BtnNext.Enabled = index < messages.Count - 1;
     }
 
+    // ── Show ePath Record ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Displays a parsed ePath record with native field names and values.
+    /// No HL7 conversion — shows the .dat data as-is.
+    /// </summary>
+    public void ShowEpathRecord(int index)
+    {
+        var records = _state.EpathRecords;
+        if (records == null || records.Count == 0) return;
+        if (index < 0 || index >= records.Count) return;
+
+        _state.CurrentIndex = index;
+        var record = records[index];
+
+        RtbPath.Clear();
+        RtbItems.Clear();
+
+        SelectGridRow(index);
+
+        // === PATH PANEL: Pathology text fields ===
+        SyntaxHighlightingHelper.AddSectionHeader(RtbPath, "PATHOLOGY REPORT TEXT");
+
+        // Show the main text fields in reading order
+        var textItems = new[] { 7410, 7420, 7430, 7440, 7450, 7400, 7460, 7470, 2600 };
+        var textLabels = new[] {
+            "Clinical History", "Nature of Specimen", "Gross Pathology",
+            "Micro Pathology", "Final Diagnosis", "Text Diagnosis",
+            "Comment", "Supplemental Reports", "Staging"
+        };
+
+        bool hasText = false;
+        for (int i = 0; i < textItems.Length; i++)
+        {
+            if (record.Fields.TryGetValue(textItems[i], out var text) && !string.IsNullOrWhiteSpace(text))
+            {
+                if (hasText) SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, "");
+                SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, $"── {textLabels[i]} ──", bold: true);
+                var lines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+                foreach (var line in lines)
+                    SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, line);
+                hasText = true;
+            }
+        }
+
+        if (!hasText)
+            SyntaxHighlightingHelper.AddLineToRichTextBox(RtbPath, "(No pathology text in this record)");
+
+        // === ITEMS PANEL: All ePath fields ===
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"ePath Record {index + 1} of {records.Count}", bold: true);
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, $"Format: {record.FormatVersion}");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "PATIENT INFO");
+        AddEpathField(RtbItems, record, 2230, "Last Name", bold: true);
+        AddEpathField(RtbItems, record, 2240, "First Name", bold: true);
+        AddEpathField(RtbItems, record, 2250, "Middle Name");
+        AddEpathField(RtbItems, record, 240, "Date of Birth", bold: true);
+        AddEpathField(RtbItems, record, 220, "Sex");
+        AddEpathField(RtbItems, record, 2300, "Medical Record Number", bold: true);
+        AddEpathField(RtbItems, record, 2320, "SSN");
+        AddEpathField(RtbItems, record, 160, "Race");
+        AddEpathField(RtbItems, record, 190, "Ethnicity");
+        AddEpathField(RtbItems, record, 2330, "Address Street");
+        AddEpathField(RtbItems, record, 70, "Address City");
+        AddEpathField(RtbItems, record, 80, "Address State");
+        AddEpathField(RtbItems, record, 100, "Address Postal Code");
+        AddEpathField(RtbItems, record, 2360, "Phone");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "REPORT INFO");
+        AddEpathField(RtbItems, record, 7090, "Path Report Number", bold: true);
+        AddEpathField(RtbItems, record, 7480, "Report Type");
+        AddEpathField(RtbItems, record, 7320, "Date Specimen Collection");
+        AddEpathField(RtbItems, record, 7560, "Specimen Received Date");
+        AddEpathField(RtbItems, record, 7330, "Result Status");
+        AddEpathField(RtbItems, record, 7490, "Date/Time of Message");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "REPORTING FACILITY");
+        AddEpathField(RtbItems, record, 7020, "Lab Name");
+        AddEpathField(RtbItems, record, 7010, "CLIA");
+        AddEpathField(RtbItems, record, 7030, "Address Street");
+        AddEpathField(RtbItems, record, 7040, "City");
+        AddEpathField(RtbItems, record, 7050, "State");
+        AddEpathField(RtbItems, record, 7060, "Postal Code");
+        AddEpathField(RtbItems, record, 7070, "Phone");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "ORDERING PROVIDER");
+        AddEpathField(RtbItems, record, 7110, "Last Name");
+        AddEpathField(RtbItems, record, 7120, "First Name");
+        AddEpathField(RtbItems, record, 7100, "License No");
+        AddEpathField(RtbItems, record, 7180, "Phone");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "ORDERING FACILITY");
+        AddEpathField(RtbItems, record, 7200, "Facility Name");
+        AddEpathField(RtbItems, record, 7190, "Facility ID");
+        AddEpathField(RtbItems, record, 7210, "Address Street");
+        AddEpathField(RtbItems, record, 7220, "City");
+        AddEpathField(RtbItems, record, 7230, "State");
+        AddEpathField(RtbItems, record, 7240, "Postal Code");
+        AddEpathField(RtbItems, record, 7250, "Phone");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "PATHOLOGIST");
+        AddEpathField(RtbItems, record, 7260, "Last Name");
+        AddEpathField(RtbItems, record, 7270, "First Name");
+        AddEpathField(RtbItems, record, 7280, "Middle Name");
+        AddEpathField(RtbItems, record, 7300, "License No");
+        AddEpathField(RtbItems, record, 7310, "License State");
+        SyntaxHighlightingHelper.AddLineToRichTextBox(RtbItems, "");
+
+        SyntaxHighlightingHelper.AddSectionHeader(RtbItems, "CODES");
+        AddEpathField(RtbItems, record, 7340, "SNOMED CT Code(s)");
+        AddEpathField(RtbItems, record, 7350, "SNOMED CT Version");
+        AddEpathField(RtbItems, record, 7360, "ICD-CM Code");
+        AddEpathField(RtbItems, record, 7370, "ICD-CM Version");
+        AddEpathField(RtbItems, record, 7380, "CPT Code(s)");
+        AddEpathField(RtbItems, record, 7390, "CPT Version");
+        AddEpathField(RtbItems, record, 7515, "Producer ID (CLIA)");
+
+        // Apply search highlighting
+        var searchText = TxtSearch?.Text;
+        SyntaxHighlightingHelper.InvokeSearchHighlight(RtbPath, searchText);
+        SyntaxHighlightingHelper.InvokeSearchHighlight(RtbItems, searchText);
+
+        // Update copy buttons
+        UpdateCopyButtons(
+            record.PatientLastName,
+            record.PatientFirstName,
+            record.DateOfBirth,
+            record.AccessionNumber
+        );
+
+        int selectedCount = GetSelectedCount();
+        LblIndex.Text = $"Record {index + 1} of {records.Count} ({selectedCount} selected)";
+        BtnPrev.Enabled = index > 0;
+        BtnNext.Enabled = index < records.Count - 1;
+    }
+
+    private static void AddEpathField(RichTextBox rtb, Core.Models.EpathRecord record, int itemNumber, string label, bool bold = false)
+    {
+        if (record.Fields.TryGetValue(itemNumber, out var value) && !string.IsNullOrWhiteSpace(value))
+            SyntaxHighlightingHelper.AddLineToRichTextBox(rtb, $"{label}: {value}", bold: bold);
+    }
+
     // ── Navigation ───────────────────────────────────────────────────────
 
     /// <summary>
@@ -348,6 +496,8 @@ public class NavigationService
     {
         if (_state.FileType == "hl7")
             ShowHl7Message(index);
+        else if (_state.FileType == "epath")
+            ShowEpathRecord(index);
         else
             ShowTumor(index);
     }

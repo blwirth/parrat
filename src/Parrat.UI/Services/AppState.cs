@@ -11,9 +11,9 @@ public class AppState
     public XmlNodeList? Tumors { get; set; }
     public XmlNamespaceManager? NsMgr { get; set; }
     public List<Hl7Message> Hl7Messages { get; set; } = new();
+    public List<EpathRecord> EpathRecords { get; set; } = new();
     public string? CurrentFilePath { get; set; }
-    public string? FileType { get; set; } // "xml" or "hl7"
-    public string? SourceFormat { get; set; } // "xml", "hl7", or "epath" — tracks original file format
+    public string? FileType { get; set; } // "xml", "hl7", or "epath"
 
     // Navigation state
     public int CurrentIndex { get; set; } = -1;
@@ -29,6 +29,7 @@ public class AppState
     {
         "xml" => Tumors?.Count ?? 0,
         "hl7" => Hl7Messages.Count,
+        "epath" => EpathRecords.Count,
         _ => 0
     };
 
@@ -38,9 +39,9 @@ public class AppState
         Tumors = null;
         NsMgr = null;
         Hl7Messages.Clear();
+        EpathRecords.Clear();
         CurrentFilePath = null;
         FileType = null;
-        SourceFormat = null;
         CurrentIndex = -1;
         NavTable = null;
         SearchIndex = Array.Empty<string>();

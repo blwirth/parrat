@@ -24,6 +24,7 @@ public class FileHandlers
     private readonly NavigationService _navigationService;
     private readonly MenuBuilder _menuBuilder;
     private readonly IGridSettingsService _gridSettingsService;
+    private readonly IEpathParserService _epathParserService;
 
     private System.Windows.Forms.Timer? _searchTimer;
 
@@ -35,7 +36,8 @@ public class FileHandlers
         IParratLogger logger,
         NavigationService navigationService,
         MenuBuilder menuBuilder,
-        IGridSettingsService gridSettingsService)
+        IGridSettingsService gridSettingsService,
+        IEpathParserService epathParserService)
     {
         _state = state;
         _xmlFileService = xmlFileService;
@@ -45,6 +47,7 @@ public class FileHandlers
         _navigationService = navigationService;
         _menuBuilder = menuBuilder;
         _gridSettingsService = gridSettingsService;
+        _epathParserService = epathParserService;
     }
 
     // ── Open File ────────────────────────────────────────────────────────
@@ -57,8 +60,8 @@ public class FileHandlers
     {
         using var ofd = new OpenFileDialog
         {
-            Filter = "NAACCR/HL7 Files (*.xml;*.hl7)|*.xml;*.hl7|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*",
-            Title = "Select NAACCR XML or HL7 file"
+            Filter = "NAACCR/HL7/ePath Files (*.xml;*.hl7;*.dat)|*.xml;*.hl7;*.dat|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|ePath Flat Files (*.dat)|*.dat|All files (*.*)|*.*",
+            Title = "Select NAACCR XML, HL7, or ePath file"
         };
 
         var lastDir = _recentFilesService.GetLastOpenedDirectory();
@@ -80,6 +83,8 @@ public class FileHandlers
 
         if (extension == ".hl7")
             ImportHl7File(filePath, form);
+        else if (extension == ".dat")
+            ImportEpathFile(filePath, form);
         else
             ImportXmlFile(filePath, form);
     }
@@ -298,6 +303,119 @@ public class FileHandlers
         {
             _logger.LogError("Failed to load HL7 file", "OPEN_FILE", ex);
             MessageBox.Show($"Error loading HL7: {ex.Message}", "Error");
+        }
+    }
+
+    // ── Import ePath (.dat) ─────────────────────────────────────────────
+
+    private void ImportEpathFile(string filePath, MainForm form)
+    {
+        try
+        {
+            var records = _epathParserService.ParseDatFile(filePath);
+
+            if (records.Count == 0)
+            {
+                MessageBox.Show("No ePath records found in this file.", "No Records");
+                form.SetStatusText("No records found");
+                form.SetFileNameText($"File: {filePath}");
+                form.RtbPath.Clear();
+                form.RtbItems.Clear();
+                form.GridNav.DataSource = null;
+                form.BtnPrev.Enabled = false;
+                form.BtnNext.Enabled = false;
+                form.LblIndex.Text = "";
+                form.PnlSearch.Visible = false;
+                form.UpdateTitle();
+                return;
+            }
+
+            // Set state
+            _state.EpathRecords = records;
+            _state.CurrentFilePath = filePath;
+            _state.FileType = "epath";
+            _state.CurrentIndex = -1;
+
+            // Clear other data
+            _state.XmlDoc = null;
+            _state.Tumors = null;
+            _state.NsMgr = null;
+            _state.Hl7Messages.Clear();
+
+            _menuBuilder.UpdateMenuStatesForFileType("epath");
+
+            var fileName = Path.GetFileName(filePath);
+            var version = records[0].FormatVersion;
+            form.SetStatusText($"Loaded: {fileName} (ePath {version}, Records: {records.Count})");
+            form.SetFileNameText($"File: {filePath}");
+
+            _logger.Log("INFO", $"Loaded {fileName} with {records.Count} ePath records ({version})", "OPEN_FILE");
+            _recentFilesService.AddRecentFile(filePath, "epath");
+
+            // Build navigation table
+            var gridSettings = _gridSettingsService.Load();
+
+            var table = new DataTable();
+            table.Columns.Add("Selected", typeof(bool));
+            table.Columns.Add("Index", typeof(int));
+            table.Columns.Add("nameLast", typeof(string));
+            table.Columns.Add("nameFirst", typeof(string));
+            table.Columns.Add("dateOfBirth", typeof(string));
+            table.Columns.Add("accessionNumber", typeof(string));
+            table.Columns.Add("patientId", typeof(string));
+            table.Columns.Add("sendingFacility", typeof(string));
+            table.Columns.Add("formatVersion", typeof(string));
+
+            table.BeginLoadData();
+            foreach (var rec in records)
+            {
+                var row = table.NewRow();
+                row["Selected"] = false;
+                row["Index"] = rec.Index + 1;
+                row["nameLast"] = rec.PatientLastName;
+                row["nameFirst"] = rec.PatientFirstName;
+                row["dateOfBirth"] = rec.DateOfBirth;
+                row["accessionNumber"] = rec.AccessionNumber;
+                row["patientId"] = rec.PatientId;
+                row["sendingFacility"] = rec.SendingFacility;
+                row["formatVersion"] = rec.FormatVersion;
+
+                table.Rows.Add(row);
+            }
+            table.EndLoadData();
+
+            _state.NavTable = table;
+
+            _state.IsLoadingData = true;
+            form.GridNav.DataSource = null;
+            form.GridNav.Columns.Clear();
+            form.GridNav.DataSource = table;
+
+            ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
+
+            _state.IsLoadingData = false;
+
+            if (form.GridNav.Rows.Count > 0)
+            {
+                form.GridNav.Rows[0].Selected = true;
+                form.GridNav.CurrentCell = form.GridNav.Rows[0].Cells[0];
+            }
+            _navigationService.ShowEpathRecord(0);
+
+            // Build search index from display fields
+            var searchEntries = records.Select(r =>
+                string.Join(" ", r.DisplayFields.Select(f => f.Value))).ToArray();
+            _state.SearchIndex = searchEntries;
+
+            form.PnlSearch.Visible = true;
+            form.TxtSearch.Text = "";
+            form.LblSearchCount.Text = "";
+            form.UpdateTitle();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to load ePath file", "OPEN_FILE", ex);
+            MessageBox.Show($"Error loading ePath file: {ex.Message}", "Error");
         }
     }
 

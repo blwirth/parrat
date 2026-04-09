@@ -56,8 +56,7 @@ public partial class MainForm
         mb.MnuSplit.Click += (s, e) => OnSplitFile();
         mb.MnuConvertTxt.Click += (s, e) => OnConvertTxt();
         mb.MnuImportCsv.Click += (s, e) => OnImportCsv();
-        mb.MnuImportEpath.Click += (s, e) => OnImportEpath();
-        mb.MnuConvertEpathToHl7.Click += (s, e) => OnConvertEpathToHl7();
+        mb.MnuConvertDatToHl7.Click += (s, e) => OnConvertDatToHl7();
 
         // ── Edit ──────────────────────────────────────────────────────────
         mb.MnuAssign.Click += (s, e) => OnAssignUnified();
@@ -853,130 +852,14 @@ public partial class MainForm
         }
     }
 
-    /// <summary>Import ePath flat file (.dat) — parse pipe-delimited ePath, convert to HL7 messages.</summary>
-    private void OnImportEpath()
+    /// <summary>Convert loaded ePath .dat data to HL7 file on disk.</summary>
+    private void OnConvertDatToHl7()
     {
         try
         {
-            using var ofd = new OpenFileDialog
+            if (_state.FileType != "epath" || _state.EpathRecords.Count == 0)
             {
-                Filter = "ePath Flat Files (*.dat;*.txt)|*.dat;*.txt|All files (*.*)|*.*",
-                Title = "Select ePath Flat File"
-            };
-
-            if (ofd.ShowDialog(this) != DialogResult.OK) return;
-
-            SetStatusText("Parsing ePath file...");
-            Refresh();
-
-            var messages = _epathParserService.ParseDatFile(ofd.FileName);
-
-            if (messages.Count == 0)
-            {
-                MessageBox.Show("No ePath records found in this file.", "Import ePath",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                SetStatusText("Ready");
-                return;
-            }
-
-            // Load into HL7 mode
-            _state.Hl7Messages = messages;
-            _state.CurrentFilePath = ofd.FileName;
-            _state.FileType = "hl7";
-            _state.SourceFormat = "epath";
-            _state.CurrentIndex = -1;
-
-            // Clear XML data
-            _state.XmlDoc = null;
-            _state.Tumors = null;
-            _state.NsMgr = null;
-
-            _menuBuilder.UpdateMenuStatesForFileType("hl7", "epath");
-
-            var fileName = Path.GetFileName(ofd.FileName);
-            SetStatusText($"Loaded: {fileName} (ePath records: {messages.Count})");
-            SetFileNameText($"File: {ofd.FileName}");
-
-            _logger.Log("INFO", $"Imported {messages.Count} ePath records from {fileName}", "EPATH_IMPORT");
-
-            // Build navigation table (same as HL7)
-            var gridSettings = _fileHandlers.GridSettingsService.Load();
-
-            var table = new System.Data.DataTable();
-            table.Columns.Add("Selected", typeof(bool));
-            table.Columns.Add("Index", typeof(int));
-            table.Columns.Add("nameLast", typeof(string));
-            table.Columns.Add("nameFirst", typeof(string));
-            table.Columns.Add("dateOfBirth", typeof(string));
-            table.Columns.Add("accessionNumber", typeof(string));
-            table.Columns.Add("patientId", typeof(string));
-            table.Columns.Add("messageType", typeof(string));
-            table.Columns.Add("orderDateTime", typeof(string));
-
-            table.BeginLoadData();
-            foreach (var msg in messages)
-            {
-                var row = table.NewRow();
-                row["Selected"] = false;
-                row["Index"] = msg.Index + 1;
-                row["nameLast"] = msg.PatientLastName;
-                row["nameFirst"] = msg.PatientFirstName;
-                row["dateOfBirth"] = msg.DateOfBirth;
-                row["accessionNumber"] = msg.AccessionNumber;
-                row["patientId"] = msg.PatientId;
-                row["messageType"] = msg.MessageType;
-                row["orderDateTime"] = msg.OrderDateTime;
-
-                table.Rows.Add(row);
-            }
-            table.EndLoadData();
-
-            _state.NavTable = table;
-
-            _state.IsLoadingData = true;
-            GridNav.DataSource = null;
-            GridNav.Columns.Clear();
-            GridNav.DataSource = table;
-
-            Services.FileHandlers.ConfigureGridColumns(GridNav, gridSettings.Hl7.Columns);
-
-            _state.IsLoadingData = false;
-
-            if (GridNav.Rows.Count > 0)
-            {
-                GridNav.Rows[0].Selected = true;
-                GridNav.CurrentCell = GridNav.Rows[0].Cells[0];
-            }
-            _navigationService.ShowHl7Message(0);
-
-            // Build search index
-            var searchService = new Core.Services.SearchService(_logger, null, null, messages);
-            _state.SearchIndex = searchService.BuildSearchIndex("hl7");
-
-            PnlSearch.Visible = true;
-            TxtSearch.Text = "";
-            LblSearchCount.Text = "";
-            UpdateTitle();
-
-            SetStatusText($"Loaded: {fileName} (ePath records: {messages.Count})");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("ePath import failed", "EPATH_IMPORT", ex);
-            MessageBox.Show($"Error importing ePath file: {ex.Message}", "Import Error",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-            SetStatusText("Error importing ePath file");
-        }
-    }
-
-    /// <summary>Convert loaded ePath data to HL7 file.</summary>
-    private void OnConvertEpathToHl7()
-    {
-        try
-        {
-            if (_state.SourceFormat != "epath" || _state.Hl7Messages.Count == 0)
-            {
-                MessageBox.Show("No ePath data loaded to convert.", "Convert ePath",
+                MessageBox.Show("No ePath .dat data loaded to convert.", "Convert .dat to .hl7",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -986,19 +869,24 @@ public partial class MainForm
             using var sfd = new SaveFileDialog
             {
                 Filter = "HL7 Files (*.hl7)|*.hl7|All files (*.*)|*.*",
-                Title = "Save Converted HL7 File",
+                Title = "Convert .dat to .hl7",
                 FileName = defaultName,
                 InitialDirectory = Path.GetDirectoryName(_state.CurrentFilePath) ?? ""
             };
 
             if (sfd.ShowDialog(this) != DialogResult.OK) return;
 
-            _hl7FileService.SaveHl7File(sfd.FileName, _state.Hl7Messages);
+            SetStatusText("Converting to HL7...");
+            Refresh();
 
-            _logger.Log("INFO", $"Converted {_state.Hl7Messages.Count} ePath records to HL7: {sfd.FileName}", "EPATH_CONVERT");
+            var hl7Messages = _epathParserService.ConvertToHl7(_state.EpathRecords);
+            _hl7FileService.SaveHl7File(sfd.FileName, hl7Messages);
+
+            var version = _state.EpathRecords[0].FormatVersion == "NOAH v2" ? "2.5.1" : "2.3.1";
+            _logger.Log("INFO", $"Converted {hl7Messages.Count} ePath records to HL7 v{version}: {sfd.FileName}", "EPATH_CONVERT");
 
             var openResult = MessageBox.Show(
-                $"HL7 file saved to:\n{sfd.FileName}\n\n{_state.Hl7Messages.Count} messages written.\n\nOpen in PARRAT?",
+                $"HL7 v{version} file saved to:\n{sfd.FileName}\n\n{hl7Messages.Count} messages written.\n\nOpen in PARRAT?",
                 "Conversion Complete",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
@@ -1007,12 +895,15 @@ public partial class MainForm
             {
                 _fileHandlers.OpenFile(sfd.FileName, this);
             }
+
+            SetStatusText("Ready");
         }
         catch (Exception ex)
         {
             _logger.LogError("ePath to HL7 conversion failed", "EPATH_CONVERT", ex);
-            MessageBox.Show($"Error converting ePath to HL7: {ex.Message}", "Conversion Error",
+            MessageBox.Show($"Error converting .dat to .hl7: {ex.Message}", "Conversion Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatusText("Error converting .dat to .hl7");
         }
     }
 

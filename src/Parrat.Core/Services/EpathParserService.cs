@@ -19,13 +19,15 @@ public class EpathParserService : IEpathParserService
         _logger = logger;
     }
 
-    public List<Hl7Message> ParseDatFile(string filePath)
+    // ── Parse .dat → native EpathRecord ─────────────────────────────────
+
+    public List<EpathRecord> ParseDatFile(string filePath)
     {
         var content = File.ReadAllText(filePath, Encoding.UTF8);
         var lines = content.Replace("\r\n", "\n").Replace("\r", "\n")
             .Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        var messages = new List<Hl7Message>();
+        var records = new List<EpathRecord>();
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -37,67 +39,26 @@ public class EpathParserService : IEpathParserService
                 var fields = SplitEpathLine(line);
                 var isNoahV2 = fields.Length >= 100;
                 var layout = isNoahV2 ? LoadNoahV2Layout() : LoadV22Layout();
-                var hl7Version = isNoahV2 ? "2.5.1" : "2.3.1";
                 var fieldMap = BuildFieldMap(fields, layout);
+                var displayFields = BuildDisplayFields(fields, layout);
 
-                var hl7Text = BuildHl7FromMap(fieldMap, hl7Version);
-
-                // Build segments dictionary and properties (same as Hl7Parser)
-                var segments = new Dictionary<string, List<string>>();
-                var allSegments = new List<string>();
-                var segLines = hl7Text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var segLine in segLines)
-                {
-                    var trimmed = segLine.Trim();
-                    if (trimmed.Length < 3) continue;
-
-                    var segType = trimmed[..3];
-                    if (!segments.ContainsKey(segType))
-                        segments[segType] = new List<string>();
-                    segments[segType].Add(trimmed);
-                    allSegments.Add(trimmed);
-                }
-
-                var lastName = Get(fieldMap, 2230);
-                var firstName = Get(fieldMap, 2240);
-                var middleName = Get(fieldMap, 2250);
-                var dob = Get(fieldMap, 240);
-                var sex = Get(fieldMap, 220);
-                var mrn = Get(fieldMap, 2300);
-                var accession = Get(fieldMap, 7090);
-                var messageDateTime = Get(fieldMap, 7490);
-                var sendingFacility = Get(fieldMap, 7020);
-                var clia = Get(fieldMap, 7010);
-                var orderDateTime = Get(fieldMap, 7320);
-
-                var ordLast = Get(fieldMap, 7110);
-                var ordFirst = Get(fieldMap, 7120);
-                var ordLic = Get(fieldMap, 7100);
-                var orderingProvider = BuildProviderDisplay(ordLic, ordLast, ordFirst);
-
-                var patientName = BuildPatientName(lastName, firstName, middleName);
-
-                messages.Add(new Hl7Message
+                var record = new EpathRecord
                 {
                     Index = i,
-                    RawContent = hl7Text,
-                    Segments = segments,
-                    AllSegments = allSegments,
-                    PatientId = mrn,
-                    PatientName = patientName,
-                    PatientLastName = lastName,
-                    PatientFirstName = firstName,
-                    DateOfBirth = dob,
-                    Sex = sex,
-                    MessageType = "ORU^R01",
-                    MessageDateTime = messageDateTime,
-                    SendingApplication = "EPATH",
-                    SendingFacility = $"{sendingFacility}^{clia}",
-                    AccessionNumber = accession,
-                    OrderDateTime = orderDateTime,
-                    OrderingProvider = orderingProvider
-                });
+                    RawLine = line,
+                    Fields = fieldMap,
+                    DisplayFields = displayFields,
+                    PatientLastName = Get(fieldMap, 2230),
+                    PatientFirstName = Get(fieldMap, 2240),
+                    DateOfBirth = Get(fieldMap, 240),
+                    Sex = Get(fieldMap, 220),
+                    PatientId = Get(fieldMap, 2300),
+                    AccessionNumber = Get(fieldMap, 7090),
+                    SendingFacility = Get(fieldMap, 7020),
+                    FormatVersion = isNoahV2 ? "NOAH v2" : "v2.2"
+                };
+
+                records.Add(record);
             }
             catch (Exception ex)
             {
@@ -105,9 +66,67 @@ public class EpathParserService : IEpathParserService
             }
         }
 
-        _logger.Log("INFO", $"Parsed {messages.Count} ePath records from {Path.GetFileName(filePath)}", "EPATH_IMPORT");
+        _logger.Log("INFO", $"Parsed {records.Count} ePath records from {Path.GetFileName(filePath)}", "EPATH_IMPORT");
+        return records;
+    }
+
+    // ── Convert EpathRecord → HL7 (explicit user action) ────────────────
+
+    public List<Hl7Message> ConvertToHl7(List<EpathRecord> records)
+    {
+        var messages = new List<Hl7Message>();
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            var record = records[i];
+            var m = record.Fields;
+            var hl7Version = record.FormatVersion == "NOAH v2" ? "2.5.1" : "2.3.1";
+            var hl7Text = BuildHl7FromMap(m, hl7Version);
+
+            var segments = new Dictionary<string, List<string>>();
+            var allSegments = new List<string>();
+            foreach (var segLine in hl7Text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = segLine.Trim();
+                if (trimmed.Length < 3) continue;
+                var segType = trimmed[..3];
+                if (!segments.ContainsKey(segType))
+                    segments[segType] = new List<string>();
+                segments[segType].Add(trimmed);
+                allSegments.Add(trimmed);
+            }
+
+            var ordLast = Get(m, 7110);
+            var ordFirst = Get(m, 7120);
+            var ordLic = Get(m, 7100);
+
+            messages.Add(new Hl7Message
+            {
+                Index = i,
+                RawContent = hl7Text,
+                Segments = segments,
+                AllSegments = allSegments,
+                PatientId = record.PatientId,
+                PatientName = BuildPatientName(record.PatientLastName, record.PatientFirstName, Get(m, 2250)),
+                PatientLastName = record.PatientLastName,
+                PatientFirstName = record.PatientFirstName,
+                DateOfBirth = record.DateOfBirth,
+                Sex = record.Sex,
+                MessageType = "ORU^R01",
+                MessageDateTime = Get(m, 7490),
+                SendingApplication = "EPATH",
+                SendingFacility = $"{record.SendingFacility}^{Get(m, 7010)}",
+                AccessionNumber = record.AccessionNumber,
+                OrderDateTime = Get(m, 7320),
+                OrderingProvider = BuildProviderDisplay(ordLic, ordLast, ordFirst)
+            });
+        }
+
+        _logger.Log("INFO", $"Converted {messages.Count} ePath records to HL7", "EPATH_CONVERT");
         return messages;
     }
+
+    // ── Pipe-delimited line splitting ───────────────────────────────────
 
     public static string[] SplitEpathLine(string line)
     {
@@ -139,37 +158,8 @@ public class EpathParserService : IEpathParserService
         return fields.ToArray();
     }
 
-    /// <summary>
-    /// Builds a dictionary mapping NAACCR item number → field value.
-    /// For fields without an item number (item=0), uses negative position as key.
-    /// </summary>
-    private static Dictionary<int, string> BuildFieldMap(string[] fields, List<EpathField> layout)
-    {
-        var map = new Dictionary<int, string>();
+    // ── HL7 message construction ────────────────────────────────────────
 
-        foreach (var field in layout)
-        {
-            int index = field.Position - 1; // 0-based
-            if (index < 0 || index >= fields.Length) continue;
-
-            var value = fields[index].Trim();
-            if (string.IsNullOrEmpty(value)) continue;
-
-            var key = field.ItemNumber > 0 ? field.ItemNumber : -field.Position;
-            map[key] = value;
-        }
-
-        return map;
-    }
-
-    /// <summary>
-    /// Builds HL7 message text from a field map keyed by NAACCR item number.
-    /// This is format-agnostic — works for both v2.2 and NOAH v2.
-    /// </summary>
-    /// <summary>
-    /// Builds HL7 ORU^R01 message text from a field map keyed by NAACCR item number.
-    /// HL7 version: v2.2 ePath → HL7 2.3.1, NOAH v2 ePath → HL7 2.5.1.
-    /// </summary>
     public string BuildHl7FromMap(Dictionary<int, string> m, string hl7Version = "2.3.1")
     {
         var sb = new StringBuilder();
@@ -194,16 +184,14 @@ public class EpathParserService : IEpathParserService
             $"||||{Get(m, 190)}" +
             $"||||||{Get(m, 7550)}");
 
-        // PV1 (physicians)
+        // PV1
         var physManaging = Get(m, 2460);
         var physSurgeon = Get(m, 2480);
         var physFollowup = Get(m, 2470);
         if (!string.IsNullOrEmpty(physManaging) || !string.IsNullOrEmpty(physSurgeon) || !string.IsNullOrEmpty(physFollowup))
-        {
             sb.AppendLine($"PV1|1||||||{physManaging}|{physSurgeon}|{physFollowup}");
-        }
 
-        // ORC (ordering facility)
+        // ORC
         sb.AppendLine(
             $"ORC|RE" +
             $"||||||||||||||||||||" +
@@ -230,7 +218,6 @@ public class EpathParserService : IEpathParserService
         // OBX segments
         int obxSetId = 1;
 
-        // Coded fields
         var snomed = Get(m, 7340);
         if (!string.IsNullOrEmpty(snomed))
             sb.AppendLine($"OBX|{obxSetId++}|CE|SNOMED^SNOMED CT Code||{Esc(snomed)}||||||F|||{Get(m, 7350)}");
@@ -243,7 +230,6 @@ public class EpathParserService : IEpathParserService
         if (!string.IsNullOrEmpty(cpt))
             sb.AppendLine($"OBX|{obxSetId++}|CE|CPT^CPT Code||{Esc(cpt)}||||||F|||{Get(m, 7390)}");
 
-        // Text fields
         var textFields = new (int item, string code, string name)[]
         {
             (7400, "PATH_DX", "Path Text Diagnosis"),
@@ -280,6 +266,43 @@ public class EpathParserService : IEpathParserService
         return sb.ToString().TrimEnd('\r', '\n');
     }
 
+    // ── Internal helpers ────────────────────────────────────────────────
+
+    private static Dictionary<int, string> BuildFieldMap(string[] fields, List<EpathField> layout)
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var field in layout)
+        {
+            int index = field.Position - 1;
+            if (index < 0 || index >= fields.Length) continue;
+            var value = fields[index].Trim();
+            if (string.IsNullOrEmpty(value)) continue;
+            var key = field.ItemNumber > 0 ? field.ItemNumber : -field.Position;
+            map[key] = value;
+        }
+        return map;
+    }
+
+    private static List<EpathDisplayField> BuildDisplayFields(string[] fields, List<EpathField> layout)
+    {
+        var result = new List<EpathDisplayField>();
+        foreach (var field in layout)
+        {
+            int index = field.Position - 1;
+            if (index < 0 || index >= fields.Length) continue;
+            var value = fields[index].Trim();
+            if (string.IsNullOrEmpty(value)) continue;
+            result.Add(new EpathDisplayField
+            {
+                Position = field.Position,
+                Name = field.Name,
+                Value = value,
+                ItemNumber = field.ItemNumber
+            });
+        }
+        return result;
+    }
+
     private List<EpathField> LoadV22Layout()
     {
         if (_v22Layout != null) return _v22Layout;
@@ -303,9 +326,7 @@ public class EpathParserService : IEpathParserService
     }
 
     private static string Get(Dictionary<int, string> map, int itemNumber)
-    {
-        return map.TryGetValue(itemNumber, out var value) ? value : "";
-    }
+        => map.TryGetValue(itemNumber, out var value) ? value : "";
 
     private static string BuildPatientName(string lastName, string firstName, string middleName)
     {

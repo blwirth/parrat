@@ -28,8 +28,7 @@ public class MenuBuilder
     public ToolStripMenuItem MnuSplit { get; private set; } = null!;
     public ToolStripMenuItem MnuConvertTxt { get; private set; } = null!;
     public ToolStripMenuItem MnuImportCsv { get; private set; } = null!;
-    public ToolStripMenuItem MnuImportEpath { get; private set; } = null!;
-    public ToolStripMenuItem MnuConvertEpathToHl7 { get; private set; } = null!;
+    public ToolStripMenuItem MnuConvertDatToHl7 { get; private set; } = null!;
     public ToolStripMenuItem MnuRestart { get; private set; } = null!;
 
     // Concatenate submenu
@@ -171,13 +170,9 @@ public class MenuBuilder
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuImportCsv);
 
-        MnuImportEpath = new ToolStripMenuItem("Import ePath Flat File (.dat)...");
+        MnuConvertDatToHl7 = new ToolStripMenuItem("Convert .dat to .hl7...") { Enabled = false };
         // Click handler wired by MainForm.Handlers.cs
-        mnuFile.DropDownItems.Add(MnuImportEpath);
-
-        MnuConvertEpathToHl7 = new ToolStripMenuItem("Convert .dat to .hl7...") { Enabled = false };
-        // Click handler wired by MainForm.Handlers.cs
-        mnuFile.DropDownItems.Add(MnuConvertEpathToHl7);
+        mnuFile.DropDownItems.Add(MnuConvertDatToHl7);
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
@@ -386,7 +381,7 @@ public class MenuBuilder
     /// <summary>
     /// Updates enabled states of menu items based on the loaded file type.
     /// </summary>
-    public void UpdateMenuStatesForFileType(string? fileType, string? sourceFormat = null)
+    public void UpdateMenuStatesForFileType(string? fileType)
     {
         bool hasFile = !string.IsNullOrEmpty(fileType);
 
@@ -404,6 +399,6 @@ public class MenuBuilder
         bool isHl7 = fileType == "hl7";
         MnuModifyHl7.Enabled = isHl7;
 
-        MnuConvertEpathToHl7.Enabled = sourceFormat == "epath";
+        MnuConvertDatToHl7.Enabled = fileType == "epath";
     }
 }
