@@ -891,6 +891,11 @@ public partial class MainForm
                 }
             }
 
+            // Show preview dialog
+            SetStatusText("Ready");
+            using var preview = new EpathPreviewForm(records, _epathParserService);
+            if (preview.ShowDialog(this) != DialogResult.OK) return;
+
             var defaultName = Path.GetFileNameWithoutExtension(inputPath ?? "epath") + ".hl7";
 
             using var sfd = new SaveFileDialog
