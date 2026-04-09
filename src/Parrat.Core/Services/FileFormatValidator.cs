@@ -289,12 +289,6 @@ public static class FileFormatValidator
         if (hasInconsistentCounts)
             warnings.Add("Records have inconsistent field counts. Some records may not parse correctly.");
 
-        // Detect version
-        if (firstFields.Length >= 100)
-            warnings.Insert(0, $"Detected format: NOAH v2 ({firstFields.Length} fields, {lines.Length} record(s)).");
-        else
-            warnings.Insert(0, $"Detected format: ePath v2.2 ({firstFields.Length} fields, {lines.Length} record(s)).");
-
         return new ValidationResult(errors.Count == 0, errors, warnings);
     }
 

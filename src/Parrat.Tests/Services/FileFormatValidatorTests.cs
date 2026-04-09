@@ -269,7 +269,7 @@ public class FileFormatValidatorTests
     }
 
     [Fact]
-    public void ValidateEpathDat_NoahV2Detected()
+    public void ValidateEpathDat_NoahV2Valid()
     {
         SetupPathHelper();
 
@@ -281,7 +281,7 @@ public class FileFormatValidatorTests
         var result = FileFormatValidator.ValidateEpathDat(content);
 
         Assert.True(result.IsValid);
-        Assert.Contains(result.Warnings, w => w.Contains("NOAH v2"));
+        Assert.Empty(result.Errors);
     }
 
     [Fact]

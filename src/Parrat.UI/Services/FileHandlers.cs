@@ -102,6 +102,8 @@ public class FileHandlers
                     "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (validation.Warnings.Count > 0)
+                ShowValidationWarnings("NAACCR XML", validation);
 
             var (doc, tumors, nsMgr) = _xmlFileService.LoadNaaccrXml(filePath);
 
@@ -215,6 +217,8 @@ public class FileHandlers
                     "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (validation.Warnings.Count > 0)
+                ShowValidationWarnings("HL7", validation);
 
             var messages = _hl7FileService.LoadHl7File(filePath);
 
@@ -335,6 +339,8 @@ public class FileHandlers
                     "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (validation.Warnings.Count > 0)
+                ShowValidationWarnings("ePath .dat", validation);
 
             var records = _epathParserService.ParseDatFile(filePath);
 
@@ -441,6 +447,15 @@ public class FileHandlers
             _logger.LogError("Failed to load ePath file", "OPEN_FILE", ex);
             MessageBox.Show($"Error loading ePath file: {ex.Message}", "Error");
         }
+    }
+
+    // ── Validation warnings ────────────────────────────────────────────
+
+    private static void ShowValidationWarnings(string fileType, FileFormatValidator.ValidationResult validation)
+    {
+        var warningText = string.Join("\n", validation.Warnings.Select(w => $"  \u2022 {w}"));
+        MessageBox.Show($"File loaded with warnings ({fileType}):\n\n{warningText}",
+            "Validation Warnings", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     // ── Grid column configuration ────────────────────────────────────────
