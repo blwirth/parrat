@@ -162,11 +162,11 @@ public class MenuBuilder
 
         mnuFile.DropDownItems.Add(new ToolStripSeparator());
 
-        MnuConvertTxt = new ToolStripMenuItem("Convert .txt");
+        MnuConvertTxt = new ToolStripMenuItem("Convert .txt to .hl7");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuConvertTxt);
 
-        MnuImportCsv = new ToolStripMenuItem("Convert .csv/.xlsx");
+        MnuImportCsv = new ToolStripMenuItem("Convert .csv/.xlsx to .xml");
         // Click handler wired by MainForm.Handlers.cs
         mnuFile.DropDownItems.Add(MnuImportCsv);
 
