@@ -95,6 +95,14 @@ public class FileHandlers
     {
         try
         {
+            var validation = FileFormatValidator.ValidateNaaccrXmlFile(filePath);
+            if (!validation.IsValid)
+            {
+                MessageBox.Show($"This file does not appear to be a valid NAACCR XML file:\n\n{validation.Summary}",
+                    "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             var (doc, tumors, nsMgr) = _xmlFileService.LoadNaaccrXml(filePath);
 
             _state.XmlDoc = doc;
@@ -200,6 +208,14 @@ public class FileHandlers
     {
         try
         {
+            var validation = FileFormatValidator.ValidateHl7File(filePath);
+            if (!validation.IsValid)
+            {
+                MessageBox.Show($"This file does not appear to be a valid HL7 file:\n\n{validation.Summary}",
+                    "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             var messages = _hl7FileService.LoadHl7File(filePath);
 
             if (messages.Count == 0)
@@ -312,6 +328,14 @@ public class FileHandlers
     {
         try
         {
+            var validation = FileFormatValidator.ValidateEpathDatFile(filePath);
+            if (!validation.IsValid)
+            {
+                MessageBox.Show($"This file does not appear to be a valid ePath .dat file:\n\n{validation.Summary}",
+                    "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             var records = _epathParserService.ParseDatFile(filePath);
 
             if (records.Count == 0)

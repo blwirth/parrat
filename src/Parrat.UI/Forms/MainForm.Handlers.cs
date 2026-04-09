@@ -5,6 +5,7 @@ using System.Xml;
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
+using Parrat.Core.Services;
 
 namespace Parrat.UI.Forms;
 
@@ -878,6 +879,15 @@ public partial class MainForm
                 if (ofd.ShowDialog(this) != DialogResult.OK) return;
 
                 inputPath = ofd.FileName;
+
+                var validation = FileFormatValidator.ValidateEpathDatFile(inputPath);
+                if (!validation.IsValid)
+                {
+                    MessageBox.Show($"This file does not appear to be a valid ePath .dat file:\n\n{validation.Summary}",
+                        "Invalid File Format", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
                 SetStatusText("Parsing .dat file...");
                 Refresh();
 
