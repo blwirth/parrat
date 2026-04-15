@@ -292,7 +292,17 @@ public class NoahService : INoahService
             request.Headers.Add("api-version", "2");
 
             var response = HttpClient.Send(request);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = new StreamReader(response.Content.ReadAsStream()).ReadToEnd();
+                int statusCode = (int)response.StatusCode;
+                string detail = string.IsNullOrWhiteSpace(body)
+                    ? $"HTTP {statusCode} {response.ReasonPhrase}"
+                    : $"HTTP {statusCode} {response.ReasonPhrase}: {body}";
+                _logger.Log("ERROR", $"NOAH API returned {statusCode}", "NOAH_API_HTTP_ERROR", body);
+                return new NoahResult { Success = false, Classification = detail };
+            }
 
             using var stream = response.Content.ReadAsStream();
             using var doc = JsonDocument.Parse(stream);

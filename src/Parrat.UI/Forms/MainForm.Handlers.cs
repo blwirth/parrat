@@ -1441,7 +1441,7 @@ public partial class MainForm
             }
             else
             {
-                MessageBox.Show($"NOAH filter error.\n\nWorking folder:\n{result.WorkingFolder}",
+                MessageBox.Show($"NOAH filter error.\n\n{result.Classification}",
                     "NOAH Reportability - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 SetStatusText("NOAH reportability: error");
             }
