@@ -68,6 +68,7 @@ public class MenuBuilder
     public ToolStripMenuItem MnuTestSiteLatCustom { get; private set; } = null!;
     public ToolStripMenuItem MnuFilterCurrentHl7 { get; private set; } = null!;
     public ToolStripMenuItem MnuFilterCustomPayload { get; private set; } = null!;
+    public ToolStripMenuItem MnuNoahServerToggle { get; private set; } = null!;
 
     // Settings menu
     public ToolStripMenuItem MnuManageCodingTables { get; private set; } = null!;
@@ -309,6 +310,10 @@ public class MenuBuilder
         MnuFilterCustomPayload = new ToolStripMenuItem("Test custom payload (NOAH)");
         // Click handler wired by MainForm.Handlers.cs
         mnuTools.DropDownItems.Add(MnuFilterCustomPayload);
+
+        mnuTools.DropDownItems.Add(new ToolStripSeparator());
+        MnuNoahServerToggle = new ToolStripMenuItem("Start NOAH Server (Keep-Alive)");
+        mnuTools.DropDownItems.Add(MnuNoahServerToggle);
 
         // Dynamic enable/disable on dropdown opening
         mnuTools.DropDownOpening += (s, e) =>

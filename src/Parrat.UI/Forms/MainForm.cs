@@ -470,6 +470,11 @@ public partial class MainForm : ParratFormBase
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
+        if (_noahServerProcess != null)
+        {
+            _noahService.StopServer(_noahServerProcess);
+            _noahServerProcess = null;
+        }
         _logger.Close();
     }
 

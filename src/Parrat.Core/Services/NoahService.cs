@@ -156,6 +156,49 @@ public class NoahService : INoahService
         }
     }
 
+    public bool ProbeServer(string? apiServerUrl)
+    {
+        apiServerUrl = (apiServerUrl ?? "http://localhost:4000").TrimEnd('/');
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{apiServerUrl}/Models");
+            request.Headers.Add("accept", "*/*");
+            request.Headers.Add("api-version", "2");
+            var response = HttpClient.Send(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public (Process? process, bool wasAlreadyRunning) EnsureServerRunning(NoahConfig config)
+    {
+        string apiServerUrl = config.ApiServerUrl?.TrimEnd('/') ?? "http://localhost:4000";
+
+        if (ProbeServer(apiServerUrl))
+            return (null, wasAlreadyRunning: true);
+
+        if (string.IsNullOrWhiteSpace(config.ExePath) || !File.Exists(config.ExePath))
+            throw new InvalidOperationException(
+                "NOAH server is not running and no executable path is configured.\n" +
+                "Configure it in Settings \u2192 NOAH Configuration.");
+
+        _logger.Log("INFO", "Starting NOAH server", "NOAH_SERVER_START", config.ExePath);
+        var proc = StartServer(config);
+
+        for (int attempt = 0; attempt < 60; attempt++)
+        {
+            Thread.Sleep(500);
+            if (ProbeServer(apiServerUrl))
+            {
+                _logger.Log("INFO", $"NOAH server ready after {(attempt + 1) * 500}ms", "NOAH_SERVER_READY");
+                return (proc, wasAlreadyRunning: false);
+            }
+        }
+
+        StopServer(proc);
+        throw new TimeoutException("NOAH server did not become reachable within 30 seconds.");
+    }
+
     public List<NoahModel> GetModels(NoahConfig config, ref Process? serverProcess)
     {
         string apiServerUrl = config.ApiServerUrl?.TrimEnd('/') ?? "http://localhost:4000";
