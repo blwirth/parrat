@@ -1379,14 +1379,44 @@ public partial class MainForm
                 }
             }
 
-            SetStatusText("NOAH reportability: running...");
-            Refresh();
+            if (fileType == "hl7")
+            {
+                var msg = _state.Hl7Messages[idx];
+                SetStatusText($"NOAH reportability: running on {msg.AccessionNumber}...");
+                Refresh();
 
-            // The actual NOAH API call would happen here through _noahService
-            // For now, show info message
-            MessageBox.Show("NOAH reportability filtering would execute here using the selected model.",
-                "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+                var result = _noahService.InvokeReportabilityApi(
+                    msg.RawContent, config, modelForm.SelectedModel.Id);
+
+                if (result.Success && result.ApiResponseJson != null)
+                {
+                    SetStatusText($"NOAH: {result.Classification} — {msg.AccessionNumber}");
+                    using var resultsForm = NoahResultsForm.FromJson(
+                        result.ApiResponseJson,
+                        $"HL7 {msg.AccessionNumber}",
+                        idx,
+                        _state.Hl7Messages.Count,
+                        _logger);
+                    resultsForm.ShowDialog(this);
+                }
+                else if (result.Success)
+                {
+                    SetStatusText($"NOAH: {result.Classification} — {msg.AccessionNumber}");
+                    MessageBox.Show($"Result: {result.Classification.ToUpperInvariant()}",
+                        "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show($"NOAH filter error.\n\n{result.Classification}",
+                        "NOAH Reportability - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    SetStatusText("NOAH reportability: error");
+                }
+            }
+            else
+            {
+                MessageBox.Show("NOAH reportability for NAACCR/ePath records is not yet implemented.",
+                    "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
         catch (Exception ex)
         {
