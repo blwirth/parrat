@@ -18,14 +18,17 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Setup Ruby (for asciidoctor-pdf)
+        if: "!contains(github.ref_name, '-rc')"
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
 
       - name: Install asciidoctor-pdf
+        if: "!contains(github.ref_name, '-rc')"
         run: gem install asciidoctor-pdf
 
       - name: Build user manual PDF
+        if: "!contains(github.ref_name, '-rc')"
         run: |
           cd docs
           asciidoctor-pdf "PARRAT - User Manual.adoc" -o "PARRAT - User Manual.pdf"
@@ -52,7 +55,9 @@ jobs:
 
           Copy-Item publish/PARRAT.exe $out/
           Copy-Item -Recurse data $out/data
-          Copy-Item "docs/PARRAT - User Manual.pdf" "$out/docs/"
+          if (Test-Path "docs/PARRAT - User Manual.pdf") {
+            Copy-Item "docs/PARRAT - User Manual.pdf" "$out/docs/"
+          }
 
           # Write version file (read by app for window title)
           $tag | Out-File -FilePath "$out/VERSION" -Encoding utf8 -NoNewline
