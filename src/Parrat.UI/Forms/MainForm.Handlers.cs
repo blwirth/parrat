@@ -1466,7 +1466,8 @@ public partial class MainForm
                 {
                     SetStatusText($"NOAH reportability: {result.Classification}");
                     using var resultsForm = NoahResultsForm.FromJson(
-                        result.ApiResponseJson, "Custom Payload", 0, 1, _logger);
+                        result.ApiResponseJson, "Custom Payload", 0, 1, _logger,
+                        fallbackObxText: payloadForm.CustomPayloadText);
                     resultsForm.ShowDialog(this);
                 }
                 else if (result.Success)

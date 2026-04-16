@@ -38,6 +38,7 @@ public class NoahResultsForm : ParratFormBase
     private readonly string? _resultFilePath;
     private readonly string? _workingFolder;
     private readonly string? _jsonContent;
+    private readonly string? _fallbackObxText;
     private readonly string _recordLabel;
     private readonly int _recordIndex;
     private readonly int _recordCount;
@@ -66,9 +67,10 @@ public class NoahResultsForm : ParratFormBase
         string recordLabel = "Record",
         int recordIndex = 0,
         int recordCount = 1,
-        IParratLogger? logger = null)
+        IParratLogger? logger = null,
+        string? fallbackObxText = null)
     {
-        return new NoahResultsForm(jsonContent, recordLabel, recordIndex, recordCount, logger);
+        return new NoahResultsForm(jsonContent, recordLabel, recordIndex, recordCount, logger, fallbackObxText);
     }
 
     private NoahResultsForm(
@@ -76,9 +78,11 @@ public class NoahResultsForm : ParratFormBase
         string recordLabel,
         int recordIndex,
         int recordCount,
-        IParratLogger? logger)
+        IParratLogger? logger,
+        string? fallbackObxText)
     {
         _jsonContent = jsonContent;
+        _fallbackObxText = fallbackObxText;
         _recordLabel = recordLabel;
         _recordIndex = recordIndex;
         _recordCount = recordCount;
@@ -218,29 +222,26 @@ public class NoahResultsForm : ParratFormBase
         string reportableText = reportable ? "REPORTABLE" : "NON-REPORTABLE";
         var reportableColor = reportable ? Color.DarkGreen : Color.DarkRed;
 
-        AddColoredLine(box, "=== CLASSIFICATION ===", bold: true);
-        AddColoredLine(box, "");
+        SyntaxHighlightingHelper.AddSectionHeader(box, "CLASSIFICATION");
         AddColoredLine(box, reportableText, bold: true, foreColor: reportableColor);
         AddColoredLine(box, "");
 
-        // Flags
-        AddColoredLine(box, "=== FLAGS ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "FLAGS");
         AddColoredLine(box, $"ImpossibleCombination: {GetBool(root, "ImpossibleCombination")}");
         AddColoredLine(box, $"MetastaticReport: {GetBool(root, "MetastaticReport")}");
         AddColoredLine(box, $"PAYAC: {GetBool(root, "PAYAC")}");
         AddColoredLine(box, "");
 
-        // Diagnosis info
-        AddColoredLine(box, "=== DIAGNOSIS ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "DIAGNOSIS");
         AddColoredLine(box, $"DiagnosisDate: {GetString(root, "DiagnosisDate")}");
         AddColoredLine(box, $"MessageID: {GetString(root, "MessageID")}");
         AddColoredLine(box, "");
 
         // Coded Result
-        if (root.TryGetProperty("CodedResult", out var codedResult) &&
+        if (TryGetProp(root, "CodedResult", out var codedResult) &&
             codedResult.ValueKind == JsonValueKind.Object)
         {
-            AddColoredLine(box, "=== CODED RESULT ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(box, "CODED RESULT");
             AddColoredLine(box, $"Histology: {GetString(codedResult, "Histology")}", bold: true);
             AddColoredLine(box, $"Site: {GetString(codedResult, "Site")}", bold: true);
             AddColoredLine(box, $"Behavior: {GetString(codedResult, "Behavior")}", bold: true);
@@ -252,18 +253,17 @@ public class NoahResultsForm : ParratFormBase
         // Entity summary
         int entityCount = 0;
         JsonElement entitiesElement = default;
-        if (root.TryGetProperty("Entities", out entitiesElement) &&
+        if (TryGetProp(root, "Entities", out entitiesElement) &&
             entitiesElement.ValueKind == JsonValueKind.Array)
         {
             entityCount = entitiesElement.GetArrayLength();
         }
 
-        AddColoredLine(box, "=== ENTITIES ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "ENTITIES");
         AddColoredLine(box, $"Total entities found: {entityCount}");
         AddColoredLine(box, "");
 
-        // Color legend
-        AddColoredLine(box, "=== COLOR LEGEND ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "COLOR LEGEND");
         AddColoredLine(box, "Cancer terms (Type 0)", backColor: ColorType0);
         AddColoredLine(box, "Cytology terms (Type 1)", backColor: ColorType1);
         AddColoredLine(box, "Site terms (Type 2)", backColor: ColorType2);
@@ -273,7 +273,7 @@ public class NoahResultsForm : ParratFormBase
         // Entity details
         if (entityCount > 0)
         {
-            AddColoredLine(box, "=== ENTITY DETAILS ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(box, "ENTITY DETAILS");
             foreach (var entity in entitiesElement.EnumerateArray())
             {
                 bool isNegated = GetBool(entity, "IsNegated");
@@ -313,16 +313,32 @@ public class NoahResultsForm : ParratFormBase
 
     private void BuildHighlightedOBXText(RichTextBox rtb, JsonElement root)
     {
-        if (!root.TryGetProperty("OBXTexts", out var obxTexts) ||
-            obxTexts.ValueKind != JsonValueKind.Object)
+        bool hasObxTexts = TryGetProp(root, "OBXTexts", out var obxTexts) &&
+                           obxTexts.ValueKind == JsonValueKind.Object;
+
+        bool obxTextsEmpty = !hasObxTexts || obxTexts.EnumerateObject()
+            .All(p => p.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(p.Value.GetString()));
+
+        if (obxTextsEmpty && !string.IsNullOrWhiteSpace(_fallbackObxText))
         {
-            rtb.Text = "(No OBXTexts in result)";
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "Custom Payload Text");
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = rtb.ForeColor;
+            rtb.SelectionBackColor = rtb.BackColor;
+            rtb.AppendText(_fallbackObxText + "\n");
+            return;
+        }
+
+        if (!hasObxTexts)
+        {
+            rtb.Text = "(No OBX text in result)";
             return;
         }
 
         // Build entities lookup by OBX segment
         var entitiesBySegment = new Dictionary<int, List<JsonElement>>();
-        if (root.TryGetProperty("Entities", out var entities) &&
+        if (TryGetProp(root, "Entities", out var entities) &&
             entities.ValueKind == JsonValueKind.Array)
         {
             foreach (var entity in entities.EnumerateArray())
@@ -340,7 +356,7 @@ public class NoahResultsForm : ParratFormBase
             if (!OBXSegmentMap.TryGetValue(segNum, out var fieldName))
                 continue;
 
-            if (!obxTexts.TryGetProperty(fieldName, out var textProp) ||
+            if (!TryGetProp(obxTexts, fieldName, out var textProp) ||
                 textProp.ValueKind != JsonValueKind.String)
                 continue;
 
@@ -351,8 +367,7 @@ public class NoahResultsForm : ParratFormBase
             // RichTextBox converts \r\n to \n internally
             string displayText = textValue.Replace("\r\n", "\n");
 
-            // Add section header
-            AddColoredLine(rtb, $"=== {fieldName} (Segment {segNum}) ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, $"{fieldName} (Segment {segNum})");
 
             // Get entities for this segment, sorted by offset
             var segEntities = new List<JsonElement>();
@@ -495,10 +510,16 @@ public class NoahResultsForm : ParratFormBase
     private static bool TryGetProp(JsonElement element, string propertyName, out JsonElement prop)
     {
         if (element.TryGetProperty(propertyName, out prop)) return true;
-        string alt = char.IsUpper(propertyName[0])
-            ? char.ToLowerInvariant(propertyName[0]) + propertyName[1..]
-            : char.ToUpperInvariant(propertyName[0]) + propertyName[1..];
-        return element.TryGetProperty(alt, out prop);
+        if (element.ValueKind != JsonValueKind.Object) return false;
+        foreach (var p in element.EnumerateObject())
+        {
+            if (p.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                prop = p.Value;
+                return true;
+            }
+        }
+        return false;
     }
 
     private static string GetString(JsonElement element, string propertyName)
