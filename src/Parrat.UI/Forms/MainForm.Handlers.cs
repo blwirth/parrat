@@ -1506,11 +1506,15 @@ public partial class MainForm
                 {
                     _noahService.StopServer(_noahServerProcess);
                     _noahServerProcess = null;
+                    SetStatusText("NOAH server stopped.");
+                }
+                else
+                {
+                    SetStatusText("Keep-alive disabled. Server was not started by PARRAT.");
                 }
                 _noahKeepAlive = false;
                 menuItem.Text = "Start NOAH Server (Keep-Alive)";
                 menuItem.Checked = false;
-                SetStatusText("NOAH server stopped.");
             }
             else
             {
@@ -1522,7 +1526,11 @@ public partial class MainForm
                 _noahKeepAlive = true;
                 menuItem.Text = "Stop NOAH Server";
                 menuItem.Checked = true;
-                SetStatusText("NOAH server running (keep-alive).");
+
+                if (_noahServerProcess != null)
+                    SetStatusText("NOAH server running (keep-alive).");
+                else
+                    SetStatusText("NOAH server already running externally. Keep-alive enabled (PARRAT will not stop it).");
             }
         }
         catch (Exception ex)
