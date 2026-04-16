@@ -133,20 +133,16 @@ public class NoahResultsForm : ParratFormBase
         var splitMain = new SplitContainer
         {
             Dock = DockStyle.Fill,
-            Orientation = Orientation.Vertical,
-            Panel1MinSize = 200,
-            Panel2MinSize = 200
+            Orientation = Orientation.Vertical
         };
 
         Shown += (_, _) =>
         {
             try
             {
-                int target = Math.Min(400, splitMain.Width - splitMain.Panel2MinSize - splitMain.SplitterWidth);
-                if (target >= splitMain.Panel1MinSize)
-                    splitMain.SplitterDistance = target;
+                splitMain.SplitterDistance = Math.Max(1, Math.Min(400, splitMain.Width - 204));
             }
-            catch { /* DPI/layout edge case */ }
+            catch { }
         };
 
         // === LEFT PANEL: Summary ===
