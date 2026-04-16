@@ -35,8 +35,9 @@ public class NoahResultsForm : ParratFormBase
     private static readonly Color ColorType1 = Color.FromArgb(255, 220, 180);  // Light orange (cytology)
     private static readonly Color ColorType2 = Color.FromArgb(220, 200, 255);  // Light purple (site)
 
-    private readonly string _resultFilePath;
-    private readonly string _workingFolder;
+    private readonly string? _resultFilePath;
+    private readonly string? _workingFolder;
+    private readonly string? _jsonContent;
     private readonly string _recordLabel;
     private readonly int _recordIndex;
     private readonly int _recordCount;
@@ -60,6 +61,32 @@ public class NoahResultsForm : ParratFormBase
         InitializeLayout();
     }
 
+    public static NoahResultsForm FromJson(
+        string jsonContent,
+        string recordLabel = "Record",
+        int recordIndex = 0,
+        int recordCount = 1,
+        IParratLogger? logger = null)
+    {
+        return new NoahResultsForm(jsonContent, recordLabel, recordIndex, recordCount, logger);
+    }
+
+    private NoahResultsForm(
+        string jsonContent,
+        string recordLabel,
+        int recordIndex,
+        int recordCount,
+        IParratLogger? logger)
+    {
+        _jsonContent = jsonContent;
+        _recordLabel = recordLabel;
+        _recordIndex = recordIndex;
+        _recordCount = recordCount;
+        _logger = logger;
+
+        InitializeLayout();
+    }
+
     private void InitializeLayout()
     {
         Text = $"NOAH Reportability Results - {_recordLabel} {_recordIndex + 1} of {_recordCount}";
@@ -67,22 +94,27 @@ public class NoahResultsForm : ParratFormBase
         Height = 900;
         StartPosition = FormStartPosition.CenterScreen;
 
-        if (!File.Exists(_resultFilePath))
-        {
-            MessageBox.Show(
-                $"Result file not found:\n{_resultFilePath}",
-                "NOAH Results",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
-            return;
-        }
-
-        // Parse result JSON
         JsonDocument resultDoc;
         try
         {
-            var json = File.ReadAllText(_resultFilePath);
-            resultDoc = JsonDocument.Parse(json);
+            if (_jsonContent != null)
+            {
+                resultDoc = JsonDocument.Parse(_jsonContent);
+            }
+            else if (_resultFilePath != null && File.Exists(_resultFilePath))
+            {
+                var json = File.ReadAllText(_resultFilePath);
+                resultDoc = JsonDocument.Parse(json);
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"Result file not found:\n{_resultFilePath}",
+                    "NOAH Results",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -145,29 +177,32 @@ public class NoahResultsForm : ParratFormBase
             Height = 50
         };
 
-        var btnOpenFolder = new Button
-        {
-            Text = "Open Working Folder",
-            Width = 150,
-            Location = new Point(10, 12)
-        };
-        btnOpenFolder.Click += (_, _) =>
-        {
-            if (Directory.Exists(_workingFolder))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", $"\"{_workingFolder}\"");
-            }
-        };
-
         var btnClose = new Button
         {
             Text = "Close",
             Width = 100,
-            Location = new Point(170, 12)
+            Location = new Point(10, 12)
         };
         btnClose.Click += (_, _) => Close();
 
-        pnlButtons.Controls.AddRange(new Control[] { btnOpenFolder, btnClose });
+        if (!string.IsNullOrEmpty(_workingFolder))
+        {
+            var btnOpenFolder = new Button
+            {
+                Text = "Open Working Folder",
+                Width = 150,
+                Location = new Point(10, 12)
+            };
+            btnOpenFolder.Click += (_, _) =>
+            {
+                if (Directory.Exists(_workingFolder))
+                    System.Diagnostics.Process.Start("explorer.exe", $"\"{_workingFolder}\"");
+            };
+            btnClose.Location = new Point(170, 12);
+            pnlButtons.Controls.Add(btnOpenFolder);
+        }
+
+        pnlButtons.Controls.Add(btnClose);
 
         Controls.Add(splitMain);
         Controls.Add(pnlButtons);
@@ -457,9 +492,18 @@ public class NoahResultsForm : ParratFormBase
         box.AppendText(text + "\r\n");
     }
 
+    private static bool TryGetProp(JsonElement element, string propertyName, out JsonElement prop)
+    {
+        if (element.TryGetProperty(propertyName, out prop)) return true;
+        string alt = char.IsUpper(propertyName[0])
+            ? char.ToLowerInvariant(propertyName[0]) + propertyName[1..]
+            : char.ToUpperInvariant(propertyName[0]) + propertyName[1..];
+        return element.TryGetProperty(alt, out prop);
+    }
+
     private static string GetString(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop))
+        if (TryGetProp(element, propertyName, out var prop))
         {
             return prop.ValueKind == JsonValueKind.String
                 ? prop.GetString() ?? ""
@@ -470,7 +514,7 @@ public class NoahResultsForm : ParratFormBase
 
     private static bool GetBool(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop) &&
+        if (TryGetProp(element, propertyName, out var prop) &&
             prop.ValueKind is JsonValueKind.True or JsonValueKind.False)
             return prop.GetBoolean();
         return false;
@@ -478,7 +522,7 @@ public class NoahResultsForm : ParratFormBase
 
     private static int GetInt(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop))
+        if (TryGetProp(element, propertyName, out var prop))
         {
             if (prop.ValueKind == JsonValueKind.Number)
                 return prop.GetInt32();

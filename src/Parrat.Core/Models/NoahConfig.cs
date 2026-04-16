@@ -40,6 +40,7 @@ public class NoahResult
     public bool ImpossibleCombination { get; set; }
     public bool MetastaticReport { get; set; }
     public string MessageId { get; set; } = string.Empty;
+    public string? ApiResponseJson { get; set; }
     public object? ApiResponse { get; set; }
     public int ExitCode { get; set; }
     public string WorkingFolder { get; set; } = string.Empty;

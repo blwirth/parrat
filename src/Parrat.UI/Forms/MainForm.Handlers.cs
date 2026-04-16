@@ -1418,26 +1418,18 @@ public partial class MainForm
             var minimalHl7 = _noahService.CreateMinimalHl7Message(payloadForm.CustomPayloadText);
             var result = _noahService.InvokeReportabilityApi(minimalHl7, config, modelForm.SelectedModel.Id);
 
-            if (result.Success)
+            if (result.Success && result.ApiResponseJson != null)
             {
                 SetStatusText($"NOAH reportability: {result.Classification}");
-
-                var reportsFolder = Path.Combine(result.WorkingFolder, "reports");
-                var resultFiles = Directory.Exists(reportsFolder)
-                    ? Directory.GetFiles(reportsFolder, "*.json")
-                    : Array.Empty<string>();
-
-                if (resultFiles.Length > 0)
-                {
-                    using var resultsForm = new NoahResultsForm(
-                        resultFiles[0], result.WorkingFolder, "Custom", 0, 1, _logger);
-                    resultsForm.ShowDialog(this);
-                }
-                else
-                {
-                    MessageBox.Show($"Result: {result.Classification.ToUpperInvariant()}",
-                        "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                using var resultsForm = NoahResultsForm.FromJson(
+                    result.ApiResponseJson, "Custom Payload", 0, 1, _logger);
+                resultsForm.ShowDialog(this);
+            }
+            else if (result.Success)
+            {
+                SetStatusText($"NOAH reportability: {result.Classification}");
+                MessageBox.Show($"Result: {result.Classification.ToUpperInvariant()}",
+                    "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {

@@ -309,26 +309,21 @@ public class NoahService : INoahService
             if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
             {
                 var result = root[0];
+                string apiResponseJson = result.GetRawText();
 
-                string reportableStr = result.TryGetProperty("reportable", out var rp)
-                    ? rp.ValueKind == JsonValueKind.String ? rp.GetString() ?? "" : rp.GetRawText()
-                    : "";
-                bool isReportable = reportableStr == "true";
+                bool isReportable = TryGetBool(result, "Reportable") ?? TryGetBool(result, "reportable") ?? false;
 
-                string classification = isReportable ? "reportable"
-                    : reportableStr == "false" ? "nonreportable"
-                    : "unknown";
+                string classification = isReportable ? "reportable" : "nonreportable";
 
                 return new NoahResult
                 {
                     Success = true,
                     Classification = classification,
                     Reportable = isReportable,
-                    ImpossibleCombination = result.TryGetProperty("impossibleCombination", out var ic) &&
-                        (ic.ValueKind == JsonValueKind.True || (ic.ValueKind == JsonValueKind.String && ic.GetString() == "true")),
-                    MetastaticReport = result.TryGetProperty("metastaticReport", out var mr) &&
-                        (mr.ValueKind == JsonValueKind.True || (mr.ValueKind == JsonValueKind.String && mr.GetString() == "true")),
-                    MessageId = result.TryGetProperty("messageId", out var mi) ? mi.GetString() ?? "" : ""
+                    ImpossibleCombination = TryGetBool(result, "ImpossibleCombination") ?? TryGetBool(result, "impossibleCombination") ?? false,
+                    MetastaticReport = TryGetBool(result, "MetastaticReport") ?? TryGetBool(result, "metastaticReport") ?? false,
+                    MessageId = TryGetString(result, "MessageID") ?? TryGetString(result, "messageId") ?? "",
+                    ApiResponseJson = apiResponseJson
                 };
             }
 
@@ -338,11 +333,6 @@ public class NoahService : INoahService
         {
             _logger.LogError("Failed to invoke NOAH reportability API", "NOAH_API_INVOKE", ex);
             return new NoahResult { Success = false, Classification = $"Failed to POST to NOAH API: {ex.Message}" };
-        }
-        finally
-        {
-            if (serverProcess != null)
-                StopServer(serverProcess);
         }
     }
 
@@ -365,5 +355,19 @@ public class NoahService : INoahService
         };
 
         return string.Join(segmentSeparator, segments);
+    }
+
+    private static bool? TryGetBool(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop)) return null;
+        if (prop.ValueKind is JsonValueKind.True or JsonValueKind.False) return prop.GetBoolean();
+        if (prop.ValueKind == JsonValueKind.String) return prop.GetString() == "true";
+        return null;
+    }
+
+    private static string? TryGetString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop)) return null;
+        return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
     }
 }
