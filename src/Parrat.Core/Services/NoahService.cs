@@ -267,17 +267,14 @@ public class NoahService : INoahService
         byte[] bytes = Encoding.UTF8.GetBytes(hl7Message);
         string hl7MessageEncoded = Convert.ToBase64String(bytes);
 
-        var requestObj = new
+        var requestObj = new[]
         {
-            value = new[]
+            new
             {
-                new
-                {
-                    messageId,
-                    hl7Message = hl7MessageEncoded,
-                    messageEncodingFormat = "Base64",
-                    modelId
-                }
+                messageId,
+                hl7Message = hl7MessageEncoded,
+                messageEncodingFormat = "Base64",
+                modelId
             }
         };
 
