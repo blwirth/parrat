@@ -38,4 +38,34 @@ public static class Hl7EscapeHelper
             return EscapeMap.TryGetValue(key, out var replacement) ? replacement : match.Value;
         });
     }
+
+    /// <summary>
+    /// Escapes special HL7 characters in text for safe inclusion in a field value.
+    /// </summary>
+    public static string Escape(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        return value
+            .Replace(@"\", @"\E\")
+            .Replace("|", @"\F\")
+            .Replace("^", @"\S\")
+            .Replace("&", @"\T\")
+            .Replace("~", @"\R\")
+            .Replace("\r\n", @"\.br\")
+            .Replace("\r", @"\.br\")
+            .Replace("\n", @"\.br\");
+    }
+
+    /// <summary>
+    /// Normalizes segment separators to \r for HL7 v2.x standard compliance.
+    /// </summary>
+    public static string NormalizeSegmentSeparators(string hl7Message)
+    {
+        if (string.IsNullOrEmpty(hl7Message))
+            return hl7Message;
+
+        return hl7Message.Replace("\r\n", "\r").Replace("\n", "\r");
+    }
 }

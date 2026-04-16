@@ -250,50 +250,21 @@ public class NoahResultsForm : ParratFormBase
             AddColoredLine(box, "");
         }
 
-        // Entity summary
+        // Entity count
         int entityCount = 0;
-        JsonElement entitiesElement = default;
-        if (TryGetProp(root, "Entities", out entitiesElement) &&
+        if (TryGetProp(root, "Entities", out var entitiesElement) &&
             entitiesElement.ValueKind == JsonValueKind.Array)
-        {
             entityCount = entitiesElement.GetArrayLength();
-        }
 
         SyntaxHighlightingHelper.AddSectionHeader(box, "ENTITIES");
         AddColoredLine(box, $"Total entities found: {entityCount}");
         AddColoredLine(box, "");
 
         SyntaxHighlightingHelper.AddSectionHeader(box, "COLOR LEGEND");
-        AddColoredLine(box, "Cancer terms (Type 0)", backColor: ColorType0);
-        AddColoredLine(box, "Cytology terms (Type 1)", backColor: ColorType1);
-        AddColoredLine(box, "Site terms (Type 2)", backColor: ColorType2);
-        AddColoredLine(box, "Negated (any type)", backColor: ColorNegated);
-        AddColoredLine(box, "");
-
-        // Entity details
-        if (entityCount > 0)
-        {
-            SyntaxHighlightingHelper.AddSectionHeader(box, "ENTITY DETAILS");
-            foreach (var entity in entitiesElement.EnumerateArray())
-            {
-                bool isNegated = GetBool(entity, "IsNegated");
-                int entityType = GetInt(entity, "EntityType");
-                string entityPhrase = GetString(entity, "EntityPhrase");
-                string code = GetString(entity, "Code");
-
-                string negatedMarker = isNegated ? " [NEGATED]" : "";
-                string typeLabel = entityType switch
-                {
-                    0 => "Cancer",
-                    1 => "Cytology",
-                    2 => "Site",
-                    _ => $"Type{entityType}"
-                };
-
-                string line = $"{typeLabel}: '{entityPhrase}' (Code: {code}){negatedMarker}";
-                AddColoredLine(box, line);
-            }
-        }
+        AddColoredLine(box, "Histology", backColor: ColorType0);
+        AddColoredLine(box, "Behavior", backColor: ColorType1);
+        AddColoredLine(box, "Site", backColor: ColorType2);
+        AddColoredLine(box, "Negated", backColor: ColorNegated);
     }
 
     // ── Highlighted OBX text builder ─────────────────────────────────────

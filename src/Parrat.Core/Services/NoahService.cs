@@ -306,8 +306,8 @@ public class NoahService : INoahService
 
         modelId = guid.ToString();
 
-        // Encode HL7 message as Base64
-        byte[] bytes = Encoding.UTF8.GetBytes(hl7Message);
+        string normalizedHl7 = Hl7EscapeHelper.NormalizeSegmentSeparators(hl7Message);
+        byte[] bytes = Encoding.UTF8.GetBytes(normalizedHl7);
         string hl7MessageEncoded = Convert.ToBase64String(bytes);
 
         var requestObj = new[]
@@ -386,18 +386,17 @@ public class NoahService : INoahService
 
         string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
         string msgId = Guid.NewGuid().ToString()[..8];
-
-        string segmentSeparator = "\r";
+        string escapedText = Hl7EscapeHelper.Escape(customText);
 
         var segments = new List<string>
         {
             $"MSH|^~\\&|ePATH|TEST_FACILITY|NOAH|NOAH_FACILITY|{timestamp}||ORU^R01|{msgId}|P|2.5.1",
             $"PID|1||{patientId}^^^TEST_FACILITY^MR||TEST^PATIENT||19700101|U",
             $"OBR|1||{accessionNumber}||88305^Surgical Pathology|||{timestamp}",
-            $"OBX|1|FT|88305&ICD10&2.16.840.1.113883.6.90^Final Diagnosis^L|2|{customText}||||||F"
+            $"OBX|1|FT|22637-3^Final Diagnosis^LN|1|{escapedText}||||||F"
         };
 
-        return string.Join(segmentSeparator, segments);
+        return string.Join("\r", segments);
     }
 
     private static bool? TryGetBool(JsonElement element, string propertyName)
