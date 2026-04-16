@@ -291,20 +291,7 @@ public class NoahResultsForm : ParratFormBase
                 };
 
                 string line = $"{typeLabel}: '{entityPhrase}' (Code: {code}){negatedMarker}";
-
-                Color backColor;
-                if (isNegated)
-                    backColor = ColorNegated;
-                else
-                    backColor = entityType switch
-                    {
-                        0 => ColorType0,
-                        1 => ColorType1,
-                        2 => ColorType2,
-                        _ => Color.Empty
-                    };
-
-                AddColoredLine(box, line, backColor: backColor);
+                AddColoredLine(box, line);
             }
         }
     }
@@ -321,18 +308,39 @@ public class NoahResultsForm : ParratFormBase
 
         if (obxTextsEmpty && !string.IsNullOrWhiteSpace(_fallbackObxText))
         {
+            // Build entities list for highlighting the fallback text
+            var fallbackEntities = new List<JsonElement>();
+            if (TryGetProp(root, "Entities", out var fbEntities) &&
+                fbEntities.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var e in fbEntities.EnumerateArray())
+                    fallbackEntities.Add(e);
+                fallbackEntities = fallbackEntities.OrderBy(e => GetInt(e, "Offset")).ToList();
+            }
+
             SyntaxHighlightingHelper.AddSectionHeader(rtb, "Custom Payload Text");
+            int startPos = rtb.TextLength;
+            string displayText = _fallbackObxText.Replace("\r\n", "\n");
+
             rtb.SelectionStart = rtb.TextLength;
             rtb.SelectionFont = rtb.Font;
             rtb.SelectionColor = rtb.ForeColor;
             rtb.SelectionBackColor = rtb.BackColor;
-            rtb.AppendText(_fallbackObxText + "\n");
+            rtb.AppendText(displayText + "\n");
+
+            ApplyEntityHighlighting(rtb, fallbackEntities, displayText, _fallbackObxText, startPos);
+            rtb.SelectionStart = 0;
+            rtb.SelectionLength = 0;
             return;
         }
 
-        if (!hasObxTexts)
+        if (obxTextsEmpty)
         {
-            rtb.Text = "(No OBX text in result)";
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "RAW API RESPONSE");
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = Color.Gray;
+            rtb.AppendText(_jsonContent ?? "(No response data)");
             return;
         }
 
@@ -376,106 +384,17 @@ public class NoahResultsForm : ParratFormBase
                 segEntities = list.OrderBy(e => GetInt(e, "Offset")).ToList();
             }
 
-            if (segEntities.Count == 0)
-            {
-                // No entities - plain text
-                rtb.SelectionStart = rtb.TextLength;
-                rtb.SelectionLength = 0;
-                rtb.SelectionFont = rtb.Font;
-                rtb.SelectionColor = rtb.ForeColor;
-                rtb.SelectionBackColor = rtb.BackColor;
-                rtb.AppendText(displayText + "\n");
-            }
-            else
-            {
-                // Record position before adding text
-                int startPos = rtb.TextLength;
+            int startPos = rtb.TextLength;
 
-                // Add entire text as plain
-                rtb.SelectionStart = rtb.TextLength;
-                rtb.SelectionLength = 0;
-                rtb.SelectionFont = rtb.Font;
-                rtb.SelectionColor = rtb.ForeColor;
-                rtb.SelectionBackColor = rtb.BackColor;
-                rtb.AppendText(displayText);
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionLength = 0;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = rtb.ForeColor;
+            rtb.SelectionBackColor = rtb.BackColor;
+            rtb.AppendText(displayText + "\n");
 
-                // Apply highlighting to each entity
-                foreach (var entity in segEntities)
-                {
-                    int offset = GetInt(entity, "Offset");
-                    int length = GetInt(entity, "Length");
-                    string entityPhrase = GetString(entity, "EntityPhrase");
-
-                    // Convert offset from original text (\r\n) to display text (\n only)
-                    string textBeforeOffset = offset > 0 && offset <= textValue.Length
-                        ? textValue.Substring(0, offset) : "";
-                    int crlfCount = System.Text.RegularExpressions.Regex.Matches(textBeforeOffset, "\r\n").Count;
-                    int displayOffset = offset - crlfCount;
-
-                    // Verify offset by checking entity phrase match
-                    int actualOffset = displayOffset;
-                    if (displayOffset >= 0 && displayOffset + length <= displayText.Length)
-                    {
-                        string textAtOffset = displayText.Substring(
-                            displayOffset,
-                            Math.Min(length, displayText.Length - displayOffset));
-                        if (textAtOffset != entityPhrase && !string.IsNullOrWhiteSpace(entityPhrase))
-                        {
-                            int foundIndex = displayText.IndexOf(
-                                entityPhrase, StringComparison.OrdinalIgnoreCase);
-                            if (foundIndex >= 0)
-                                actualOffset = foundIndex;
-                        }
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrWhiteSpace(entityPhrase))
-                        {
-                            int foundIndex = displayText.IndexOf(
-                                entityPhrase, StringComparison.OrdinalIgnoreCase);
-                            if (foundIndex >= 0)
-                                actualOffset = foundIndex;
-                            else
-                                continue;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-
-                    int highlightStart = startPos + actualOffset;
-                    int highlightLength = length;
-
-                    if (highlightStart < startPos) continue;
-                    int textEndPos = startPos + displayText.Length;
-                    if (highlightStart + highlightLength > textEndPos)
-                        highlightLength = textEndPos - highlightStart;
-                    if (highlightLength <= 0) continue;
-
-                    // Determine color
-                    bool isNegated = GetBool(entity, "IsNegated");
-                    int entityType = GetInt(entity, "EntityType");
-                    Color backColor;
-                    if (isNegated)
-                        backColor = ColorNegated;
-                    else
-                        backColor = entityType switch
-                        {
-                            0 => ColorType0,
-                            1 => ColorType1,
-                            2 => ColorType2,
-                            _ => ColorType0
-                        };
-
-                    rtb.SelectionStart = highlightStart;
-                    rtb.SelectionLength = highlightLength;
-                    rtb.SelectionBackColor = backColor;
-                }
-
-                // Add trailing newline after highlighting
-                rtb.AppendText("\n");
-            }
+            if (segEntities.Count > 0)
+                ApplyEntityHighlighting(rtb, segEntities, displayText, textValue, startPos);
 
             AddColoredLine(rtb, "");
         }
@@ -483,6 +402,70 @@ public class NoahResultsForm : ParratFormBase
         // Reset selection to start
         rtb.SelectionStart = 0;
         rtb.SelectionLength = 0;
+    }
+
+    // ── Entity highlighting ────────────────────────────────────────────
+
+    private static void ApplyEntityHighlighting(
+        RichTextBox rtb, List<JsonElement> entities, string displayText, string originalText, int startPos)
+    {
+        foreach (var entity in entities)
+        {
+            int offset = GetInt(entity, "Offset");
+            int length = GetInt(entity, "Length");
+            string entityPhrase = GetString(entity, "EntityPhrase");
+
+            // Convert offset from original text (\r\n) to display text (\n only)
+            string textBeforeOffset = offset > 0 && offset <= originalText.Length
+                ? originalText.Substring(0, offset) : "";
+            int crlfCount = System.Text.RegularExpressions.Regex.Matches(textBeforeOffset, "\r\n").Count;
+            int displayOffset = offset - crlfCount;
+
+            int actualOffset = displayOffset;
+            if (displayOffset >= 0 && displayOffset + length <= displayText.Length)
+            {
+                string textAtOffset = displayText.Substring(
+                    displayOffset, Math.Min(length, displayText.Length - displayOffset));
+                if (textAtOffset != entityPhrase && !string.IsNullOrWhiteSpace(entityPhrase))
+                {
+                    int foundIndex = displayText.IndexOf(entityPhrase, StringComparison.OrdinalIgnoreCase);
+                    if (foundIndex >= 0) actualOffset = foundIndex;
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(entityPhrase))
+                {
+                    int foundIndex = displayText.IndexOf(entityPhrase, StringComparison.OrdinalIgnoreCase);
+                    if (foundIndex >= 0) actualOffset = foundIndex;
+                    else continue;
+                }
+                else continue;
+            }
+
+            int highlightStart = startPos + actualOffset;
+            int highlightLength = length;
+
+            if (highlightStart < startPos) continue;
+            int textEndPos = startPos + displayText.Length;
+            if (highlightStart + highlightLength > textEndPos)
+                highlightLength = textEndPos - highlightStart;
+            if (highlightLength <= 0) continue;
+
+            bool isNegated = GetBool(entity, "IsNegated");
+            int entityType = GetInt(entity, "EntityType");
+            Color backColor = isNegated ? ColorNegated : entityType switch
+            {
+                0 => ColorType0,
+                1 => ColorType1,
+                2 => ColorType2,
+                _ => ColorType0
+            };
+
+            rtb.SelectionStart = highlightStart;
+            rtb.SelectionLength = highlightLength;
+            rtb.SelectionBackColor = backColor;
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
