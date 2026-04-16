@@ -310,7 +310,9 @@ public class NoahService : INoahService
             {
                 var result = root[0];
 
-                string reportableStr = result.TryGetProperty("reportable", out var rp) ? rp.GetString() ?? "" : "";
+                string reportableStr = result.TryGetProperty("reportable", out var rp)
+                    ? rp.ValueKind == JsonValueKind.String ? rp.GetString() ?? "" : rp.GetRawText()
+                    : "";
                 bool isReportable = reportableStr == "true";
 
                 string classification = isReportable ? "reportable"
@@ -322,8 +324,10 @@ public class NoahService : INoahService
                     Success = true,
                     Classification = classification,
                     Reportable = isReportable,
-                    ImpossibleCombination = result.TryGetProperty("impossibleCombination", out var ic) && ic.GetString() == "true",
-                    MetastaticReport = result.TryGetProperty("metastaticReport", out var mr) && mr.GetBoolean(),
+                    ImpossibleCombination = result.TryGetProperty("impossibleCombination", out var ic) &&
+                        (ic.ValueKind == JsonValueKind.True || (ic.ValueKind == JsonValueKind.String && ic.GetString() == "true")),
+                    MetastaticReport = result.TryGetProperty("metastaticReport", out var mr) &&
+                        (mr.ValueKind == JsonValueKind.True || (mr.ValueKind == JsonValueKind.String && mr.GetString() == "true")),
                     MessageId = result.TryGetProperty("messageId", out var mi) ? mi.GetString() ?? "" : ""
                 };
             }
