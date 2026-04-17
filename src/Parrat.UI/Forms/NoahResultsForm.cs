@@ -380,48 +380,19 @@ public class NoahResultsForm : ParratFormBase
     private static void ApplyEntityHighlighting(
         RichTextBox rtb, List<JsonElement> entities, string displayText, string originalText, int startPos)
     {
+        string rtbText = rtb.Text;
+        int regionEnd = Math.Min(startPos + displayText.Length + 50, rtbText.Length);
+
         foreach (var entity in entities)
         {
-            int offset = GetInt(entity, "Offset");
-            int length = GetInt(entity, "Length");
             string entityPhrase = GetString(entity, "EntityPhrase");
+            if (string.IsNullOrWhiteSpace(entityPhrase)) continue;
 
-            // Convert offset from original text (\r\n) to display text (\n only)
-            string textBeforeOffset = offset > 0 && offset <= originalText.Length
-                ? originalText.Substring(0, offset) : "";
-            int crlfCount = System.Text.RegularExpressions.Regex.Matches(textBeforeOffset, "\r\n").Count;
-            int displayOffset = offset - crlfCount;
+            int searchFrom = startPos;
+            int foundAt = rtbText.IndexOf(entityPhrase, searchFrom,
+                Math.Max(0, regionEnd - searchFrom), StringComparison.OrdinalIgnoreCase);
 
-            int actualOffset = displayOffset;
-            if (displayOffset >= 0 && displayOffset + length <= displayText.Length)
-            {
-                string textAtOffset = displayText.Substring(
-                    displayOffset, Math.Min(length, displayText.Length - displayOffset));
-                if (textAtOffset != entityPhrase && !string.IsNullOrWhiteSpace(entityPhrase))
-                {
-                    int foundIndex = displayText.IndexOf(entityPhrase, StringComparison.OrdinalIgnoreCase);
-                    if (foundIndex >= 0) actualOffset = foundIndex;
-                }
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(entityPhrase))
-                {
-                    int foundIndex = displayText.IndexOf(entityPhrase, StringComparison.OrdinalIgnoreCase);
-                    if (foundIndex >= 0) actualOffset = foundIndex;
-                    else continue;
-                }
-                else continue;
-            }
-
-            int highlightStart = startPos + actualOffset;
-            int highlightLength = length;
-
-            if (highlightStart < startPos) continue;
-            int textEndPos = startPos + displayText.Length;
-            if (highlightStart + highlightLength > textEndPos)
-                highlightLength = textEndPos - highlightStart;
-            if (highlightLength <= 0) continue;
+            if (foundAt < 0) continue;
 
             bool isNegated = GetBool(entity, "IsNegated");
             int entityType = GetInt(entity, "EntityType");
@@ -433,8 +404,8 @@ public class NoahResultsForm : ParratFormBase
                 _ => ColorType0
             };
 
-            rtb.SelectionStart = highlightStart;
-            rtb.SelectionLength = highlightLength;
+            rtb.SelectionStart = foundAt;
+            rtb.SelectionLength = entityPhrase.Length;
             rtb.SelectionBackColor = backColor;
         }
     }
