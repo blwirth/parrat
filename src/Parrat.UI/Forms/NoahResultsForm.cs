@@ -315,6 +315,8 @@ public class NoahResultsForm : ParratFormBase
             return;
         }
 
+        var debugLines = new List<string>();
+
         // Build entities lookup by OBX segment
         var entitiesBySegment = new Dictionary<int, List<JsonElement>>();
         if (TryGetProp(root, "Entities", out var entities) &&
@@ -327,6 +329,23 @@ public class NoahResultsForm : ParratFormBase
                     entitiesBySegment[segNum] = new List<JsonElement>();
                 entitiesBySegment[segNum].Add(entity);
             }
+        }
+
+        // Debug: entity grouping
+        debugLines.Add($"Total entities: {entitiesBySegment.Values.Sum(l => l.Count)}");
+        foreach (var kvp in entitiesBySegment)
+            debugLines.Add($"  Segment {kvp.Key}: {kvp.Value.Count} entities");
+
+        // Debug: OBXTexts keys
+        if (hasObxTexts)
+        {
+            var keys = new List<string>();
+            foreach (var p in obxTexts.EnumerateObject())
+            {
+                string val = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() ?? "" : "";
+                keys.Add($"{p.Name}={val.Length}chars");
+            }
+            debugLines.Add($"OBXTexts keys: {string.Join(", ", keys)}");
         }
 
         // Process each OBX text field in order
@@ -359,48 +378,98 @@ public class NoahResultsForm : ParratFormBase
 
             int rtbSegmentLength = rtb.TextLength - startPos;
             if (segEntities.Count > 0)
-                ApplyEntityHighlighting(rtb, segEntities, textValue, startPos, rtbSegmentLength);
+            {
+                var diag = ApplyEntityHighlighting(rtb, segEntities, textValue, startPos, rtbSegmentLength);
+                debugLines.AddRange(diag);
+            }
 
             AddColoredLine(rtb, "");
         }
 
-        // Reset selection to start
+        // Debug section
+        if (debugLines.Count > 0)
+        {
+            AddColoredLine(rtb, "");
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "HIGHLIGHT DEBUG");
+            foreach (var line in debugLines)
+                AddColoredLine(rtb, line);
+        }
+
         rtb.SelectionStart = 0;
         rtb.SelectionLength = 0;
     }
 
     // ── Entity highlighting ────────────────────────────────────────────
 
-    private static void ApplyEntityHighlighting(
+    private static List<string> ApplyEntityHighlighting(
         RichTextBox rtb, List<JsonElement> entities, string noahText, int startPos, int rtbSegmentLength)
     {
-        // NOAH offsets are relative to noahText (original, may have \r\n).
-        // RTB may store line breaks differently, so compute an adjustment.
-        // If RTB collapsed \r\n to \n, rtbSegmentLength < noahText.Length.
+        var diag = new List<string>();
         int noahLen = noahText.Length;
         int crlfCount = System.Text.RegularExpressions.Regex.Matches(noahText, "\r\n").Count;
         bool rtbCollapsedCrlf = rtbSegmentLength < noahLen && crlfCount > 0;
+
+        diag.Add($"noahText.Length={noahLen}, rtbSegmentLength={rtbSegmentLength}, crlfCount={crlfCount}, collapsed={rtbCollapsedCrlf}");
+        diag.Add($"startPos={startPos}, rtb.TextLength={rtb.TextLength}");
+
+        string rtbText = rtb.Text;
+        int highlighted = 0;
 
         foreach (var entity in entities)
         {
             int offset = GetInt(entity, "Offset");
             int length = GetInt(entity, "Length");
             string entityPhrase = GetString(entity, "EntityPhrase");
-            if (string.IsNullOrWhiteSpace(entityPhrase)) continue;
+            if (string.IsNullOrWhiteSpace(entityPhrase))
+            {
+                diag.Add($"  SKIP empty phrase at offset={offset}");
+                continue;
+            }
 
             int rtbOffset = offset;
             if (rtbCollapsedCrlf)
             {
-                int crlfBeforeOffset = System.Text.RegularExpressions.Regex.Matches(
+                int crlfBefore = System.Text.RegularExpressions.Regex.Matches(
                     noahText.Substring(0, Math.Min(offset, noahLen)), "\r\n").Count;
-                rtbOffset = offset - crlfBeforeOffset;
+                rtbOffset = offset - crlfBefore;
+                diag.Add($"  '{entityPhrase}' noahOff={offset} crlfBefore={crlfBefore} rtbOff={rtbOffset}");
+            }
+            else
+            {
+                diag.Add($"  '{entityPhrase}' offset={offset} len={length}");
             }
 
             int highlightStart = startPos + rtbOffset;
             int highlightLength = entityPhrase.Length;
+            int regionEnd = startPos + rtbSegmentLength;
 
-            if (highlightStart < startPos || highlightStart + highlightLength > startPos + rtbSegmentLength)
-                continue;
+            if (highlightStart < startPos || highlightStart + highlightLength > regionEnd)
+            {
+                diag.Add($"    OUT OF BOUNDS: hlStart={highlightStart} hlEnd={highlightStart + highlightLength} regionEnd={regionEnd}");
+
+                // Fallback: try IndexOf in RTB text
+                int searchEnd = Math.Min(regionEnd, rtbText.Length);
+                int found = rtbText.IndexOf(entityPhrase, startPos,
+                    Math.Max(0, searchEnd - startPos), StringComparison.OrdinalIgnoreCase);
+                if (found >= 0)
+                {
+                    highlightStart = found;
+                    highlightLength = entityPhrase.Length;
+                    diag.Add($"    FALLBACK IndexOf found at {found}");
+                }
+                else
+                {
+                    diag.Add($"    FALLBACK IndexOf NOT FOUND");
+                    continue;
+                }
+            }
+
+            // Show what's actually at the computed position
+            if (highlightStart >= 0 && highlightStart + highlightLength <= rtbText.Length)
+            {
+                string actual = rtbText.Substring(highlightStart, highlightLength);
+                diag.Add($"    RTB text at pos: '{actual}'");
+            }
 
             bool isNegated = GetBool(entity, "IsNegated");
             int entityType = GetInt(entity, "EntityType");
@@ -415,7 +484,11 @@ public class NoahResultsForm : ParratFormBase
             rtb.SelectionStart = highlightStart;
             rtb.SelectionLength = highlightLength;
             rtb.SelectionBackColor = backColor;
+            highlighted++;
         }
+
+        diag.Add($"Highlighted {highlighted}/{entities.Count} entities");
+        return diag;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
