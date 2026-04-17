@@ -133,8 +133,14 @@ public class NoahResultsForm : ParratFormBase
 
         var root = resultDoc.RootElement;
 
-        // ── Main split container: left (summary) | right (OBX text) ──
-        var splitMain = new SplitContainer
+        // ── 3-panel layout: Summary | (Highlighted Text | JSON Response) ──
+        var splitOuter = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical
+        };
+
+        var splitInner = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical
@@ -144,12 +150,13 @@ public class NoahResultsForm : ParratFormBase
         {
             try
             {
-                splitMain.SplitterDistance = Math.Max(1, Math.Min(400, splitMain.Width - 204));
+                splitOuter.SplitterDistance = Math.Max(1, Math.Min(280, splitOuter.Width - 204));
+                splitInner.SplitterDistance = Math.Max(1, splitInner.Width - 440);
             }
             catch { }
         };
 
-        // === LEFT PANEL: Summary ===
+        // === PANEL 1: Summary ===
         var rtbSummary = new RichTextBox
         {
             Dock = DockStyle.Fill,
@@ -157,11 +164,10 @@ public class NoahResultsForm : ParratFormBase
             Font = new Font("Consolas", 10f),
             WordWrap = true
         };
-
         BuildSummaryContent(rtbSummary, root);
-        splitMain.Panel1.Controls.Add(rtbSummary);
+        splitOuter.Panel1.Controls.Add(rtbSummary);
 
-        // === RIGHT PANEL: OBX Text with highlighting ===
+        // === PANEL 2: OBX Text with highlighting ===
         var rtbText = new RichTextBox
         {
             Dock = DockStyle.Fill,
@@ -170,9 +176,22 @@ public class NoahResultsForm : ParratFormBase
             WordWrap = true,
             ScrollBars = RichTextBoxScrollBars.Both
         };
-
         BuildHighlightedOBXText(rtbText, root);
-        splitMain.Panel2.Controls.Add(rtbText);
+        splitInner.Panel1.Controls.Add(rtbText);
+
+        // === PANEL 3: JSON Response ===
+        var rtbJson = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            Font = new Font("Consolas", 9f),
+            WordWrap = false,
+            ScrollBars = RichTextBoxScrollBars.Both
+        };
+        BuildJsonResponsePanel(rtbJson, root);
+        splitInner.Panel2.Controls.Add(rtbJson);
+
+        splitOuter.Panel2.Controls.Add(splitInner);
 
         // ── Bottom panel with buttons ────────────────────────────────
         var pnlButtons = new Panel
@@ -208,7 +227,7 @@ public class NoahResultsForm : ParratFormBase
 
         pnlButtons.Controls.Add(btnClose);
 
-        Controls.Add(splitMain);
+        Controls.Add(splitOuter);
         Controls.Add(pnlButtons);
 
         resultDoc.Dispose();
@@ -265,6 +284,33 @@ public class NoahResultsForm : ParratFormBase
         AddColoredLine(box, "Behavior", backColor: ColorType1);
         AddColoredLine(box, "Site", backColor: ColorType2);
         AddColoredLine(box, "Negated", backColor: ColorNegated);
+    }
+
+    // ── JSON response panel builder ──────────────────────────────────────
+
+    private void BuildJsonResponsePanel(RichTextBox rtb, JsonElement root)
+    {
+        SyntaxHighlightingHelper.AddSectionHeader(rtb, "JSON RESPONSE");
+
+        string pretty;
+        try
+        {
+            pretty = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            pretty = $"(Failed to serialize JSON: {ex.Message})\n\n{_jsonContent ?? ""}";
+        }
+
+        rtb.SelectionStart = rtb.TextLength;
+        rtb.SelectionLength = 0;
+        rtb.SelectionFont = rtb.Font;
+        rtb.SelectionColor = rtb.ForeColor;
+        rtb.SelectionBackColor = rtb.BackColor;
+        rtb.AppendText(pretty);
+
+        rtb.SelectionStart = 0;
+        rtb.SelectionLength = 0;
     }
 
     // ── Highlighted OBX text builder ─────────────────────────────────────
@@ -400,6 +446,12 @@ public class NoahResultsForm : ParratFormBase
     }
 
     // ── Entity highlighting ────────────────────────────────────────────
+    //
+    // Policy: trust the API's Offset and Length values. No phrase-string
+    // second-guessing. No IndexOf fallback. If the computed range falls
+    // outside the rendered segment, CLAMP to the segment bounds and still
+    // paint — so every entity produces a visible mark the user can see and
+    // reason about, instead of silently vanishing.
 
     private static List<string> ApplyEntityHighlighting(
         RichTextBox rtb, List<JsonElement> entities, string noahText, int startPos, int rtbSegmentLength)
@@ -408,71 +460,72 @@ public class NoahResultsForm : ParratFormBase
         int noahLen = noahText.Length;
         int crlfCount = System.Text.RegularExpressions.Regex.Matches(noahText, "\r\n").Count;
         bool rtbCollapsedCrlf = rtbSegmentLength < noahLen && crlfCount > 0;
+        int regionEnd = startPos + rtbSegmentLength;
 
         diag.Add($"noahText.Length={noahLen}, rtbSegmentLength={rtbSegmentLength}, crlfCount={crlfCount}, collapsed={rtbCollapsedCrlf}");
-        diag.Add($"startPos={startPos}, rtb.TextLength={rtb.TextLength}");
+        diag.Add($"startPos={startPos}, rtb.TextLength={rtb.TextLength}, regionEnd={regionEnd}");
 
         string rtbText = rtb.Text;
-        int highlighted = 0;
+        int painted = 0;
+        int clamped = 0;
 
         foreach (var entity in entities)
         {
+            int id = GetInt(entity, "Id");
+            int entityType = GetInt(entity, "EntityType");
+            int segment = GetInt(entity, "OBXSegment");
+            string entityPhrase = GetString(entity, "EntityPhrase");
             int offset = GetInt(entity, "Offset");
             int length = GetInt(entity, "Length");
-            string entityPhrase = GetString(entity, "EntityPhrase");
-            if (string.IsNullOrWhiteSpace(entityPhrase))
-            {
-                diag.Add($"  SKIP empty phrase at offset={offset}");
-                continue;
-            }
+            bool isNegated = GetBool(entity, "IsNegated");
+            int negationType = GetInt(entity, "NegationType");
+            string code = GetString(entity, "Code");
+            string additionalCode = GetString(entity, "AdditionalCode");
+            bool isNonreportable = GetBool(entity, "IsNonreportableTerm");
 
+            diag.Add($"Entity Id={id} type={entityType} seg={segment} phrase='{entityPhrase}' offset={offset} length={length} negated={isNegated} negType={negationType} code='{code}' addCode='{additionalCode}' nonReport={isNonreportable}");
+
+            // Translate API offset (CRLF-based) into RTB offset (LF-collapsed)
             int rtbOffset = offset;
-            if (rtbCollapsedCrlf)
+            int crlfBefore = 0;
+            if (rtbCollapsedCrlf && offset > 0)
             {
-                int crlfBefore = System.Text.RegularExpressions.Regex.Matches(
+                crlfBefore = System.Text.RegularExpressions.Regex.Matches(
                     noahText.Substring(0, Math.Min(offset, noahLen)), "\r\n").Count;
                 rtbOffset = offset - crlfBefore;
-                diag.Add($"  '{entityPhrase}' noahOff={offset} crlfBefore={crlfBefore} rtbOff={rtbOffset}");
-            }
-            else
-            {
-                diag.Add($"  '{entityPhrase}' offset={offset} len={length}");
             }
 
             int highlightStart = startPos + rtbOffset;
-            int highlightLength = entityPhrase.Length;
-            int regionEnd = startPos + rtbSegmentLength;
+            int highlightEnd = highlightStart + length;
+            string note = "";
 
-            if (highlightStart < startPos || highlightStart + highlightLength > regionEnd)
+            if (highlightStart < startPos)
             {
-                diag.Add($"    OUT OF BOUNDS: hlStart={highlightStart} hlEnd={highlightStart + highlightLength} regionEnd={regionEnd}");
-
-                // Fallback: try IndexOf in RTB text
-                int searchEnd = Math.Min(regionEnd, rtbText.Length);
-                int found = rtbText.IndexOf(entityPhrase, startPos,
-                    Math.Max(0, searchEnd - startPos), StringComparison.OrdinalIgnoreCase);
-                if (found >= 0)
-                {
-                    highlightStart = found;
-                    highlightLength = entityPhrase.Length;
-                    diag.Add($"    FALLBACK IndexOf found at {found}");
-                }
-                else
-                {
-                    diag.Add($"    FALLBACK IndexOf NOT FOUND");
-                    continue;
-                }
+                note += $" [CLAMPED low: {highlightStart}→{startPos}]";
+                highlightStart = startPos;
+                clamped++;
             }
+            if (highlightEnd > regionEnd)
+            {
+                note += $" [CLAMPED high: {highlightEnd}→{regionEnd}]";
+                highlightEnd = regionEnd;
+                clamped++;
+            }
+            int highlightLength = Math.Max(0, highlightEnd - highlightStart);
 
-            // Show what's actually at the computed position
-            if (highlightStart >= 0 && highlightStart + highlightLength <= rtbText.Length)
+            diag.Add($"  → rtbOffset={rtbOffset} (crlfBefore={crlfBefore}) applied [{highlightStart}..{highlightEnd}] len={highlightLength}{note}");
+
+            if (highlightLength > 0 && highlightStart + highlightLength <= rtbText.Length)
             {
                 string actual = rtbText.Substring(highlightStart, highlightLength);
-                diag.Add($"    RTB text at pos: '{actual}'");
+                diag.Add($"  → RTB actual: '{actual}'");
+            }
+            else
+            {
+                diag.Add($"  → RTB actual: (empty range)");
+                continue;
             }
 
-            bool isNegated = GetBool(entity, "IsNegated");
-            int entityType = GetInt(entity, "EntityType");
             Color backColor = isNegated ? ColorNegated : entityType switch
             {
                 0 => ColorType0,
@@ -484,10 +537,10 @@ public class NoahResultsForm : ParratFormBase
             rtb.SelectionStart = highlightStart;
             rtb.SelectionLength = highlightLength;
             rtb.SelectionBackColor = backColor;
-            highlighted++;
+            painted++;
         }
 
-        diag.Add($"Highlighted {highlighted}/{entities.Count} entities");
+        diag.Add($"Painted {painted}/{entities.Count} entities (clamped ranges: {clamped})");
         return diag;
     }
 
