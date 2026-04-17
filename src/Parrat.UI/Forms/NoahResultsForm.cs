@@ -363,24 +363,27 @@ public class NoahResultsForm : ParratFormBase
 
         var debugLines = new List<string>();
 
-        // Build entities lookup by OBX segment
-        var entitiesBySegment = new Dictionary<int, List<JsonElement>>();
+        // Build entities lookup by OBX segment.
+        // NOAH V2 returns obxSegment as a STRING name ("TextDiagnosis"), not an int.
+        var entitiesBySegment = new Dictionary<string, List<JsonElement>>(StringComparer.OrdinalIgnoreCase);
         if (TryGetProp(root, "Entities", out var entities) &&
             entities.ValueKind == JsonValueKind.Array)
         {
             foreach (var entity in entities.EnumerateArray())
             {
-                int segNum = GetInt(entity, "OBXSegment");
-                if (!entitiesBySegment.ContainsKey(segNum))
-                    entitiesBySegment[segNum] = new List<JsonElement>();
-                entitiesBySegment[segNum].Add(entity);
+                string segName = GetString(entity, "OBXSegment");
+                if (string.IsNullOrEmpty(segName))
+                    segName = "(unknown)";
+                if (!entitiesBySegment.ContainsKey(segName))
+                    entitiesBySegment[segName] = new List<JsonElement>();
+                entitiesBySegment[segName].Add(entity);
             }
         }
 
         // Debug: entity grouping
         debugLines.Add($"Total entities: {entitiesBySegment.Values.Sum(l => l.Count)}");
         foreach (var kvp in entitiesBySegment)
-            debugLines.Add($"  Segment {kvp.Key}: {kvp.Value.Count} entities");
+            debugLines.Add($"  Segment '{kvp.Key}': {kvp.Value.Count} entities");
 
         // Debug: OBXTexts keys
         if (hasObxTexts)
@@ -411,7 +414,7 @@ public class NoahResultsForm : ParratFormBase
             SyntaxHighlightingHelper.AddSectionHeader(rtb, $"{fieldName} (Segment {segNum})");
 
             var segEntities = new List<JsonElement>();
-            if (entitiesBySegment.TryGetValue(segNum, out var list))
+            if (entitiesBySegment.TryGetValue(fieldName, out var list))
                 segEntities = list.OrderBy(e => GetInt(e, "Offset")).ToList();
 
             int startPos = rtb.TextLength;
@@ -472,18 +475,19 @@ public class NoahResultsForm : ParratFormBase
         foreach (var entity in entities)
         {
             int id = GetInt(entity, "Id");
-            int entityType = GetInt(entity, "EntityType");
-            int segment = GetInt(entity, "OBXSegment");
+            // V2 API returns entityType/obxSegment as STRING names, not ints.
+            string entityType = GetString(entity, "EntityType");
+            string segment = GetString(entity, "OBXSegment");
             string entityPhrase = GetString(entity, "EntityPhrase");
             int offset = GetInt(entity, "Offset");
             int length = GetInt(entity, "Length");
             bool isNegated = GetBool(entity, "IsNegated");
-            int negationType = GetInt(entity, "NegationType");
+            string negationType = GetString(entity, "NegationType");
             string code = GetString(entity, "Code");
             string additionalCode = GetString(entity, "AdditionalCode");
-            bool isNonreportable = GetBool(entity, "IsNonreportableTerm");
+            bool isNonreportable = GetBool(entity, "IsNonReportableTerm");
 
-            diag.Add($"Entity Id={id} type={entityType} seg={segment} phrase='{entityPhrase}' offset={offset} length={length} negated={isNegated} negType={negationType} code='{code}' addCode='{additionalCode}' nonReport={isNonreportable}");
+            diag.Add($"Entity Id={id} type='{entityType}' seg='{segment}' phrase='{entityPhrase}' offset={offset} length={length} negated={isNegated} negType='{negationType}' code='{code}' addCode='{additionalCode}' nonReport={isNonreportable}");
 
             // Translate API offset (CRLF-based) into RTB offset (LF-collapsed)
             int rtbOffset = offset;
@@ -526,11 +530,11 @@ public class NoahResultsForm : ParratFormBase
                 continue;
             }
 
-            Color backColor = isNegated ? ColorNegated : entityType switch
+            Color backColor = isNegated ? ColorNegated : entityType.ToLowerInvariant() switch
             {
-                0 => ColorType0,
-                1 => ColorType1,
-                2 => ColorType2,
+                "histology" => ColorType0,
+                "behavior" => ColorType1,
+                "site" => ColorType2,
                 _ => ColorType0
             };
 
