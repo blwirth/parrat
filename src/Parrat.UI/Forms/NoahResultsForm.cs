@@ -291,15 +291,15 @@ public class NoahResultsForm : ParratFormBase
 
             SyntaxHighlightingHelper.AddSectionHeader(rtb, "Custom Payload Text");
             int startPos = rtb.TextLength;
-            string displayText = _fallbackObxText.Replace("\r\n", "\n");
 
             rtb.SelectionStart = rtb.TextLength;
             rtb.SelectionFont = rtb.Font;
             rtb.SelectionColor = rtb.ForeColor;
             rtb.SelectionBackColor = rtb.BackColor;
-            rtb.AppendText(displayText + "\n");
+            rtb.AppendText(_fallbackObxText + "\n");
 
-            ApplyEntityHighlighting(rtb, fallbackEntities, displayText, _fallbackObxText, startPos);
+            int rtbLen = rtb.TextLength - startPos;
+            ApplyEntityHighlighting(rtb, fallbackEntities, _fallbackObxText, startPos, rtbLen);
             rtb.SelectionStart = 0;
             rtb.SelectionLength = 0;
             return;
@@ -343,29 +343,23 @@ public class NoahResultsForm : ParratFormBase
             if (string.IsNullOrWhiteSpace(textValue))
                 continue;
 
-            // RichTextBox converts \r\n to \n internally
-            string displayText = textValue.Replace("\r\n", "\n");
-
             SyntaxHighlightingHelper.AddSectionHeader(rtb, $"{fieldName} (Segment {segNum})");
 
-            // Get entities for this segment, sorted by offset
             var segEntities = new List<JsonElement>();
             if (entitiesBySegment.TryGetValue(segNum, out var list))
-            {
                 segEntities = list.OrderBy(e => GetInt(e, "Offset")).ToList();
-            }
 
             int startPos = rtb.TextLength;
-
             rtb.SelectionStart = rtb.TextLength;
             rtb.SelectionLength = 0;
             rtb.SelectionFont = rtb.Font;
             rtb.SelectionColor = rtb.ForeColor;
             rtb.SelectionBackColor = rtb.BackColor;
-            rtb.AppendText(displayText + "\n");
+            rtb.AppendText(textValue + "\n");
 
+            int rtbSegmentLength = rtb.TextLength - startPos;
             if (segEntities.Count > 0)
-                ApplyEntityHighlighting(rtb, segEntities, displayText, textValue, startPos);
+                ApplyEntityHighlighting(rtb, segEntities, textValue, startPos, rtbSegmentLength);
 
             AddColoredLine(rtb, "");
         }
@@ -378,21 +372,35 @@ public class NoahResultsForm : ParratFormBase
     // ── Entity highlighting ────────────────────────────────────────────
 
     private static void ApplyEntityHighlighting(
-        RichTextBox rtb, List<JsonElement> entities, string displayText, string originalText, int startPos)
+        RichTextBox rtb, List<JsonElement> entities, string noahText, int startPos, int rtbSegmentLength)
     {
-        string rtbText = rtb.Text;
-        int regionEnd = Math.Min(startPos + displayText.Length + 50, rtbText.Length);
+        // NOAH offsets are relative to noahText (original, may have \r\n).
+        // RTB may store line breaks differently, so compute an adjustment.
+        // If RTB collapsed \r\n to \n, rtbSegmentLength < noahText.Length.
+        int noahLen = noahText.Length;
+        int crlfCount = System.Text.RegularExpressions.Regex.Matches(noahText, "\r\n").Count;
+        bool rtbCollapsedCrlf = rtbSegmentLength < noahLen && crlfCount > 0;
 
         foreach (var entity in entities)
         {
+            int offset = GetInt(entity, "Offset");
+            int length = GetInt(entity, "Length");
             string entityPhrase = GetString(entity, "EntityPhrase");
             if (string.IsNullOrWhiteSpace(entityPhrase)) continue;
 
-            int searchFrom = startPos;
-            int foundAt = rtbText.IndexOf(entityPhrase, searchFrom,
-                Math.Max(0, regionEnd - searchFrom), StringComparison.OrdinalIgnoreCase);
+            int rtbOffset = offset;
+            if (rtbCollapsedCrlf)
+            {
+                int crlfBeforeOffset = System.Text.RegularExpressions.Regex.Matches(
+                    noahText.Substring(0, Math.Min(offset, noahLen)), "\r\n").Count;
+                rtbOffset = offset - crlfBeforeOffset;
+            }
 
-            if (foundAt < 0) continue;
+            int highlightStart = startPos + rtbOffset;
+            int highlightLength = entityPhrase.Length;
+
+            if (highlightStart < startPos || highlightStart + highlightLength > startPos + rtbSegmentLength)
+                continue;
 
             bool isNegated = GetBool(entity, "IsNegated");
             int entityType = GetInt(entity, "EntityType");
@@ -404,8 +412,8 @@ public class NoahResultsForm : ParratFormBase
                 _ => ColorType0
             };
 
-            rtb.SelectionStart = foundAt;
-            rtb.SelectionLength = entityPhrase.Length;
+            rtb.SelectionStart = highlightStart;
+            rtb.SelectionLength = highlightLength;
             rtb.SelectionBackColor = backColor;
         }
     }
