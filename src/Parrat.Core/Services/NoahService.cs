@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
@@ -379,6 +380,12 @@ public class NoahService : INoahService
         }
     }
 
+    // Matches <br>, <br/>, <br />, <BR>, etc. — common HTML artefact when users
+    // paste from rendered XML/HTML sources into the custom payload box.
+    private static readonly Regex HtmlBreakRegex = new(
+        @"<\s*br\s*/?\s*>",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     public string CreateMinimalHl7Message(string customText, string? patientId = null, string? accessionNumber = null)
     {
         patientId ??= "TEST000001";
@@ -386,15 +393,33 @@ public class NoahService : INoahService
 
         string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
         string msgId = Guid.NewGuid().ToString()[..8];
-        string escapedText = Hl7EscapeHelper.Escape(customText);
+
+        // NOAH applies mask phrases line-by-line: if a mask phrase appears on a
+        // line, the entire line is masked. Packing all text into a single OBX-5
+        // makes the whole payload one "line" — a mask hit anywhere redacts
+        // everything. Split on real line breaks AND on HTML <br> variants
+        // (users paste from rendered XML), then emit one OBX per line.
+        var normalized = HtmlBreakRegex.Replace(customText ?? "", "\n");
+        var lines = normalized.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         var segments = new List<string>
         {
             $"MSH|^~\\&|ePATH|TEST_FACILITY|NOAH|NOAH_FACILITY|{timestamp}||ORU^R01|{msgId}|P|2.5.1",
             $"PID|1||{patientId}^^^TEST_FACILITY^MR||TEST^PATIENT||19700101|U",
-            $"OBR|1||{accessionNumber}||88305^Surgical Pathology|||{timestamp}",
-            $"OBX|1|FT|22637-3^Final Diagnosis^LN|1|{escapedText}||||||F"
+            $"OBR|1||{accessionNumber}||88305^Surgical Pathology|||{timestamp}"
         };
+
+        int setId = 1;
+        foreach (var line in lines)
+        {
+            string escaped = Hl7EscapeHelper.Escape(line);
+            segments.Add($"OBX|{setId}|FT|22637-3^Final Diagnosis^LN|1|{escaped}||||||F");
+            setId++;
+        }
+
+        // Guarantee at least one OBX even if input was empty.
+        if (setId == 1)
+            segments.Add("OBX|1|FT|22637-3^Final Diagnosis^LN|1|||||||F");
 
         return string.Join("\r", segments);
     }
