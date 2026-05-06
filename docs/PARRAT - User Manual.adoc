@@ -28,6 +28,10 @@ To select a file to view, select *Open* from the *File* menu and navigate the na
 
 Once loaded, the left panel lists the records in a navigation grid. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel. The status bar at the bottom displays the current record number, total record count, and the number of selected records (for example, "Tumor 1 of 25 (3 selected)").
 
+:imagesdir: screens
+image::PARRAT.png[PARRAT main window with a NAACCR XML file loaded,pdfwidth=100%]
+:imagesdir: ../logo
+
 ==== Navigation Grid Columns
 
 The navigation grid displays different columns depending on the file type.
@@ -79,6 +83,27 @@ When viewing HL7 files, the application applies syntax highlighting for improved
 * Observation values (OBX-5.1) are bolded
 
 This highlighting is applied in both the main viewer and when viewing raw records.
+
+==== Customizing Grid Columns
+
+To customize which NAACCR fields appear as columns in the navigation grid for XML files, select *Grid Columns...* from the *Settings* menu. Column customization is only available for XML files; HL7 columns are fixed.
+
+The dialog presents two lists:
+
+* *Active Columns* (left): The fields currently displayed in the navigation grid, in display order.
+* *Available Columns* (right): All other NAACCR fields from the active dictionary version. A search box filters the list in real time.
+
+Use the arrow buttons to add or remove columns. Active columns can be reordered by drag-and-drop or with the up/down arrow buttons. *Reset* restores the default column set.
+
+After clicking *OK*, the currently loaded file is reloaded so the new columns take effect.
+
+=== Opening a Reference File
+
+A second file can be opened side-by-side as a read-only reference, useful when cross-checking a working file against an export from another system. Select *Open Reference File...* from the *File* menu (enabled once a primary file is loaded). Both NAACCR XML and HL7 are supported.
+
+The reference window is independent of the main window — it has no *Selected* checkbox column and no export options.
+
+When a reference file is open, a *Find in Reference* button appears next to the navigation copy bar. Clicking it locates the matching record in the reference window using the current record's last name, first name, date of birth, and `pathReportNumber1`.
 
 === Searching Records
 
@@ -394,9 +419,9 @@ Exports the currently selected record. Any records checked in the *Selected* col
 * *Export Selected as CSV*: exports only records checked in the *Selected* column.
 --
 
-When exporting XML records to CSV, column headers may be selected based on version 25 of the NAACCR data dictionary. The application reads from the truncated JSON file in the `/dictionaries` folder.
+When exporting XML records to CSV, column headers may be selected from the NAACCR data dictionary. The application reads the truncated JSON file (`naaccr-items-v{NN}.json`) in `/data/dictionaries`, which carries item number, name, XML id, and parent element. The matching imsweb XML dictionary (`naaccr-dictionary-{NN}0.xml`) is then layered on top to enrich each item with `length` and `dataType`. The JSON file is required at runtime; the XML enrichment is optional.
 
-If the JSON file is missing, the application falls back to the XML data dictionary. The JSON dictionary can be regenerated using:
+The JSON files can be regenerated from either an apps.naaccr.org export or an imsweb base dictionary using:
 
 `/scripts/generate-dictionary-json.ps1`
 
@@ -430,6 +455,14 @@ Since NOAH only accepts HL7 records, *Test current HL7 (NOAH)* is disabled when 
 ====
 
 For sending a custom payload independent of a loaded file, see <<Testing Custom Payload with NOAH>>.
+
+==== Keeping the NOAH Server Alive
+
+By default, PARRAT starts NOAH on demand for each request and shuts it down when the call completes. Cold-starting NOAH adds noticeable latency, so for batches of requests this can be avoided by keeping the server alive between calls.
+
+Select *Start NOAH Server (Keep-Alive)* from the *Tools* menu to launch NOAH and leave it running. The menu item changes to *Stop NOAH Server* and is checked while keep-alive is active. Subsequent NOAH calls reuse the running instance.
+
+Select *Stop NOAH Server* to shut it down. If NOAH was already running externally when keep-alive was enabled, PARRAT will not stop the external instance — it only manages processes it started itself.
 
 <<<
 == Additional Utilities
@@ -482,6 +515,44 @@ If an incorrect facility is selected, the status label indicates no cases found.
 A summary of parsed cases is shown for quality review. Missing fields indicate parsing failures requiring manual review. Cases with unusually high line counts may represent improperly split cases.
 
 If the results appear correct, select *Convert to HL7*.
+
+=== Converting ePath .dat to HL7
+
+This utility converts ePath flat-file (`.dat`) exports into HL7. To convert a file:
+
+. Select *Convert .dat to .hl7...* from the *File* menu
+. Browse to the input file. The file is validated as a recognizable ePath flat file before parsing.
+. Review the parsed records in the preview dialog
+. Choose an output location and filename
+
+The HL7 version emitted depends on the detected ePath format: NOAH v2 layouts produce HL7 v2.5.1, while v22 layouts produce HL7 v2.3.1. Layout definitions are stored in `/data/dictionaries/epath-v22-layout.json` and `/data/dictionaries/epath-noah-v2-layout.json`.
+
+After conversion, a dialog prompts whether to open the new HL7 file.
+
+=== Converting CSV or Excel to NAACCR XML
+
+This utility converts a CSV or XLSX spreadsheet of pathology data into a NAACCR XML file. Select *Convert .csv/.xlsx to .xml* from the *File* menu and choose the input file.
+
+==== Mapping Columns to NAACCR Items
+
+After parsing, a mapping dialog opens showing each spreadsheet column alongside an auto-matched NAACCR item from the selected dictionary version (v25 or v26). Auto-matching compares column headers against item names, XML ids, and item numbers.
+
+From the dialog you can:
+
+* Change the NAACCR version. Existing mappings are revalidated against the new version's dictionary; columns not present in that version are flagged as incompatible and excluded from the export.
+* Manually map any column by selecting a different NAACCR item.
+* Mark a column as *Skip* to exclude it from the export.
+* Choose the *Record Type* (`A`, `M`, `C`, `I`, or `L`) for the generated NAACCR file.
+* Exclude individual rows from the export.
+
+==== Generating the XML File
+
+Click *OK* to generate the XML. You are prompted for an output location; the default filename is the input filename with `_naaccr.xml` appended. The output file is formatted with line breaks and indentation for readability. After saving, a dialog prompts whether to open the new file.
+
+[NOTE]
+====
+At least one column must be mapped to an NAACCR item. Imports with no mappings are cancelled.
+====
 
 === Testing Custom Payload with NOAH
 
