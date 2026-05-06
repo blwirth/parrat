@@ -112,7 +112,7 @@ public class CsvImportForm : ParratFormBase
             Width = 55,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
-        _cboVersion.Items.AddRange(new object[] { "v25", "v26" });
+        _cboVersion.Items.AddRange(new object[] { "v23", "v24", "v25", "v26" });
         _cboVersion.SelectedItem = $"v{_initialVersion}";
         _cboVersion.SelectedIndexChanged += (_, _) => OnVersionChanged();
 

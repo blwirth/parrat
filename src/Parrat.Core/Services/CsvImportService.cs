@@ -11,6 +11,8 @@ public class CsvImportService : ICsvImportService
 
     private static readonly Dictionary<int, string> BaseDictionaryUris = new()
     {
+        [23] = "http://naaccr.org/naaccrxml/naaccr-dictionary-230.xml",
+        [24] = "http://naaccr.org/naaccrxml/naaccr-dictionary-240.xml",
         [25] = "http://naaccr.org/naaccrxml/naaccr-dictionary-250.xml",
         [26] = "http://naaccr.org/naaccrxml/naaccr-dictionary-260.xml"
     };
