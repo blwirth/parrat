@@ -2,6 +2,8 @@
 
 **PARRAT** (PAthology Report and Registry Abstract Tools) is a self-contained Windows desktop application for viewing, converting, deduplicating, and exporting pathology reports in HL7 and NAACCR XML formats.
 
+![PARRAT main window](docs/screens/PARRAT.png)
+
 ## Installation
 
 1. Download the latest `Parrat-*.zip` from [Releases](../../releases/latest)
