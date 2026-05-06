@@ -138,7 +138,7 @@ partial class ReferenceForm : ParratFormBase
         // ── Bottom navigation panel ──────────────────────────────────────
         _bottomPanel = new Panel();
         _bottomPanel.Dock = DockStyle.Bottom;
-        _bottomPanel.Height = 40;
+        _bottomPanel.Height = 44;
         _bottomPanel.Padding = new Padding(10, 5, 10, 5);
 
         _btnPrev = new Button();
@@ -184,7 +184,7 @@ partial class ReferenceForm : ParratFormBase
             btn.FlatAppearance.BorderColor = Color.Silver;
             btn.FlatAppearance.BorderSize = 1;
             btn.Font = new Font("Segoe UI", 8f);
-            btn.Padding = new Padding(2, 0, 2, 0);
+            btn.Padding = new Padding(4, 1, 4, 1);
             btn.Margin = new Padding(2, 5, 2, 5);
             btn.Cursor = Cursors.Hand;
             btn.Text = copyLabels[i];
