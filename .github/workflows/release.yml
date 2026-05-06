@@ -54,7 +54,31 @@ jobs:
           New-Item -ItemType Directory -Path "$out/logs" -Force | Out-Null
 
           Copy-Item publish/PARRAT.exe $out/
-          Copy-Item -Recurse data $out/data
+
+          # Ship only the data files the app loads at runtime.
+          # Source files (apps.naaccr.org CSV/XML exports) and example data
+          # are excluded — they live in the repo for regen / local testing.
+          New-Item -ItemType Directory -Path "$out/data/dictionaries" -Force | Out-Null
+          $dictFiles = @(
+            'Laterality.json',
+            'Topography.jsonl',
+            'TopographyMelanoma.jsonl',
+            'SiteCodingRules.jsonl',
+            'epath-v22-layout.json',
+            'epath-noah-v2-layout.json',
+            'naaccr-items-v23.json',
+            'naaccr-items-v24.json',
+            'naaccr-items-v25.json',
+            'naaccr-items-v26.json',
+            'naaccr-dictionary-230.xml',
+            'naaccr-dictionary-240.xml',
+            'naaccr-dictionary-250.xml',
+            'naaccr-dictionary-260.xml'
+          )
+          foreach ($f in $dictFiles) {
+            Copy-Item "data/dictionaries/$f" "$out/data/dictionaries/$f"
+          }
+
           if (Test-Path "docs/PARRAT - User Manual.pdf") {
             Copy-Item "docs/PARRAT - User Manual.pdf" "$out/docs/"
           }
