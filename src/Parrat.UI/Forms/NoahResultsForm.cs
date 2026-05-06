@@ -35,8 +35,10 @@ public class NoahResultsForm : ParratFormBase
     private static readonly Color ColorType1 = Color.FromArgb(255, 220, 180);  // Light orange (cytology)
     private static readonly Color ColorType2 = Color.FromArgb(220, 200, 255);  // Light purple (site)
 
-    private readonly string _resultFilePath;
-    private readonly string _workingFolder;
+    private readonly string? _resultFilePath;
+    private readonly string? _workingFolder;
+    private readonly string? _jsonContent;
+    private readonly string? _fallbackObxText;
     private readonly string _recordLabel;
     private readonly int _recordIndex;
     private readonly int _recordCount;
@@ -60,6 +62,35 @@ public class NoahResultsForm : ParratFormBase
         InitializeLayout();
     }
 
+    public static NoahResultsForm FromJson(
+        string jsonContent,
+        string recordLabel = "Record",
+        int recordIndex = 0,
+        int recordCount = 1,
+        IParratLogger? logger = null,
+        string? fallbackObxText = null)
+    {
+        return new NoahResultsForm(jsonContent, recordLabel, recordIndex, recordCount, logger, fallbackObxText);
+    }
+
+    private NoahResultsForm(
+        string jsonContent,
+        string recordLabel,
+        int recordIndex,
+        int recordCount,
+        IParratLogger? logger,
+        string? fallbackObxText)
+    {
+        _jsonContent = jsonContent;
+        _fallbackObxText = fallbackObxText;
+        _recordLabel = recordLabel;
+        _recordIndex = recordIndex;
+        _recordCount = recordCount;
+        _logger = logger;
+
+        InitializeLayout();
+    }
+
     private void InitializeLayout()
     {
         Text = $"NOAH Reportability Results - {_recordLabel} {_recordIndex + 1} of {_recordCount}";
@@ -67,22 +98,27 @@ public class NoahResultsForm : ParratFormBase
         Height = 900;
         StartPosition = FormStartPosition.CenterScreen;
 
-        if (!File.Exists(_resultFilePath))
-        {
-            MessageBox.Show(
-                $"Result file not found:\n{_resultFilePath}",
-                "NOAH Results",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
-            return;
-        }
-
-        // Parse result JSON
         JsonDocument resultDoc;
         try
         {
-            var json = File.ReadAllText(_resultFilePath);
-            resultDoc = JsonDocument.Parse(json);
+            if (_jsonContent != null)
+            {
+                resultDoc = JsonDocument.Parse(_jsonContent);
+            }
+            else if (_resultFilePath != null && File.Exists(_resultFilePath))
+            {
+                var json = File.ReadAllText(_resultFilePath);
+                resultDoc = JsonDocument.Parse(json);
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"Result file not found:\n{_resultFilePath}",
+                    "NOAH Results",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -97,23 +133,30 @@ public class NoahResultsForm : ParratFormBase
 
         var root = resultDoc.RootElement;
 
-        // ── Main split container: left (summary) | right (OBX text) ──
-        var splitMain = new SplitContainer
+        // ── 3-panel layout: Summary | (Highlighted Text | JSON Response) ──
+        var splitOuter = new SplitContainer
         {
             Dock = DockStyle.Fill,
-            Orientation = Orientation.Vertical,
-            Panel1MinSize = 250,
-            Panel2MinSize = 300,
-            SplitterDistance = 400
+            Orientation = Orientation.Vertical
+        };
+
+        var splitInner = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical
         };
 
         Shown += (_, _) =>
         {
-            if (splitMain.Width > 400)
-                splitMain.SplitterDistance = 400;
+            try
+            {
+                splitOuter.SplitterDistance = Math.Max(1, Math.Min(280, splitOuter.Width - 204));
+                splitInner.SplitterDistance = Math.Max(1, splitInner.Width - 440);
+            }
+            catch { }
         };
 
-        // === LEFT PANEL: Summary ===
+        // === PANEL 1: Summary ===
         var rtbSummary = new RichTextBox
         {
             Dock = DockStyle.Fill,
@@ -121,11 +164,10 @@ public class NoahResultsForm : ParratFormBase
             Font = new Font("Consolas", 10f),
             WordWrap = true
         };
-
         BuildSummaryContent(rtbSummary, root);
-        splitMain.Panel1.Controls.Add(rtbSummary);
+        splitOuter.Panel1.Controls.Add(rtbSummary);
 
-        // === RIGHT PANEL: OBX Text with highlighting ===
+        // === PANEL 2: OBX Text with highlighting ===
         var rtbText = new RichTextBox
         {
             Dock = DockStyle.Fill,
@@ -134,9 +176,22 @@ public class NoahResultsForm : ParratFormBase
             WordWrap = true,
             ScrollBars = RichTextBoxScrollBars.Both
         };
-
         BuildHighlightedOBXText(rtbText, root);
-        splitMain.Panel2.Controls.Add(rtbText);
+        splitInner.Panel1.Controls.Add(rtbText);
+
+        // === PANEL 3: JSON Response ===
+        var rtbJson = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            Font = new Font("Consolas", 9f),
+            WordWrap = false,
+            ScrollBars = RichTextBoxScrollBars.Both
+        };
+        BuildJsonResponsePanel(rtbJson, root);
+        splitInner.Panel2.Controls.Add(rtbJson);
+
+        splitOuter.Panel2.Controls.Add(splitInner);
 
         // ── Bottom panel with buttons ────────────────────────────────
         var pnlButtons = new Panel
@@ -145,31 +200,34 @@ public class NoahResultsForm : ParratFormBase
             Height = 50
         };
 
-        var btnOpenFolder = new Button
-        {
-            Text = "Open Working Folder",
-            Width = 150,
-            Location = new Point(10, 12)
-        };
-        btnOpenFolder.Click += (_, _) =>
-        {
-            if (Directory.Exists(_workingFolder))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", $"\"{_workingFolder}\"");
-            }
-        };
-
         var btnClose = new Button
         {
             Text = "Close",
             Width = 100,
-            Location = new Point(170, 12)
+            Location = new Point(10, 12)
         };
         btnClose.Click += (_, _) => Close();
 
-        pnlButtons.Controls.AddRange(new Control[] { btnOpenFolder, btnClose });
+        if (!string.IsNullOrEmpty(_workingFolder))
+        {
+            var btnOpenFolder = new Button
+            {
+                Text = "Open Working Folder",
+                Width = 150,
+                Location = new Point(10, 12)
+            };
+            btnOpenFolder.Click += (_, _) =>
+            {
+                if (Directory.Exists(_workingFolder))
+                    System.Diagnostics.Process.Start("explorer.exe", $"\"{_workingFolder}\"");
+            };
+            btnClose.Location = new Point(170, 12);
+            pnlButtons.Controls.Add(btnOpenFolder);
+        }
 
-        Controls.Add(splitMain);
+        pnlButtons.Controls.Add(btnClose);
+
+        Controls.Add(splitOuter);
         Controls.Add(pnlButtons);
 
         resultDoc.Dispose();
@@ -183,29 +241,26 @@ public class NoahResultsForm : ParratFormBase
         string reportableText = reportable ? "REPORTABLE" : "NON-REPORTABLE";
         var reportableColor = reportable ? Color.DarkGreen : Color.DarkRed;
 
-        AddColoredLine(box, "=== CLASSIFICATION ===", bold: true);
-        AddColoredLine(box, "");
+        SyntaxHighlightingHelper.AddSectionHeader(box, "CLASSIFICATION");
         AddColoredLine(box, reportableText, bold: true, foreColor: reportableColor);
         AddColoredLine(box, "");
 
-        // Flags
-        AddColoredLine(box, "=== FLAGS ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "FLAGS");
         AddColoredLine(box, $"ImpossibleCombination: {GetBool(root, "ImpossibleCombination")}");
         AddColoredLine(box, $"MetastaticReport: {GetBool(root, "MetastaticReport")}");
         AddColoredLine(box, $"PAYAC: {GetBool(root, "PAYAC")}");
         AddColoredLine(box, "");
 
-        // Diagnosis info
-        AddColoredLine(box, "=== DIAGNOSIS ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "DIAGNOSIS");
         AddColoredLine(box, $"DiagnosisDate: {GetString(root, "DiagnosisDate")}");
         AddColoredLine(box, $"MessageID: {GetString(root, "MessageID")}");
         AddColoredLine(box, "");
 
         // Coded Result
-        if (root.TryGetProperty("CodedResult", out var codedResult) &&
+        if (TryGetProp(root, "CodedResult", out var codedResult) &&
             codedResult.ValueKind == JsonValueKind.Object)
         {
-            AddColoredLine(box, "=== CODED RESULT ===", bold: true);
+            SyntaxHighlightingHelper.AddSectionHeader(box, "CODED RESULT");
             AddColoredLine(box, $"Histology: {GetString(codedResult, "Histology")}", bold: true);
             AddColoredLine(box, $"Site: {GetString(codedResult, "Site")}", bold: true);
             AddColoredLine(box, $"Behavior: {GetString(codedResult, "Behavior")}", bold: true);
@@ -214,89 +269,132 @@ public class NoahResultsForm : ParratFormBase
             AddColoredLine(box, "");
         }
 
-        // Entity summary
+        // Entity count
         int entityCount = 0;
-        JsonElement entitiesElement = default;
-        if (root.TryGetProperty("Entities", out entitiesElement) &&
+        if (TryGetProp(root, "Entities", out var entitiesElement) &&
             entitiesElement.ValueKind == JsonValueKind.Array)
-        {
             entityCount = entitiesElement.GetArrayLength();
-        }
 
-        AddColoredLine(box, "=== ENTITIES ===", bold: true);
+        SyntaxHighlightingHelper.AddSectionHeader(box, "ENTITIES");
         AddColoredLine(box, $"Total entities found: {entityCount}");
         AddColoredLine(box, "");
 
-        // Color legend
-        AddColoredLine(box, "=== COLOR LEGEND ===", bold: true);
-        AddColoredLine(box, "Cancer terms (Type 0)", backColor: ColorType0);
-        AddColoredLine(box, "Cytology terms (Type 1)", backColor: ColorType1);
-        AddColoredLine(box, "Site terms (Type 2)", backColor: ColorType2);
-        AddColoredLine(box, "Negated (any type)", backColor: ColorNegated);
-        AddColoredLine(box, "");
+        SyntaxHighlightingHelper.AddSectionHeader(box, "COLOR LEGEND");
+        AddColoredLine(box, "Histology", backColor: ColorType0);
+        AddColoredLine(box, "Behavior", backColor: ColorType1);
+        AddColoredLine(box, "Site", backColor: ColorType2);
+        AddColoredLine(box, "Negated", backColor: ColorNegated);
+    }
 
-        // Entity details
-        if (entityCount > 0)
+    // ── JSON response panel builder ──────────────────────────────────────
+
+    private void BuildJsonResponsePanel(RichTextBox rtb, JsonElement root)
+    {
+        SyntaxHighlightingHelper.AddSectionHeader(rtb, "JSON RESPONSE");
+
+        string pretty;
+        try
         {
-            AddColoredLine(box, "=== ENTITY DETAILS ===", bold: true);
-            foreach (var entity in entitiesElement.EnumerateArray())
-            {
-                bool isNegated = GetBool(entity, "IsNegated");
-                int entityType = GetInt(entity, "EntityType");
-                string entityPhrase = GetString(entity, "EntityPhrase");
-                string code = GetString(entity, "Code");
-
-                string negatedMarker = isNegated ? " [NEGATED]" : "";
-                string typeLabel = entityType switch
-                {
-                    0 => "Cancer",
-                    1 => "Cytology",
-                    2 => "Site",
-                    _ => $"Type{entityType}"
-                };
-
-                string line = $"{typeLabel}: '{entityPhrase}' (Code: {code}){negatedMarker}";
-
-                Color backColor;
-                if (isNegated)
-                    backColor = ColorNegated;
-                else
-                    backColor = entityType switch
-                    {
-                        0 => ColorType0,
-                        1 => ColorType1,
-                        2 => ColorType2,
-                        _ => Color.Empty
-                    };
-
-                AddColoredLine(box, line, backColor: backColor);
-            }
+            pretty = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
         }
+        catch (Exception ex)
+        {
+            pretty = $"(Failed to serialize JSON: {ex.Message})\n\n{_jsonContent ?? ""}";
+        }
+
+        rtb.SelectionStart = rtb.TextLength;
+        rtb.SelectionLength = 0;
+        rtb.SelectionFont = rtb.Font;
+        rtb.SelectionColor = rtb.ForeColor;
+        rtb.SelectionBackColor = rtb.BackColor;
+        rtb.AppendText(pretty);
+
+        rtb.SelectionStart = 0;
+        rtb.SelectionLength = 0;
     }
 
     // ── Highlighted OBX text builder ─────────────────────────────────────
 
     private void BuildHighlightedOBXText(RichTextBox rtb, JsonElement root)
     {
-        if (!root.TryGetProperty("OBXTexts", out var obxTexts) ||
-            obxTexts.ValueKind != JsonValueKind.Object)
+        bool hasObxTexts = TryGetProp(root, "OBXTexts", out var obxTexts) &&
+                           obxTexts.ValueKind == JsonValueKind.Object;
+
+        bool obxTextsEmpty = !hasObxTexts || obxTexts.EnumerateObject()
+            .All(p => p.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(p.Value.GetString()));
+
+        if (obxTextsEmpty && !string.IsNullOrWhiteSpace(_fallbackObxText))
         {
-            rtb.Text = "(No OBXTexts in result)";
+            // Build entities list for highlighting the fallback text
+            var fallbackEntities = new List<JsonElement>();
+            if (TryGetProp(root, "Entities", out var fbEntities) &&
+                fbEntities.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var e in fbEntities.EnumerateArray())
+                    fallbackEntities.Add(e);
+                fallbackEntities = fallbackEntities.OrderBy(e => GetInt(e, "Offset")).ToList();
+            }
+
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "Custom Payload Text");
+            int startPos = rtb.TextLength;
+
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = rtb.ForeColor;
+            rtb.SelectionBackColor = rtb.BackColor;
+            rtb.AppendText(_fallbackObxText + "\n");
+
+            int rtbLen = rtb.TextLength - startPos;
+            ApplyEntityHighlighting(rtb, fallbackEntities, _fallbackObxText, startPos, rtbLen);
+            rtb.SelectionStart = 0;
+            rtb.SelectionLength = 0;
             return;
         }
 
-        // Build entities lookup by OBX segment
-        var entitiesBySegment = new Dictionary<int, List<JsonElement>>();
-        if (root.TryGetProperty("Entities", out var entities) &&
+        if (obxTextsEmpty)
+        {
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "RAW API RESPONSE");
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = Color.Gray;
+            rtb.AppendText(_jsonContent ?? "(No response data)");
+            return;
+        }
+
+        var debugLines = new List<string>();
+
+        // Build entities lookup by OBX segment.
+        // NOAH V2 returns obxSegment as a STRING name ("TextDiagnosis"), not an int.
+        var entitiesBySegment = new Dictionary<string, List<JsonElement>>(StringComparer.OrdinalIgnoreCase);
+        if (TryGetProp(root, "Entities", out var entities) &&
             entities.ValueKind == JsonValueKind.Array)
         {
             foreach (var entity in entities.EnumerateArray())
             {
-                int segNum = GetInt(entity, "OBXSegment");
-                if (!entitiesBySegment.ContainsKey(segNum))
-                    entitiesBySegment[segNum] = new List<JsonElement>();
-                entitiesBySegment[segNum].Add(entity);
+                string segName = GetString(entity, "OBXSegment");
+                if (string.IsNullOrEmpty(segName))
+                    segName = "(unknown)";
+                if (!entitiesBySegment.ContainsKey(segName))
+                    entitiesBySegment[segName] = new List<JsonElement>();
+                entitiesBySegment[segName].Add(entity);
             }
+        }
+
+        // Debug: entity grouping
+        debugLines.Add($"Total entities: {entitiesBySegment.Values.Sum(l => l.Count)}");
+        foreach (var kvp in entitiesBySegment)
+            debugLines.Add($"  Segment '{kvp.Key}': {kvp.Value.Count} entities");
+
+        // Debug: OBXTexts keys
+        if (hasObxTexts)
+        {
+            var keys = new List<string>();
+            foreach (var p in obxTexts.EnumerateObject())
+            {
+                string val = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() ?? "" : "";
+                keys.Add($"{p.Name}={val.Length}chars");
+            }
+            debugLines.Add($"OBXTexts keys: {string.Join(", ", keys)}");
         }
 
         // Process each OBX text field in order
@@ -305,7 +403,7 @@ public class NoahResultsForm : ParratFormBase
             if (!OBXSegmentMap.TryGetValue(segNum, out var fieldName))
                 continue;
 
-            if (!obxTexts.TryGetProperty(fieldName, out var textProp) ||
+            if (!TryGetProp(obxTexts, fieldName, out var textProp) ||
                 textProp.ValueKind != JsonValueKind.String)
                 continue;
 
@@ -313,126 +411,141 @@ public class NoahResultsForm : ParratFormBase
             if (string.IsNullOrWhiteSpace(textValue))
                 continue;
 
-            // RichTextBox converts \r\n to \n internally
-            string displayText = textValue.Replace("\r\n", "\n");
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, $"{fieldName} (Segment {segNum})");
 
-            // Add section header
-            AddColoredLine(rtb, $"=== {fieldName} (Segment {segNum}) ===", bold: true);
-
-            // Get entities for this segment, sorted by offset
             var segEntities = new List<JsonElement>();
-            if (entitiesBySegment.TryGetValue(segNum, out var list))
-            {
+            if (entitiesBySegment.TryGetValue(fieldName, out var list))
                 segEntities = list.OrderBy(e => GetInt(e, "Offset")).ToList();
-            }
 
-            if (segEntities.Count == 0)
+            int startPos = rtb.TextLength;
+            rtb.SelectionStart = rtb.TextLength;
+            rtb.SelectionLength = 0;
+            rtb.SelectionFont = rtb.Font;
+            rtb.SelectionColor = rtb.ForeColor;
+            rtb.SelectionBackColor = rtb.BackColor;
+            rtb.AppendText(textValue + "\n");
+
+            int rtbSegmentLength = rtb.TextLength - startPos;
+            if (segEntities.Count > 0)
             {
-                // No entities - plain text
-                rtb.SelectionStart = rtb.TextLength;
-                rtb.SelectionLength = 0;
-                rtb.SelectionFont = rtb.Font;
-                rtb.SelectionColor = rtb.ForeColor;
-                rtb.SelectionBackColor = rtb.BackColor;
-                rtb.AppendText(displayText + "\n");
-            }
-            else
-            {
-                // Record position before adding text
-                int startPos = rtb.TextLength;
-
-                // Add entire text as plain
-                rtb.SelectionStart = rtb.TextLength;
-                rtb.SelectionLength = 0;
-                rtb.SelectionFont = rtb.Font;
-                rtb.SelectionColor = rtb.ForeColor;
-                rtb.SelectionBackColor = rtb.BackColor;
-                rtb.AppendText(displayText);
-
-                // Apply highlighting to each entity
-                foreach (var entity in segEntities)
-                {
-                    int offset = GetInt(entity, "Offset");
-                    int length = GetInt(entity, "Length");
-                    string entityPhrase = GetString(entity, "EntityPhrase");
-
-                    // Convert offset from original text (\r\n) to display text (\n only)
-                    string textBeforeOffset = offset > 0 && offset <= textValue.Length
-                        ? textValue.Substring(0, offset) : "";
-                    int crlfCount = System.Text.RegularExpressions.Regex.Matches(textBeforeOffset, "\r\n").Count;
-                    int displayOffset = offset - crlfCount;
-
-                    // Verify offset by checking entity phrase match
-                    int actualOffset = displayOffset;
-                    if (displayOffset >= 0 && displayOffset + length <= displayText.Length)
-                    {
-                        string textAtOffset = displayText.Substring(
-                            displayOffset,
-                            Math.Min(length, displayText.Length - displayOffset));
-                        if (textAtOffset != entityPhrase && !string.IsNullOrWhiteSpace(entityPhrase))
-                        {
-                            int foundIndex = displayText.IndexOf(
-                                entityPhrase, StringComparison.OrdinalIgnoreCase);
-                            if (foundIndex >= 0)
-                                actualOffset = foundIndex;
-                        }
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrWhiteSpace(entityPhrase))
-                        {
-                            int foundIndex = displayText.IndexOf(
-                                entityPhrase, StringComparison.OrdinalIgnoreCase);
-                            if (foundIndex >= 0)
-                                actualOffset = foundIndex;
-                            else
-                                continue;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-
-                    int highlightStart = startPos + actualOffset;
-                    int highlightLength = length;
-
-                    if (highlightStart < startPos) continue;
-                    int textEndPos = startPos + displayText.Length;
-                    if (highlightStart + highlightLength > textEndPos)
-                        highlightLength = textEndPos - highlightStart;
-                    if (highlightLength <= 0) continue;
-
-                    // Determine color
-                    bool isNegated = GetBool(entity, "IsNegated");
-                    int entityType = GetInt(entity, "EntityType");
-                    Color backColor;
-                    if (isNegated)
-                        backColor = ColorNegated;
-                    else
-                        backColor = entityType switch
-                        {
-                            0 => ColorType0,
-                            1 => ColorType1,
-                            2 => ColorType2,
-                            _ => ColorType0
-                        };
-
-                    rtb.SelectionStart = highlightStart;
-                    rtb.SelectionLength = highlightLength;
-                    rtb.SelectionBackColor = backColor;
-                }
-
-                // Add trailing newline after highlighting
-                rtb.AppendText("\n");
+                var diag = ApplyEntityHighlighting(rtb, segEntities, textValue, startPos, rtbSegmentLength);
+                debugLines.AddRange(diag);
             }
 
             AddColoredLine(rtb, "");
         }
 
-        // Reset selection to start
+        // Debug section
+        if (debugLines.Count > 0)
+        {
+            AddColoredLine(rtb, "");
+            SyntaxHighlightingHelper.AddSectionHeader(rtb, "HIGHLIGHT DEBUG");
+            foreach (var line in debugLines)
+                AddColoredLine(rtb, line);
+        }
+
         rtb.SelectionStart = 0;
         rtb.SelectionLength = 0;
+    }
+
+    // ── Entity highlighting ────────────────────────────────────────────
+    //
+    // Policy: trust the API's Offset and Length values. No phrase-string
+    // second-guessing. No IndexOf fallback. If the computed range falls
+    // outside the rendered segment, CLAMP to the segment bounds and still
+    // paint — so every entity produces a visible mark the user can see and
+    // reason about, instead of silently vanishing.
+
+    private static List<string> ApplyEntityHighlighting(
+        RichTextBox rtb, List<JsonElement> entities, string noahText, int startPos, int rtbSegmentLength)
+    {
+        var diag = new List<string>();
+        int noahLen = noahText.Length;
+        int crlfCount = System.Text.RegularExpressions.Regex.Matches(noahText, "\r\n").Count;
+        bool rtbCollapsedCrlf = rtbSegmentLength < noahLen && crlfCount > 0;
+        int regionEnd = startPos + rtbSegmentLength;
+
+        diag.Add($"noahText.Length={noahLen}, rtbSegmentLength={rtbSegmentLength}, crlfCount={crlfCount}, collapsed={rtbCollapsedCrlf}");
+        diag.Add($"startPos={startPos}, rtb.TextLength={rtb.TextLength}, regionEnd={regionEnd}");
+
+        string rtbText = rtb.Text;
+        int painted = 0;
+        int clamped = 0;
+
+        foreach (var entity in entities)
+        {
+            int id = GetInt(entity, "Id");
+            // V2 API returns entityType/obxSegment as STRING names, not ints.
+            string entityType = GetString(entity, "EntityType");
+            string segment = GetString(entity, "OBXSegment");
+            string entityPhrase = GetString(entity, "EntityPhrase");
+            int offset = GetInt(entity, "Offset");
+            int length = GetInt(entity, "Length");
+            bool isNegated = GetBool(entity, "IsNegated");
+            string negationType = GetString(entity, "NegationType");
+            string code = GetString(entity, "Code");
+            string additionalCode = GetString(entity, "AdditionalCode");
+            bool isNonreportable = GetBool(entity, "IsNonReportableTerm");
+
+            diag.Add($"Entity Id={id} type='{entityType}' seg='{segment}' phrase='{entityPhrase}' offset={offset} length={length} negated={isNegated} negType='{negationType}' code='{code}' addCode='{additionalCode}' nonReport={isNonreportable}");
+
+            // Translate API offset (CRLF-based) into RTB offset (LF-collapsed)
+            int rtbOffset = offset;
+            int crlfBefore = 0;
+            if (rtbCollapsedCrlf && offset > 0)
+            {
+                crlfBefore = System.Text.RegularExpressions.Regex.Matches(
+                    noahText.Substring(0, Math.Min(offset, noahLen)), "\r\n").Count;
+                rtbOffset = offset - crlfBefore;
+            }
+
+            int highlightStart = startPos + rtbOffset;
+            int highlightEnd = highlightStart + length;
+            string note = "";
+
+            if (highlightStart < startPos)
+            {
+                note += $" [CLAMPED low: {highlightStart}→{startPos}]";
+                highlightStart = startPos;
+                clamped++;
+            }
+            if (highlightEnd > regionEnd)
+            {
+                note += $" [CLAMPED high: {highlightEnd}→{regionEnd}]";
+                highlightEnd = regionEnd;
+                clamped++;
+            }
+            int highlightLength = Math.Max(0, highlightEnd - highlightStart);
+
+            diag.Add($"  → rtbOffset={rtbOffset} (crlfBefore={crlfBefore}) applied [{highlightStart}..{highlightEnd}] len={highlightLength}{note}");
+
+            if (highlightLength > 0 && highlightStart + highlightLength <= rtbText.Length)
+            {
+                string actual = rtbText.Substring(highlightStart, highlightLength);
+                diag.Add($"  → RTB actual: '{actual}'");
+            }
+            else
+            {
+                diag.Add($"  → RTB actual: (empty range)");
+                continue;
+            }
+
+            Color backColor = isNegated ? ColorNegated : entityType.ToLowerInvariant() switch
+            {
+                "histology" => ColorType0,
+                "behavior" => ColorType1,
+                "site" => ColorType2,
+                _ => ColorType0
+            };
+
+            rtb.SelectionStart = highlightStart;
+            rtb.SelectionLength = highlightLength;
+            rtb.SelectionBackColor = backColor;
+            painted++;
+        }
+
+        diag.Add($"Painted {painted}/{entities.Count} entities (clamped ranges: {clamped})");
+        return diag;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -457,9 +570,24 @@ public class NoahResultsForm : ParratFormBase
         box.AppendText(text + "\r\n");
     }
 
+    private static bool TryGetProp(JsonElement element, string propertyName, out JsonElement prop)
+    {
+        if (element.TryGetProperty(propertyName, out prop)) return true;
+        if (element.ValueKind != JsonValueKind.Object) return false;
+        foreach (var p in element.EnumerateObject())
+        {
+            if (p.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                prop = p.Value;
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static string GetString(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop))
+        if (TryGetProp(element, propertyName, out var prop))
         {
             return prop.ValueKind == JsonValueKind.String
                 ? prop.GetString() ?? ""
@@ -470,7 +598,7 @@ public class NoahResultsForm : ParratFormBase
 
     private static bool GetBool(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop) &&
+        if (TryGetProp(element, propertyName, out var prop) &&
             prop.ValueKind is JsonValueKind.True or JsonValueKind.False)
             return prop.GetBoolean();
         return false;
@@ -478,7 +606,7 @@ public class NoahResultsForm : ParratFormBase
 
     private static int GetInt(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop))
+        if (TryGetProp(element, propertyName, out var prop))
         {
             if (prop.ValueKind == JsonValueKind.Number)
                 return prop.GetInt32();

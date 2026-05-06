@@ -29,6 +29,8 @@ public partial class MainForm
     private IConvertTxtService _convertTxtService = null!;
     private IExportService _exportService = null!;
     private INoahService _noahService = null!;
+    private Process? _noahServerProcess;
+    private bool _noahKeepAlive;
     private ISplitFileService _splitFileService = null!;
     private IConcatenateService _concatenateService = null!;
     private IConfigService _configService = null!;
@@ -88,6 +90,7 @@ public partial class MainForm
         mb.MnuTestSiteLatCustom.Click += (s, e) => OnTestSiteLatCustom();
         mb.MnuFilterCurrentHl7.Click += (s, e) => OnNoahReportability();
         mb.MnuFilterCustomPayload.Click += (s, e) => OnNoahCustomPayload();
+        mb.MnuNoahServerToggle.Click += (s, e) => OnNoahServerToggle(mb.MnuNoahServerToggle);
 
         // ── Settings ──────────────────────────────────────────────────────
         mb.MnuManageCodingTables.DropDownOpening += OnManageTablesDropDownOpening;
@@ -1379,14 +1382,52 @@ public partial class MainForm
                 }
             }
 
-            SetStatusText("NOAH reportability: running...");
-            Refresh();
+            if (fileType == "hl7")
+            {
+                var msg = _state.Hl7Messages[idx];
+                SetStatusText($"NOAH reportability: running on {msg.AccessionNumber}...");
+                Refresh();
 
-            // The actual NOAH API call would happen here through _noahService
-            // For now, show info message
-            MessageBox.Show("NOAH reportability filtering would execute here using the selected model.",
-                "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            SetStatusText($"Loaded: {Path.GetFileName(_state.CurrentFilePath)}");
+                EnsureNoahServer(config);
+                try
+                {
+                    var result = _noahService.InvokeReportabilityApi(
+                        msg.RawContent, config, modelForm.SelectedModel.Id);
+
+                    if (result.Success && result.ApiResponseJson != null)
+                    {
+                        SetStatusText($"NOAH: {result.Classification} — {msg.AccessionNumber}");
+                        using var resultsForm = NoahResultsForm.FromJson(
+                            result.ApiResponseJson,
+                            $"HL7 {msg.AccessionNumber}",
+                            idx,
+                            _state.Hl7Messages.Count,
+                            _logger);
+                        resultsForm.ShowDialog(this);
+                    }
+                    else if (result.Success)
+                    {
+                        SetStatusText($"NOAH: {result.Classification} — {msg.AccessionNumber}");
+                        MessageBox.Show($"Result: {result.Classification.ToUpperInvariant()}",
+                            "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"NOAH filter error.\n\n{result.Classification}",
+                            "NOAH Reportability - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        SetStatusText("NOAH reportability: error");
+                    }
+                }
+                finally
+                {
+                    CleanupNoahServerIfNeeded();
+                }
+            }
+            else
+            {
+                MessageBox.Show("NOAH reportability for NAACCR/ePath records is not yet implemented.",
+                    "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
         catch (Exception ex)
         {
@@ -1415,41 +1456,88 @@ public partial class MainForm
             SetStatusText("NOAH reportability: running custom payload...");
             Refresh();
 
-            var minimalHl7 = _noahService.CreateMinimalHl7Message(payloadForm.CustomPayloadText);
-            var result = _noahService.InvokeReportabilityApi(minimalHl7, config, modelForm.SelectedModel.Id);
-
-            if (result.Success)
+            EnsureNoahServer(config);
+            try
             {
-                SetStatusText($"NOAH reportability: {result.Classification}");
+                var minimalHl7 = _noahService.CreateMinimalHl7Message(payloadForm.CustomPayloadText);
+                var result = _noahService.InvokeReportabilityApi(minimalHl7, config, modelForm.SelectedModel.Id);
 
-                var reportsFolder = Path.Combine(result.WorkingFolder, "reports");
-                var resultFiles = Directory.Exists(reportsFolder)
-                    ? Directory.GetFiles(reportsFolder, "*.json")
-                    : Array.Empty<string>();
-
-                if (resultFiles.Length > 0)
+                if (result.Success && result.ApiResponseJson != null)
                 {
-                    using var resultsForm = new NoahResultsForm(
-                        resultFiles[0], result.WorkingFolder, "Custom", 0, 1, _logger);
+                    SetStatusText($"NOAH reportability: {result.Classification}");
+                    using var resultsForm = NoahResultsForm.FromJson(
+                        result.ApiResponseJson, "Custom Payload", 0, 1, _logger,
+                        fallbackObxText: payloadForm.CustomPayloadText);
                     resultsForm.ShowDialog(this);
                 }
-                else
+                else if (result.Success)
                 {
+                    SetStatusText($"NOAH reportability: {result.Classification}");
                     MessageBox.Show($"Result: {result.Classification.ToUpperInvariant()}",
                         "NOAH Reportability", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                else
+                {
+                    MessageBox.Show($"NOAH filter error.\n\n{result.Classification}",
+                        "NOAH Reportability - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    SetStatusText("NOAH reportability: error");
+                }
             }
-            else
+            finally
             {
-                MessageBox.Show($"NOAH filter error.\n\nWorking folder:\n{result.WorkingFolder}",
-                    "NOAH Reportability - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                SetStatusText("NOAH reportability: error");
+                CleanupNoahServerIfNeeded();
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("NOAH custom payload failed", "NOAH_API", ex);
             MessageBox.Show($"Error: {ex.Message}", "NOAH Reportability - Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>Toggle NOAH server keep-alive mode.</summary>
+    private void OnNoahServerToggle(ToolStripMenuItem menuItem)
+    {
+        try
+        {
+            if (_noahKeepAlive)
+            {
+                if (_noahServerProcess != null)
+                {
+                    _noahService.StopServer(_noahServerProcess);
+                    _noahServerProcess = null;
+                    SetStatusText("NOAH server stopped.");
+                }
+                else
+                {
+                    SetStatusText("Keep-alive disabled. Server was not started by PARRAT.");
+                }
+                _noahKeepAlive = false;
+                menuItem.Text = "Start NOAH Server (Keep-Alive)";
+                menuItem.Checked = false;
+            }
+            else
+            {
+                var config = _noahService.GetConfig();
+                SetStatusText("Starting NOAH server...");
+                Refresh();
+
+                EnsureNoahServer(config);
+                _noahKeepAlive = true;
+                menuItem.Text = "Stop NOAH Server";
+                menuItem.Checked = true;
+
+                if (_noahServerProcess != null)
+                    SetStatusText("NOAH server running (keep-alive).");
+                else
+                    SetStatusText("NOAH server already running externally. Keep-alive enabled (PARRAT will not stop it).");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("NOAH server toggle failed", "NOAH_SERVER", ex);
+            MessageBox.Show($"Error: {ex.Message}", "NOAH Server",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -2126,5 +2214,28 @@ public partial class MainForm
             selected.Add(item.ToString()!);
 
         return selected.Count > 0 ? selected.ToArray() : null;
+    }
+
+    // ── NOAH server lifecycle ────────────────────────────────────────────
+
+    private void EnsureNoahServer(NoahConfig config)
+    {
+        if (_noahServerProcess != null && !_noahServerProcess.HasExited &&
+            _noahService.ProbeServer(config.ApiServerUrl))
+            return;
+
+        var (proc, wasAlreadyRunning) = _noahService.EnsureServerRunning(config);
+
+        if (!wasAlreadyRunning && proc != null)
+            _noahServerProcess = proc;
+    }
+
+    private void CleanupNoahServerIfNeeded()
+    {
+        if (!_noahKeepAlive && _noahServerProcess != null)
+        {
+            _noahService.StopServer(_noahServerProcess);
+            _noahServerProcess = null;
+        }
     }
 }

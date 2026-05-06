@@ -177,6 +177,36 @@ public class NoahServiceTests : IDisposable
         Assert.StartsWith("OBX|", segments[3]);
     }
 
+    [Fact]
+    public void CreateMinimalHl7Message_SplitsMultiLineIntoPerLineObxSegments()
+    {
+        var msg = _service.CreateMinimalHl7Message("Line one\r\nLine two\nLine three");
+        var segments = msg.Split('\r');
+
+        var obxSegments = segments.Where(s => s.StartsWith("OBX|")).ToArray();
+        Assert.Equal(3, obxSegments.Length);
+        Assert.Contains("|Line one|", obxSegments[0]);
+        Assert.Contains("|Line two|", obxSegments[1]);
+        Assert.Contains("|Line three|", obxSegments[2]);
+        Assert.StartsWith("OBX|1|", obxSegments[0]);
+        Assert.StartsWith("OBX|2|", obxSegments[1]);
+        Assert.StartsWith("OBX|3|", obxSegments[2]);
+    }
+
+    [Fact]
+    public void CreateMinimalHl7Message_TreatsHtmlBrTagsAsLineBreaks()
+    {
+        var msg = _service.CreateMinimalHl7Message("Facility Name<br />Patient info<br/>Diagnosis text<BR>More text");
+        var segments = msg.Split('\r');
+
+        var obxSegments = segments.Where(s => s.StartsWith("OBX|")).ToArray();
+        Assert.Equal(4, obxSegments.Length);
+        Assert.Contains("|Facility Name|", obxSegments[0]);
+        Assert.Contains("|Patient info|", obxSegments[1]);
+        Assert.Contains("|Diagnosis text|", obxSegments[2]);
+        Assert.Contains("|More text|", obxSegments[3]);
+    }
+
     #endregion
 
     #region StartServer — validation only (no actual process)

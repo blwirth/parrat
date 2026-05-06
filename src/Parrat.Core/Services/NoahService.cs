@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
@@ -156,6 +157,49 @@ public class NoahService : INoahService
         }
     }
 
+    public bool ProbeServer(string? apiServerUrl)
+    {
+        apiServerUrl = (apiServerUrl ?? "http://localhost:4000").TrimEnd('/');
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{apiServerUrl}/Models");
+            request.Headers.Add("accept", "*/*");
+            request.Headers.Add("api-version", "2");
+            var response = HttpClient.Send(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public (Process? process, bool wasAlreadyRunning) EnsureServerRunning(NoahConfig config)
+    {
+        string apiServerUrl = config.ApiServerUrl?.TrimEnd('/') ?? "http://localhost:4000";
+
+        if (ProbeServer(apiServerUrl))
+            return (null, wasAlreadyRunning: true);
+
+        if (string.IsNullOrWhiteSpace(config.ExePath) || !File.Exists(config.ExePath))
+            throw new InvalidOperationException(
+                "NOAH server is not running and no executable path is configured.\n" +
+                "Configure it in Settings \u2192 NOAH Configuration.");
+
+        _logger.Log("INFO", "Starting NOAH server", "NOAH_SERVER_START", config.ExePath);
+        var proc = StartServer(config);
+
+        for (int attempt = 0; attempt < 60; attempt++)
+        {
+            Thread.Sleep(500);
+            if (ProbeServer(apiServerUrl))
+            {
+                _logger.Log("INFO", $"NOAH server ready after {(attempt + 1) * 500}ms", "NOAH_SERVER_READY");
+                return (proc, wasAlreadyRunning: false);
+            }
+        }
+
+        StopServer(proc);
+        throw new TimeoutException("NOAH server did not become reachable within 30 seconds.");
+    }
+
     public List<NoahModel> GetModels(NoahConfig config, ref Process? serverProcess)
     {
         string apiServerUrl = config.ApiServerUrl?.TrimEnd('/') ?? "http://localhost:4000";
@@ -263,21 +307,18 @@ public class NoahService : INoahService
 
         modelId = guid.ToString();
 
-        // Encode HL7 message as Base64
-        byte[] bytes = Encoding.UTF8.GetBytes(hl7Message);
+        string normalizedHl7 = Hl7EscapeHelper.NormalizeSegmentSeparators(hl7Message);
+        byte[] bytes = Encoding.UTF8.GetBytes(normalizedHl7);
         string hl7MessageEncoded = Convert.ToBase64String(bytes);
 
-        var requestObj = new
+        var requestObj = new[]
         {
-            value = new[]
+            new
             {
-                new
-                {
-                    messageId,
-                    hl7Message = hl7MessageEncoded,
-                    messageEncodingFormat = "Base64",
-                    modelId
-                }
+                messageId,
+                hl7Message = hl7MessageEncoded,
+                messageEncodingFormat = "Base64",
+                modelId
             }
         };
 
@@ -292,7 +333,17 @@ public class NoahService : INoahService
             request.Headers.Add("api-version", "2");
 
             var response = HttpClient.Send(request);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = new StreamReader(response.Content.ReadAsStream()).ReadToEnd();
+                int statusCode = (int)response.StatusCode;
+                string detail = string.IsNullOrWhiteSpace(body)
+                    ? $"HTTP {statusCode} {response.ReasonPhrase}"
+                    : $"HTTP {statusCode} {response.ReasonPhrase}: {body}";
+                _logger.Log("ERROR", $"NOAH API returned {statusCode}", "NOAH_API_HTTP_ERROR", body);
+                return new NoahResult { Success = false, Classification = detail };
+            }
 
             using var stream = response.Content.ReadAsStream();
             using var doc = JsonDocument.Parse(stream);
@@ -302,22 +353,21 @@ public class NoahService : INoahService
             if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
             {
                 var result = root[0];
+                string apiResponseJson = result.GetRawText();
 
-                string reportableStr = result.TryGetProperty("reportable", out var rp) ? rp.GetString() ?? "" : "";
-                bool isReportable = reportableStr == "true";
+                bool isReportable = TryGetBool(result, "Reportable") ?? TryGetBool(result, "reportable") ?? false;
 
-                string classification = isReportable ? "reportable"
-                    : reportableStr == "false" ? "nonreportable"
-                    : "unknown";
+                string classification = isReportable ? "reportable" : "nonreportable";
 
                 return new NoahResult
                 {
                     Success = true,
                     Classification = classification,
                     Reportable = isReportable,
-                    ImpossibleCombination = result.TryGetProperty("impossibleCombination", out var ic) && ic.GetString() == "true",
-                    MetastaticReport = result.TryGetProperty("metastaticReport", out var mr) && mr.GetBoolean(),
-                    MessageId = result.TryGetProperty("messageId", out var mi) ? mi.GetString() ?? "" : ""
+                    ImpossibleCombination = TryGetBool(result, "ImpossibleCombination") ?? TryGetBool(result, "impossibleCombination") ?? false,
+                    MetastaticReport = TryGetBool(result, "MetastaticReport") ?? TryGetBool(result, "metastaticReport") ?? false,
+                    MessageId = TryGetString(result, "MessageID") ?? TryGetString(result, "messageId") ?? "",
+                    ApiResponseJson = apiResponseJson
                 };
             }
 
@@ -328,12 +378,13 @@ public class NoahService : INoahService
             _logger.LogError("Failed to invoke NOAH reportability API", "NOAH_API_INVOKE", ex);
             return new NoahResult { Success = false, Classification = $"Failed to POST to NOAH API: {ex.Message}" };
         }
-        finally
-        {
-            if (serverProcess != null)
-                StopServer(serverProcess);
-        }
     }
+
+    // Matches <br>, <br/>, <br />, <BR>, etc. — common HTML artefact when users
+    // paste from rendered XML/HTML sources into the custom payload box.
+    private static readonly Regex HtmlBreakRegex = new(
+        @"<\s*br\s*/?\s*>",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public string CreateMinimalHl7Message(string customText, string? patientId = null, string? accessionNumber = null)
     {
@@ -343,16 +394,47 @@ public class NoahService : INoahService
         string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
         string msgId = Guid.NewGuid().ToString()[..8];
 
-        string segmentSeparator = "\r";
+        // NOAH applies mask phrases line-by-line: if a mask phrase appears on a
+        // line, the entire line is masked. Packing all text into a single OBX-5
+        // makes the whole payload one "line" — a mask hit anywhere redacts
+        // everything. Split on real line breaks AND on HTML <br> variants
+        // (users paste from rendered XML), then emit one OBX per line.
+        var normalized = HtmlBreakRegex.Replace(customText ?? "", "\n");
+        var lines = normalized.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         var segments = new List<string>
         {
             $"MSH|^~\\&|ePATH|TEST_FACILITY|NOAH|NOAH_FACILITY|{timestamp}||ORU^R01|{msgId}|P|2.5.1",
             $"PID|1||{patientId}^^^TEST_FACILITY^MR||TEST^PATIENT||19700101|U",
-            $"OBR|1||{accessionNumber}||88305^Surgical Pathology|||{timestamp}",
-            $"OBX|1|FT|88305&ICD10&2.16.840.1.113883.6.90^Final Diagnosis^L|2|{customText}||||||F"
+            $"OBR|1||{accessionNumber}||88305^Surgical Pathology|||{timestamp}"
         };
 
-        return string.Join(segmentSeparator, segments);
+        int setId = 1;
+        foreach (var line in lines)
+        {
+            string escaped = Hl7EscapeHelper.Escape(line);
+            segments.Add($"OBX|{setId}|FT|22637-3^Final Diagnosis^LN|1|{escaped}||||||F");
+            setId++;
+        }
+
+        // Guarantee at least one OBX even if input was empty.
+        if (setId == 1)
+            segments.Add("OBX|1|FT|22637-3^Final Diagnosis^LN|1|||||||F");
+
+        return string.Join("\r", segments);
+    }
+
+    private static bool? TryGetBool(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop)) return null;
+        if (prop.ValueKind is JsonValueKind.True or JsonValueKind.False) return prop.GetBoolean();
+        if (prop.ValueKind == JsonValueKind.String) return prop.GetString() == "true";
+        return null;
+    }
+
+    private static string? TryGetString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop)) return null;
+        return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
     }
 }

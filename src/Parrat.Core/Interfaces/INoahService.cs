@@ -13,6 +13,8 @@ public interface INoahService
     void SaveConfig(NoahConfig config);
     Process StartServer(NoahConfig config);
     void StopServer(Process? process);
+    bool ProbeServer(string? apiServerUrl);
+    (Process? process, bool wasAlreadyRunning) EnsureServerRunning(NoahConfig config);
     List<NoahModel> GetModels(NoahConfig config, ref Process? serverProcess);
     NoahWorkingFolders CreateWorkingFolders(string outputFormat, string workingRoot);
     NoahResult InvokeReportabilityApi(string hl7Message, NoahConfig config, string modelId,
