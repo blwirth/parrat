@@ -28,6 +28,8 @@ To select a file to view, select *Open* from the *File* menu and navigate the na
 
 Once loaded, the left panel lists the records in a navigation grid. Clicking any record in the navigation panel displays its formatted text in the center panel and parsed values in the right panel. The status bar at the bottom displays the current record number, total record count, and the number of selected records (for example, "Tumor 1 of 25 (3 selected)").
 
+image::{docdir}/screens/PARRAT.png[PARRAT main window with a NAACCR XML file loaded,pdfwidth=100%]
+
 ==== Navigation Grid Columns
 
 The navigation grid displays different columns depending on the file type.
