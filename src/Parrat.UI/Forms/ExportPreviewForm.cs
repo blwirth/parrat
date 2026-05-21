@@ -467,7 +467,7 @@ public class ExportPreviewForm : ParratFormBase
 
     private void BtnAddCustom_Click(object? sender, EventArgs e)
     {
-        using var customForm = new Form
+        using var customForm = new ParratFormBase
         {
             Text = "Add Custom Field",
             Width = 400,
@@ -564,7 +564,7 @@ public class ExportPreviewForm : ParratFormBase
 
     private void BtnSaveConfig_Click(object? sender, EventArgs e)
     {
-        using var saveForm = new Form
+        using var saveForm = new ParratFormBase
         {
             Text = "Save Export Configuration",
             Width = 400,

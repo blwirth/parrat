@@ -308,7 +308,7 @@ public class ConcatenateHl7Form : ParratFormBase
         var outputDir = folderDialog.SelectedPath;
 
         // Get output filename
-        using var inputForm = new Form
+        using var inputForm = new ParratFormBase
         {
             Text = "Enter Output Filename",
             Width = 400,
