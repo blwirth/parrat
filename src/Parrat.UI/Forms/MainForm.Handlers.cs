@@ -697,7 +697,7 @@ public partial class MainForm
             var inputPath = ofd.FileName;
 
             // Ask for facility
-            using var facilityForm = new Form
+            using var facilityForm = new ParratFormBase
             {
                 Text = "Select Facility",
                 Width = 300,
@@ -2166,7 +2166,7 @@ public partial class MainForm
     /// <summary>Shows a simple variable selection dialog and returns selected NAACCR IDs.</summary>
     private static string[]? ShowVariableSelectionDialog(List<string> variables)
     {
-        using var dlg = new Form
+        using var dlg = new ParratFormBase
         {
             Text = "Select Variables to Remove",
             Width = 500,

@@ -13,7 +13,7 @@ public class ParratFormBase : Form
     private static Icon? _appIcon;
     private bool _hasScaled;
 
-    protected ParratFormBase()
+    public ParratFormBase()
     {
         AutoScaleMode = AutoScaleMode.None;
 

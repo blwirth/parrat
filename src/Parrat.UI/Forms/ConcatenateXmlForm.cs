@@ -319,7 +319,7 @@ public class ConcatenateXmlForm : ParratFormBase
         var outputDir = folderDialog.SelectedPath;
 
         // Get output filename
-        using var inputForm = new Form
+        using var inputForm = new ParratFormBase
         {
             Text = "Enter Output Filename",
             Width = 400,
@@ -412,7 +412,7 @@ public class ConcatenateXmlForm : ParratFormBase
 
     private string ShowDuplicatePatientIdWarning(List<string> duplicates)
     {
-        using var warningForm = new Form
+        using var warningForm = new ParratFormBase
         {
             Text = "Duplicate Patient IDs Detected",
             Width = 500,

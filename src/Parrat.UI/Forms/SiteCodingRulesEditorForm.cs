@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 
@@ -385,6 +386,7 @@ public class PatternEditDialog : ParratFormBase
 {
     private readonly ISiteLateralityService _siteLateralityService;
     private List<ExpressionItem> _expressionItems;
+    private readonly List<TopographyEntry> _topoMap;
 
     private TextBox _txtCode = null!;
     private NumericUpDown _numPriority = null!;
@@ -405,6 +407,17 @@ public class PatternEditDialog : ParratFormBase
     {
         _siteLateralityService = siteLateralityService;
         _expressionItems = new List<ExpressionItem>();
+
+        // Load topography map once so {topo} template terms can match in Test.
+        // Mirrors the filter applied in MainForm.RunSiteLateralityTest.
+        var topoPath = PathHelper.GetDictionaryPath("Topography.jsonl");
+        _topoMap = File.Exists(topoPath)
+            ? _siteLateralityService.ReadTopographyJson(topoPath)
+                .Where(t => !string.IsNullOrEmpty(t.Code)
+                    && !string.IsNullOrEmpty(t.SearchPhrase)
+                    && !t.Code.StartsWith("C77"))
+                .ToList()
+            : new List<TopographyEntry>();
 
         if (pattern?.Expression != null)
         {
@@ -783,7 +796,7 @@ public class PatternEditDialog : ParratFormBase
             isFirstLine = false;
 
             var low = trimmed.ToLowerInvariant();
-            var testResult = _siteLateralityService.TestSiteCodingRule(tempPattern, low);
+            var testResult = _siteLateralityService.TestSiteCodingRule(tempPattern, low, _topoMap);
 
             if (testResult.Matched)
             {
@@ -885,7 +898,7 @@ public class PatternEditDialog : ParratFormBase
 
     private static string? ShowTextInputDialog(string title, string prompt, string defaultValue = "")
     {
-        using var inputForm = new Form
+        using var inputForm = new ParratFormBase
         {
             Text = title,
             Width = 420,
