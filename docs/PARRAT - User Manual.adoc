@@ -425,6 +425,23 @@ The JSON files can be regenerated from either an apps.naaccr.org export or an im
 
 `/scripts/generate-dictionary-json.ps1`
 
+==== Selecting Variables to Export
+
+The NAACCR dictionary contains hundreds of items, but a given file usually populates only a subset. Rather than checking each variable by hand, the export dialog provides four buttons that build the column list from the data actually present in the file. All four update the live preview, and the resulting CSV columns follow canonical NAACCR order (by item number, with any variable not found in the dictionary placed last).
+
+* *Select Present Vars*: checks every variable that appears in the records being exported (the selected records for *Export Selected as CSV*, or all records for *Export All as CSV*). This is the quick way to produce a full report of a file without picking variables individually.
+
+* *Present (All Records)*: checks every variable that appears anywhere in the loaded file, including records that are not being exported. A variable found only in non-exported records still becomes a column — it is simply blank for every exported record. This "negative information" can be useful when you want a consistent column set across a batch, or want to see which variables exist in the file even though the exported records do not carry them. This button is disabled for *Export All as CSV* (where it would be identical to *Select Present Vars*).
+
+* *Clear Selection*: unchecks all selected variables so you can start over.
+
+* *Remove Empty Cols*: removes any currently selected variable that is blank for every exported record. This is the easiest way to prune back after *Present (All Records)* — pull in everything to see what the file contains, then drop the columns that hold no data for the records you are exporting.
+
+[NOTE]
+====
+*Select Present Vars* and *Present (All Records)* add to the current selection rather than replacing it, so any variables you have already chosen (or loaded from a saved configuration) are kept.
+====
+
 Custom header configurations can be saved via *Save Config* and loaded via *Load Config*.
 
 When exporting HL7 records to CSV, the following fixed columns are used:
