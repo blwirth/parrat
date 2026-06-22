@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 
@@ -200,34 +201,13 @@ public class ExportService : IExportService
 
             foreach (var field in fieldList)
             {
-                string value = "";
                 string parentElement = field.ParentElement ?? "Tumor";
 
                 // Check custom fields mapping
                 if (customFields != null && customFields.TryGetValue(field.XmlId, out var customParent))
                     parentElement = customParent;
 
-                if (parentElement == "NaaccrData")
-                {
-                    var root = tumor.OwnerDocument?.DocumentElement;
-                    if (root != null)
-                    {
-                        var node = root.SelectSingleNode($"./n:Item[@naaccrId='{field.XmlId}']", nsMgr);
-                        if (node != null) value = node.InnerText;
-                    }
-                }
-                else if (parentElement == "Patient")
-                {
-                    var node = patient.SelectSingleNode($"./n:Item[@naaccrId='{field.XmlId}']", nsMgr);
-                    if (node != null) value = node.InnerText;
-                }
-                else
-                {
-                    var node = tumor.SelectSingleNode($"./n:Item[@naaccrId='{field.XmlId}']", nsMgr);
-                    if (node != null) value = node.InnerText;
-                }
-
-                row[field.XmlId] = value;
+                row[field.XmlId] = TumorFieldReader.ReadValue(tumor, patient, field.XmlId, parentElement, nsMgr);
             }
 
             rows.Add(row);
