@@ -2,6 +2,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 
@@ -39,6 +40,11 @@ public class ExportPreviewForm : ParratFormBase
     private Button _btnMoveUp = null!;
     private Button _btnMoveDown = null!;
     private Button _btnRefresh = null!;
+    private Button _btnSelectPresent = null!;
+    private Button _btnSelectPresentAll = null!;
+    private Button _btnClearSelection = null!;
+    private Button _btnRemoveEmpty = null!;
+    private ToolTip _toolTip = null!;
     private Label _lblSummary = null!;
     private Label _lblErrors = null!;
     private DataGridView _grid = null!;
@@ -123,7 +129,7 @@ public class ExportPreviewForm : ParratFormBase
         var pnlFieldButtons = new Panel
         {
             Location = new Point(0, 50),
-            Size = new Size(340, 70)
+            Size = new Size(340, 135)
         };
 
         _btnLoadConfig = new Button { Text = "Load Config", Location = new Point(0, 0), Width = 105 };
@@ -132,20 +138,65 @@ public class ExportPreviewForm : ParratFormBase
         _btnMoveUp = new Button { Text = "Move Up", Location = new Point(0, 35), Width = 105 };
         _btnMoveDown = new Button { Text = "Move Down", Location = new Point(115, 35), Width = 105 };
         _btnRefresh = new Button { Text = "Refresh", Location = new Point(230, 35), Width = 105 };
+        _btnSelectPresent = new Button
+        {
+            Text = "Select Present Vars",
+            Location = new Point(0, 70),
+            Width = 165
+        };
+        _btnSelectPresentAll = new Button
+        {
+            Text = "Present (All Records)",
+            Location = new Point(175, 70),
+            Width = 165
+        };
 
-        pnlFieldButtons.Controls.AddRange(new Control[] { _btnLoadConfig, _btnSaveConfig, _btnAddCustom, _btnMoveUp, _btnMoveDown, _btnRefresh });
+        var separator = new Label
+        {
+            AutoSize = false,
+            BorderStyle = BorderStyle.Fixed3D,
+            Location = new Point(0, 63),
+            Size = new Size(340, 2)
+        };
+
+        _btnClearSelection = new Button
+        {
+            Text = "Clear Selection",
+            Location = new Point(0, 105),
+            Width = 165
+        };
+        _btnRemoveEmpty = new Button
+        {
+            Text = "Remove Empty Cols",
+            Location = new Point(175, 105),
+            Width = 165
+        };
+
+        _toolTip = new ToolTip();
+        _toolTip.SetToolTip(_btnSelectPresent,
+            "Select every variable present in the cases being exported.");
+        _toolTip.SetToolTip(_btnSelectPresentAll,
+            "Select every variable present anywhere in the loaded file, including non-selected cases " +
+            "(adds blank columns for variables absent from the exported cases).");
+        _toolTip.SetToolTip(_btnClearSelection,
+            "Uncheck all selected fields and start over.");
+        _toolTip.SetToolTip(_btnRemoveEmpty,
+            "Remove selected variables that are blank for every exported case " +
+            "(e.g. columns added by \"Present (All Records)\" that carry no data here).");
+
+        pnlFieldButtons.Controls.AddRange(new Control[] { _btnLoadConfig, _btnSaveConfig, _btnAddCustom, _btnMoveUp, _btnMoveDown, _btnRefresh, separator, _btnSelectPresent, _btnSelectPresentAll, _btnClearSelection, _btnRemoveEmpty });
 
         var lblFields = new Label
         {
             Text = "Available Fields:",
-            Location = new Point(0, 125),
+            Location = new Point(0, 190),
             AutoSize = true
         };
 
         _lstFields = new CheckedListBox
         {
-            Location = new Point(0, 145),
-            Size = new Size(340, 440),
+            Location = new Point(0, 210),
+            Size = new Size(340, 375),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom,
             CheckOnClick = true
         };
@@ -233,6 +284,14 @@ public class ExportPreviewForm : ParratFormBase
         _btnMoveUp.Click += BtnMoveUp_Click;
         _btnMoveDown.Click += BtnMoveDown_Click;
         _btnRefresh.Click += (_, _) => UpdatePreview();
+        _btnSelectPresent.Click += (_, _) => SelectPresentVariables(allRecords: false);
+        _btnSelectPresentAll.Click += (_, _) => SelectPresentVariables(allRecords: true);
+        _btnClearSelection.Click += (_, _) => ClearSelection();
+        _btnRemoveEmpty.Click += (_, _) => RemoveEmptyColumns();
+
+        // The "all records" scope only differs from the export scope when fewer than all
+        // tumors are being exported (Export Selected). For Export All it is a no-op.
+        _btnSelectPresentAll.Enabled = _tumors != null && _tumorIndices.Length < _tumors.Count;
     }
 
     private string? ExtractXmlId(string displayText)
@@ -364,23 +423,7 @@ public class ExportPreviewForm : ParratFormBase
 
                 foreach (var fieldId in currentFields)
                 {
-                    var value = "";
-                    var parentElement = _dictionary.GetParentElement(fieldId, _customFieldParents);
-
-                    if (parentElement == "Patient")
-                    {
-                        var node = patient.SelectSingleNode($"./n:Item[@naaccrId='{fieldId}']", _nsMgr);
-                        if (node != null)
-                            value = node.InnerText;
-                    }
-                    else
-                    {
-                        var node = tumor!.SelectSingleNode($"./n:Item[@naaccrId='{fieldId}']", _nsMgr);
-                        if (node != null)
-                            value = node.InnerText;
-                    }
-
-                    row[fieldId] = value;
+                    row[fieldId] = ResolveFieldValue(fieldId, tumor!, patient);
                 }
 
                 rows.Add(row);
@@ -435,6 +478,62 @@ public class ExportPreviewForm : ParratFormBase
         }
     }
 
+    /// <summary>
+    /// Resolves a field's value for one tumor via the shared <see cref="TumorFieldReader"/>,
+    /// so the preview always matches what the CSV export writes.
+    /// </summary>
+    private string ResolveFieldValue(string fieldId, XmlNode tumor, XmlNode? patient)
+    {
+        var parentElement = _dictionary.GetParentElement(fieldId, _customFieldParents);
+        return TumorFieldReader.ReadValue(tumor, patient, fieldId, parentElement, _nsMgr);
+    }
+
+    private void ClearSelection()
+    {
+        if (_selectedFields.Count == 0)
+        {
+            _lblSummary.Text = "No fields selected";
+            return;
+        }
+
+        _selectedFields.Clear();
+        _customFieldParents.Clear();
+        PopulateFieldList(_txtSearch.Text);
+        UpdatePreview();
+        _lblSummary.Text = "Cleared all selected fields";
+    }
+
+    /// <summary>
+    /// Removes selected variables that are blank for every exported case. Variables present
+    /// only in non-selected cases (added via "Present (All Records)") are pruned here, since
+    /// they carry no data in the cases actually being exported.
+    /// </summary>
+    private void RemoveEmptyColumns()
+    {
+        if (_tumors == null || _selectedFields.Count == 0)
+            return;
+
+        var removed = TumorFieldReader.FindEmptyFields(
+            _tumors, _tumorIndices, _selectedFields,
+            id => _dictionary.GetParentElement(id, _customFieldParents), _nsMgr);
+
+        if (removed.Count == 0)
+        {
+            _lblSummary.Text = "No empty columns to remove";
+            return;
+        }
+
+        foreach (var id in removed)
+        {
+            _selectedFields.Remove(id);
+            _customFieldParents.Remove(id);
+        }
+
+        PopulateFieldList(_txtSearch.Text);
+        UpdatePreview();
+        _lblSummary.Text = $"Removed {removed.Count} empty column(s) ({_selectedFields.Count} selected)";
+    }
+
     private void LstFields_ItemCheck(object? sender, ItemCheckEventArgs e)
     {
         if (_isPopulatingFields) return;
@@ -463,6 +562,44 @@ public class ExportPreviewForm : ParratFormBase
 
         // Defer preview update to after the check state changes
         BeginInvoke(new Action(UpdatePreview));
+    }
+
+    private void SelectPresentVariables(bool allRecords)
+    {
+        if (_tumors == null || _tumors.Count == 0)
+            return;
+
+        // Scope: just the cases being exported, or every loaded record (incl. non-selected).
+        var scanIndices = allRecords
+            ? Enumerable.Range(0, _tumors.Count).ToArray()
+            : _tumorIndices;
+
+        var present = VariableScanHelper.ScanPresentVariables(_tumors, scanIndices, _nsMgr);
+
+        // Union: keep existing selections; append only the variables not already chosen.
+        var newIds = present.Keys.Where(id => !_selectedFields.Contains(id)).ToList();
+
+        // Register unknown ids (absent from the dictionary) as custom fields with the level
+        // they were found at, so they export with values rather than blanks.
+        foreach (var id in newIds)
+        {
+            if (_dictionary.GetItemByXmlId(id) == null && !_customFieldParents.ContainsKey(id))
+                _customFieldParents[id] = present[id];
+        }
+
+        // Canonical NAACCR order, then union onto the existing selection (order preserved).
+        var orderedNew = VariableScanHelper.OrderByNaaccr(newIds, _dictionary);
+        var merged = VariableScanHelper.MergePreservingOrder(_selectedFields, orderedNew);
+        _selectedFields.Clear();
+        _selectedFields.AddRange(merged);
+
+        PopulateFieldList(_txtSearch.Text);
+        UpdatePreview();
+
+        var scopeLabel = allRecords ? "all loaded records" : "exported cases";
+        _lblSummary.Text = newIds.Count == 0
+            ? $"All {present.Count} present variable(s) from {scopeLabel} were already selected"
+            : $"Added {newIds.Count} present variable(s) from {scopeLabel} ({_selectedFields.Count} selected)";
     }
 
     private void BtnAddCustom_Click(object? sender, EventArgs e)
