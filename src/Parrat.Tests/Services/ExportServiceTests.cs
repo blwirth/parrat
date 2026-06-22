@@ -307,6 +307,184 @@ public class ExportServiceTests : IDisposable
         Assert.Equal("C509", values[3]);    // primarySite — Tumor level
     }
 
+    // =====================================================================
+    //  "Select all present variables" — scan -> fields -> CSV integration
+    // =====================================================================
+
+    /// <summary>
+    /// Two-tumor file where the selected tumor has primarySite and the other has
+    /// pathReportNumber1. Scanning only the selected tumor and exporting it must yield a
+    /// CSV whose columns are exactly the present variables — the non-selected tumor's
+    /// variable must NOT become a column.
+    /// </summary>
+    [Fact]
+    public void ScanThenExportSelected_SelectedScope_ExcludesVariablesOnlyInOtherTumors()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            NameLast = "Lee",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" },
+                new NaaccrXmlTestHelper.TumorData { PathReportNumber1 = "RPT-1" }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var tumors = xmlDoc.SelectNodes("//n:Tumor", nsMgr)!;
+        var selected = new[] { 0 };
+
+        var scan = VariableScanHelper.ScanPresentVariables(tumors, selected, nsMgr);
+        var fields = BuildOrderedFields(scan, CreateDictionary());
+
+        var outputPath = Path.Combine(_tempDir, "selected_scope.csv");
+        new ExportService(tumors).ExportSelectedCsv(selected, xmlDoc, nsMgr, outputPath, fields);
+
+        var header = File.ReadAllLines(outputPath)[0].Split(',');
+        Assert.Contains("primarySite", header);
+        Assert.Contains("nameLast", header);
+        Assert.DoesNotContain("pathReportNumber1", header);
+    }
+
+    /// <summary>
+    /// Same file, but scanning ALL loaded records (the "negative information" option) while
+    /// still exporting only the selected tumor: pathReportNumber1 becomes a column even
+    /// though it appears in no exported row — its cell is blank for the exported tumor.
+    /// </summary>
+    [Fact]
+    public void ScanThenExportSelected_AllRecordsScope_IncludesNonSelectedVariableAsBlankColumn()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            NameLast = "Lee",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" },
+                new NaaccrXmlTestHelper.TumorData { PathReportNumber1 = "RPT-1" }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var tumors = xmlDoc.SelectNodes("//n:Tumor", nsMgr)!;
+        var selected = new[] { 0 };
+        var allRecords = new[] { 0, 1 };
+
+        var scan = VariableScanHelper.ScanPresentVariables(tumors, allRecords, nsMgr);
+        var fields = BuildOrderedFields(scan, CreateDictionary());
+
+        var outputPath = Path.Combine(_tempDir, "all_records_scope.csv");
+        new ExportService(tumors).ExportSelectedCsv(selected, xmlDoc, nsMgr, outputPath, fields);
+
+        var lines = File.ReadAllLines(outputPath);
+        var header = lines[0].Split(',');
+        var values = lines[1].Split(',');
+
+        Assert.Equal(2, lines.Length); // header + 1 exported row
+        var col = Array.IndexOf(header, "pathReportNumber1");
+        Assert.True(col >= 0, "pathReportNumber1 should be a column under all-records scope");
+        Assert.Equal("", values[col]); // present as a (blank) column for the exported row
+    }
+
+    /// <summary>
+    /// The CSV columns produced from a scan must appear in canonical NAACCR order
+    /// (by item number), matching how the export dialog orders auto-selected fields.
+    /// </summary>
+    [Fact]
+    public void ScanThenExport_OrdersColumnsByNaaccrNumber()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(patients: new NaaccrXmlTestHelper.PatientData
+        {
+            PatientIdNumber = "PAT001",
+            NameLast = "Smith",
+            Tumors = new[]
+            {
+                new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509", DateOfDiagnosis = "20240101" }
+            }
+        });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var tumors = xmlDoc.SelectNodes("//n:Tumor", nsMgr)!;
+
+        var scan = VariableScanHelper.ScanPresentVariables(tumors, new[] { 0 }, nsMgr);
+        var dict = CreateDictionary();
+        var fields = BuildOrderedFields(scan, dict);
+
+        var outputPath = Path.Combine(_tempDir, "ordered.csv");
+        new ExportService(tumors).ExportAllCsv(xmlDoc, nsMgr, outputPath, fields);
+
+        var header = File.ReadAllLines(outputPath)[0].Split(',');
+
+        // Header item numbers must be non-decreasing.
+        var numbers = header
+            .Select(id => dict.GetItemByXmlId(id)?.NumberInt ?? int.MaxValue)
+            .ToList();
+        var sorted = numbers.OrderBy(n => n).ToList();
+        Assert.Equal(sorted, numbers);
+    }
+
+    /// <summary>
+    /// A naaccrId present in the XML but absent from the dictionary must still export with
+    /// its value when registered as a custom field at the level the scanner found it.
+    /// </summary>
+    [Fact]
+    public void ScanThenExport_UnknownNaaccrId_ExportsValueViaCustomParent()
+    {
+        var xml = NaaccrXmlTestHelper.BuildNaaccrXml(
+            naaccrDataItems: new Dictionary<string, string> { ["madeUpVariable"] = "XYZ" },
+            patients: new NaaccrXmlTestHelper.PatientData
+            {
+                NameLast = "Doe",
+                Tumors = new[] { new NaaccrXmlTestHelper.TumorData { PrimarySite = "C509" } }
+            });
+
+        var (xmlDoc, nsMgr) = LoadXml(xml);
+        var tumors = xmlDoc.SelectNodes("//n:Tumor", nsMgr)!;
+
+        var scan = VariableScanHelper.ScanPresentVariables(tumors, new[] { 0 }, nsMgr);
+        Assert.Equal("NaaccrData", scan["madeUpVariable"]); // found at file level
+
+        var customFields = new Dictionary<string, string> { ["madeUpVariable"] = scan["madeUpVariable"] };
+        var fields = new List<ExportField>
+        {
+            new() { XmlId = "madeUpVariable", IsCustom = true, ParentElement = "NaaccrData" }
+        };
+
+        var outputPath = Path.Combine(_tempDir, "unknown.csv");
+        new ExportService(tumors).ExportAllCsv(xmlDoc, nsMgr, outputPath, fields, customFields);
+
+        var lines = File.ReadAllLines(outputPath);
+        Assert.Equal("madeUpVariable", lines[0]);
+        Assert.Equal("XYZ", lines[1]);
+    }
+
+    /// <summary>
+    /// Mirrors the export dialog's ordering: existing logic that turns a scan result into a
+    /// canonically-ordered ExportField list (by NAACCR number, dictionary-unknown ids last).
+    /// </summary>
+    private static List<ExportField> BuildOrderedFields(
+        Dictionary<string, string> scan, NaaccrDictionary dict)
+    {
+        // Use the same production ordering the export dialog uses.
+        return VariableScanHelper.OrderByNaaccr(scan.Keys, dict)
+            .Select(id => new ExportField
+            {
+                XmlId = id,
+                IsCustom = dict.GetItemByXmlId(id) == null,
+                ParentElement = dict.GetItemByXmlId(id)?.ParentElement is { Length: > 0 } p
+                    ? p
+                    : scan[id]
+            })
+            .ToList();
+    }
+
+    private static NaaccrDictionary CreateDictionary(int version = 25)
+    {
+        PathHelper.SetRepoRoot(TestEnvironment.FindRepoRoot());
+        var dict = new NaaccrDictionary();
+        dict.Initialize(version);
+        return dict;
+    }
+
     private static (XmlDocument, XmlNamespaceManager) LoadXml(string xml)
     {
         var xmlDoc = new XmlDocument();
