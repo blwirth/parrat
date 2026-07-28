@@ -106,6 +106,26 @@ public class NaaccrItemReaderTests
     }
 
     [Fact]
+    public void ReadInto_DictionaryHoldingOtherReadersValues_StillReadsItsOwnIds()
+    {
+        // Leveled reads share one dictionary across several readers, so a
+        // dictionary that already looks "full" must not stop a later reader.
+        var (doc, nsMgr) = Load(Wrap(@"
+      <Item naaccrId=""nameLast"">Smith</Item>
+      <Tumor><Item naaccrId=""primarySite"">C509</Item></Tumor>"));
+
+        var tumor = doc.SelectSingleNode("//n:Tumor", nsMgr)!;
+        var patient = tumor.ParentNode;
+
+        var shared = new Dictionary<string, string>(StringComparer.Ordinal);
+        new NaaccrItemReader(new[] { "primarySite" }).ReadInto(tumor, shared);
+        new NaaccrItemReader(new[] { "nameLast" }).ReadInto(patient, shared);
+
+        Assert.Equal("C509", shared["primarySite"]);
+        Assert.Equal("Smith", shared["nameLast"]);
+    }
+
+    [Fact]
     public void ReadInto_NullNode_IsIgnored()
     {
         var reader = new NaaccrItemReader(new[] { "nameLast" });

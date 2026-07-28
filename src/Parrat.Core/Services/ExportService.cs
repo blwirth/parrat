@@ -37,7 +37,7 @@ public class ExportService : IExportService
         if (tumorIndices == null || tumorIndices.Length == 0)
             tumorIndices = Enumerable.Range(0, effectiveTumors.Count).ToArray();
 
-        WriteTumorCsv(tumorIndices, effectiveTumors, nsMgr, outputPath, fieldList, customFields);
+        WriteTumorCsv(tumorIndices, effectiveTumors, outputPath, fieldList, customFields);
     }
 
     public void ExportSelectedCsv(int[] tumorIndices, XmlDocument xmlDoc, XmlNamespaceManager nsMgr,
@@ -184,56 +184,60 @@ public class ExportService : IExportService
 
     // --- Private helpers ---
 
-    private static void WriteTumorCsv(int[] tumorIndices, XmlNodeList tumors, XmlNamespaceManager nsMgr,
+    private static void WriteTumorCsv(int[] tumorIndices, XmlNodeList tumors,
         string outputPath, List<ExportField> fieldList, Dictionary<string, string>? customFields)
     {
-        var rows = new List<Dictionary<string, string>>();
+        var reader = new NaaccrLeveledItemReader(
+            fieldList.Select(f => new KeyValuePair<string, string>(
+                f.XmlId,
+                ResolveParentElement(f, customFields))));
+
+        // Rows are written as they are read rather than collected first, so an
+        // export of thousands of records does not hold every row in memory on
+        // top of the document it came from.
+        using var writer = new StreamWriter(outputPath, false, Encoding.UTF8);
+
+        // Header row
+        writer.WriteLine(string.Join(",", fieldList.Select(f => f.XmlId)));
+
+        var values = new Dictionary<string, string>(fieldList.Count, StringComparer.Ordinal);
+        var csvRow = new List<string>(fieldList.Count);
 
         foreach (int tumorIndex in tumorIndices)
         {
             if (tumorIndex < 0 || tumorIndex >= tumors.Count) continue;
 
             var tumor = tumors[tumorIndex]!;
-            var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr);
+            var patient = NaaccrLeveledItemReader.FindPatient(tumor);
             if (patient == null) continue;
 
-            var row = new Dictionary<string, string>();
+            values.Clear();
+            reader.ReadRow(tumor, patient, values);
 
+            csvRow.Clear();
             foreach (var field in fieldList)
             {
-                string parentElement = field.ParentElement ?? "Tumor";
-
-                // Check custom fields mapping
-                if (customFields != null && customFields.TryGetValue(field.XmlId, out var customParent))
-                    parentElement = customParent;
-
-                row[field.XmlId] = TumorFieldReader.ReadValue(tumor, patient, field.XmlId, parentElement, nsMgr);
-            }
-
-            rows.Add(row);
-        }
-
-        // Write CSV manually (matching PS behavior)
-        var csvContent = new List<string>();
-
-        // Header row
-        csvContent.Add(string.Join(",", fieldList.Select(f => f.XmlId)));
-
-        // Data rows
-        foreach (var row in rows)
-        {
-            var csvRow = new List<string>();
-            foreach (var field in fieldList)
-            {
-                string value = row.TryGetValue(field.XmlId, out var v) ? v : "";
-                if (value.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0)
+                string value = values.TryGetValue(field.XmlId, out var v) ? v : "";
+                if (value.IndexOfAny(CsvSpecialCharacters) >= 0)
                     value = "\"" + value.Replace("\"", "\"\"") + "\"";
                 csvRow.Add(value);
             }
-            csvContent.Add(string.Join(",", csvRow));
-        }
 
-        File.WriteAllLines(outputPath, csvContent, Encoding.UTF8);
+            writer.WriteLine(string.Join(",", csvRow));
+        }
+    }
+
+    private static readonly char[] CsvSpecialCharacters = { ',', '"', '\r', '\n' };
+
+    /// <summary>
+    /// The element an export field is read from, honoring any custom mapping.
+    /// </summary>
+    private static string ResolveParentElement(ExportField field, Dictionary<string, string>? customFields)
+    {
+        if (customFields != null && customFields.TryGetValue(field.XmlId, out var customParent))
+            return customParent;
+
+        return field.ParentElement ?? "Tumor";
     }
 
     private static void WriteHl7Csv(int[] messageIndices, List<Hl7Message> messages, string outputPath)

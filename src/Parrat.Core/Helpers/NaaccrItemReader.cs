@@ -39,7 +39,10 @@ public sealed class NaaccrItemReader
     /// </summary>
     public void ReadInto(XmlNode? node, IDictionary<string, string> into)
     {
-        if (node == null || into.Count == _wanted.Count)
+        // No short-circuit on into.Count: the dictionary may be shared with
+        // other readers covering different item ids, so a full dictionary does
+        // not mean this reader's ids are all resolved.
+        if (node == null)
             return;
 
         for (var child = node.FirstChild; child != null; child = child.NextSibling)
