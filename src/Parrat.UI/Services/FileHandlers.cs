@@ -164,7 +164,10 @@ public class FileHandlers
     }
 
     /// <summary>Loads a folder by path. Separated from the dialog for reuse and testing.</summary>
-    public void OpenFolder(string folderPath, MainForm form)
+    /// <param name="preferredFormat">
+    /// Format to preselect in the chooser, used when reopening from Open Recent.
+    /// </param>
+    public void OpenFolder(string folderPath, MainForm form, DetectedFileFormat? preferredFormat = null)
     {
         try
         {
@@ -180,7 +183,7 @@ public class FileHandlers
                 return;
             }
 
-            var format = ChooseFormat(scan, form);
+            var format = ChooseFormat(scan, form, preferredFormat);
             if (format == null)
                 return;
 
@@ -221,6 +224,9 @@ public class FileHandlers
                             $"Loaded folder {folderPath}: {result.Records.Count} messages from {PluralHelper.Count(result.FileCount, "file")}",
                             "OPEN_FOLDER");
 
+                        _recentFilesService.AddRecentFolder(
+                            folderPath, FileFormatDetector.DescribeShortType(format.Value));
+
                         ShowHl7Messages(result.Records, form,
                             $"Loaded folder: {folderName} ({result.FileCount} files, Messages: {result.Records.Count})",
                             $"Folder: {folderPath}");
@@ -241,6 +247,9 @@ public class FileHandlers
 
                         _state.TumorSourceFiles = result.TumorSourceFiles;
 
+                        _recentFilesService.AddRecentFolder(
+                            folderPath, FileFormatDetector.DescribeShortType(format.Value));
+
                         ShowXmlTumors(result.Document!, result.Tumors!, result.NsMgr!, form,
                             $"Loaded folder: {folderName} ({result.FileCount} files, Tumors: {result.TumorCount})",
                             $"Folder: {folderPath}");
@@ -258,6 +267,9 @@ public class FileHandlers
                         _logger.Log("INFO",
                             $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {PluralHelper.Count(result.FileCount, "file")}",
                             "OPEN_FOLDER");
+
+                        _recentFilesService.AddRecentFolder(
+                            folderPath, FileFormatDetector.DescribeShortType(format.Value));
 
                         ShowEpathRecords(result.Records, form,
                             $"Loaded folder: {folderName} ({result.FileCount} files, Records: {result.Records.Count})",
@@ -317,7 +329,8 @@ public class FileHandlers
     /// Picks which format to load. A folder holding more than one record format
     /// cannot be merged into a single view, so the user chooses.
     /// </summary>
-    private DetectedFileFormat? ChooseFormat(FolderScanResult scan, MainForm form)
+    private DetectedFileFormat? ChooseFormat(
+        FolderScanResult scan, MainForm form, DetectedFileFormat? preferredFormat)
     {
         var formats = scan.AvailableFormats;
         if (formats.Count == 1)
@@ -345,7 +358,7 @@ public class FileHandlers
             form.Cursor = previousCursor;
         }
 
-        using var chooser = new FolderFormatChooserForm(scan, recordCounts);
+        using var chooser = new FolderFormatChooserForm(scan, recordCounts, preferredFormat);
         return chooser.ShowDialog() == DialogResult.OK ? chooser.SelectedFormat : null;
     }
 
@@ -970,22 +983,47 @@ public class FileHandlers
 
         if (recentFiles.Count == 0)
         {
-            var emptyItem = new ToolStripMenuItem("(No recent files)") { Enabled = false };
+            var emptyItem = new ToolStripMenuItem("(No recent items)") { Enabled = false };
             mnuOpenRecent.DropDownItems.Add(emptyItem);
             return;
         }
 
         foreach (var entry in recentFiles)
         {
-            var displayName = Path.GetFileName(entry.FilePath);
+            // A folder path has no extension to hint at what it is, so say so.
+            var displayName = DisplayNameFor(entry.FilePath);
+            if (entry.IsFolder)
+                displayName += "  (folder)";
+
             var item = new ToolStripMenuItem(displayName)
             {
                 ToolTipText = entry.FilePath
             };
 
             var capturedPath = entry.FilePath;
+            var capturedIsFolder = entry.IsFolder;
+            var capturedFormat = FileFormatDetector.ParseShortType(entry.FileType);
+
             item.Click += (s, e) =>
             {
+                if (capturedIsFolder)
+                {
+                    if (Directory.Exists(capturedPath))
+                    {
+                        // The format recorded last time preselects the chooser;
+                        // the folder is rescanned, so its contents may have moved on.
+                        OpenFolder(capturedPath, form,
+                            capturedFormat == DetectedFileFormat.Unknown ? null : capturedFormat);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Folder not found: {capturedPath}", "Folder Not Found",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+
+                    return;
+                }
+
                 if (File.Exists(capturedPath))
                 {
                     OpenFile(capturedPath, form);
@@ -1002,12 +1040,22 @@ public class FileHandlers
 
         mnuOpenRecent.DropDownItems.Add(new ToolStripSeparator());
 
-        var clearItem = new ToolStripMenuItem("Clear Recent Files");
+        var clearItem = new ToolStripMenuItem("Clear Recent Items");
         clearItem.Click += (s, e) =>
         {
             _recentFilesService.ClearRecentFiles();
         };
         mnuOpenRecent.DropDownItems.Add(clearItem);
+    }
+
+    /// <summary>
+    /// The name to show for a recent entry. Falls back to the full path for a
+    /// drive root, which has no name of its own.
+    /// </summary>
+    private static string DisplayNameFor(string path)
+    {
+        var name = Path.GetFileName(path);
+        return string.IsNullOrEmpty(name) ? path : name;
     }
 
     // ── Open Containing Folder ───────────────────────────────────────────

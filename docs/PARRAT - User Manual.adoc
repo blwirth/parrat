@@ -90,9 +90,11 @@ Because the records come from many files, actions that rewrite the loaded file i
 
 ==== Recently Opened Files
 
-The application maintains a list of recently opened files for quick access. Select *Open Recent* from the *File* menu to view and reopen previously loaded files. Up to ten files are stored in this list.
+The application maintains a list of recently opened items for quick access. Select *Open Recent* from the *File* menu to view and reopen them. Up to ten items are stored in this list.
 
-To clear the history, select *Clear Recent Files* from the same menu.
+Loaded folders appear alongside files, marked *(folder)*. Reopening one rescans the folder rather than restoring what was loaded before, so files added or removed since are picked up. If the folder still holds more than one format, the format you chose last time is preselected.
+
+To clear the history, select *Clear Recent Items* from the same menu.
 
 ==== Open Containing Folder
 

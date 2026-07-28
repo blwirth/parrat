@@ -80,18 +80,35 @@ public class RecentFilesService : IRecentFilesService
     }
 
     public void AddRecentFile(string filePath, string fileType)
+        => AddRecent(filePath, fileType, isFolder: false);
+
+    public void AddRecentFolder(string folderPath, string fileType)
+        => AddRecent(folderPath, fileType, isFolder: true);
+
+    private void AddRecent(string path, string fileType, bool isFolder)
     {
-        if (string.IsNullOrWhiteSpace(filePath)) return;
+        if (string.IsNullOrWhiteSpace(path)) return;
 
         string normalizedPath;
         try
         {
-            normalizedPath = Path.GetFullPath(filePath);
+            normalizedPath = Path.GetFullPath(path);
+
+            // A trailing separator would leave the entry with no name to show.
+            // Drives keep theirs, since "C:" alone means something different.
+            if (isFolder)
+            {
+                var trimmed = normalizedPath.TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (trimmed.Length > 0 && !trimmed.EndsWith(Path.VolumeSeparatorChar))
+                    normalizedPath = trimmed;
+            }
         }
         catch (Exception ex)
         {
-            _logger.Log("WARN", "Failed to normalize file path, using raw path", "RECENT_FILES_PATH", ex.Message);
-            normalizedPath = filePath;
+            _logger.Log("WARN", "Failed to normalize path, using raw path", "RECENT_FILES_PATH", ex.Message);
+            normalizedPath = path;
         }
 
         var files = GetRecentFiles();
@@ -104,6 +121,7 @@ public class RecentFilesService : IRecentFilesService
         {
             FilePath = normalizedPath,
             FileType = fileType,
+            IsFolder = isFolder,
             OpenedAt = DateTime.UtcNow
         });
 
@@ -131,7 +149,10 @@ public class RecentFilesService : IRecentFilesService
 
         try
         {
-            var dir = Path.GetDirectoryName(mostRecent.FilePath);
+            // A folder entry is already the directory to return to.
+            var dir = mostRecent.IsFolder
+                ? mostRecent.FilePath
+                : Path.GetDirectoryName(mostRecent.FilePath);
             if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
             {
                 return dir;

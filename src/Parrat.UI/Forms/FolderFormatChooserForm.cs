@@ -17,8 +17,18 @@ public class FolderFormatChooserForm : ParratFormBase
     /// <summary>The format the user chose. Only meaningful when DialogResult is OK.</summary>
     public DetectedFileFormat SelectedFormat { get; private set; }
 
-    public FolderFormatChooserForm(FolderScanResult scan, IReadOnlyDictionary<DetectedFileFormat, int> recordCounts)
+    /// <param name="preferredFormat">
+    /// Format to preselect — the one chosen last time this folder was opened.
+    /// Ignored when the folder no longer holds it.
+    /// </param>
+    public FolderFormatChooserForm(
+        FolderScanResult scan,
+        IReadOnlyDictionary<DetectedFileFormat, int> recordCounts,
+        DetectedFileFormat? preferredFormat = null)
     {
+        if (preferredFormat != null && !scan.AvailableFormats.Contains(preferredFormat.Value))
+            preferredFormat = null;
+
         Text = "Choose Format to Load";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
@@ -51,7 +61,9 @@ public class FolderFormatChooserForm : ParratFormBase
                 Location = new Point(24, y),
                 Size = new Size(370, 24),
                 Tag = format,
-                Checked = _options.Count == 0
+                Checked = preferredFormat != null
+                    ? format == preferredFormat.Value
+                    : _options.Count == 0
             };
 
             _options.Add(radio);
@@ -59,7 +71,7 @@ public class FolderFormatChooserForm : ParratFormBase
             y += 26;
         }
 
-        SelectedFormat = scan.AvailableFormats[0];
+        SelectedFormat = preferredFormat ?? scan.AvailableFormats[0];
 
         // Sized to its content: the dialog holds one row per format present, so
         // a fixed height either gapes or crowds depending on how many there are.

@@ -128,6 +128,30 @@ public static class FileFormatDetector
     };
 
     /// <summary>
+    /// The short type name used for loaded state and the recent items list —
+    /// "xml", "hl7", "epath". Empty for formats that cannot be loaded.
+    /// </summary>
+    public static string DescribeShortType(DetectedFileFormat format) => format switch
+    {
+        DetectedFileFormat.Hl7 => "hl7",
+        DetectedFileFormat.NaaccrXml => "xml",
+        DetectedFileFormat.EpathDat => "epath",
+        _ => ""
+    };
+
+    /// <summary>
+    /// The format for a short type name, or <see cref="DetectedFileFormat.Unknown"/>
+    /// if it is absent or unrecognized.
+    /// </summary>
+    public static DetectedFileFormat ParseShortType(string? shortType) => shortType switch
+    {
+        "hl7" => DetectedFileFormat.Hl7,
+        "xml" => DetectedFileFormat.NaaccrXml,
+        "epath" => DetectedFileFormat.EpathDat,
+        _ => DetectedFileFormat.Unknown
+    };
+
+    /// <summary>
     /// What a single navigable record is called in this format, singular. A
     /// NAACCR file is counted in tumors rather than patients, since one patient
     /// may carry several.

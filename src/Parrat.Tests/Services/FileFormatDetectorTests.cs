@@ -142,6 +142,35 @@ public class FileFormatDetectorTests
         Assert.Equal("unrecognized", FileFormatDetector.DescribeFormat(DetectedFileFormat.Unknown));
     }
 
+    [Theory]
+    [InlineData(DetectedFileFormat.Hl7, "hl7")]
+    [InlineData(DetectedFileFormat.NaaccrXml, "xml")]
+    [InlineData(DetectedFileFormat.EpathDat, "epath")]
+    public void ShortType_RoundTripsThroughParse(DetectedFileFormat format, string expected)
+    {
+        var shortType = FileFormatDetector.DescribeShortType(format);
+
+        Assert.Equal(expected, shortType);
+        Assert.Equal(format, FileFormatDetector.ParseShortType(shortType));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("something-else")]
+    public void ParseShortType_UnrecognizedValue_ReturnsUnknown(string? shortType)
+    {
+        Assert.Equal(DetectedFileFormat.Unknown, FileFormatDetector.ParseShortType(shortType));
+    }
+
+    [Fact]
+    public void DescribeRecordUnit_NamesTheRecordEachFormatIsCountedIn()
+    {
+        Assert.Equal("tumor", FileFormatDetector.DescribeRecordUnit(DetectedFileFormat.NaaccrXml));
+        Assert.Equal("message", FileFormatDetector.DescribeRecordUnit(DetectedFileFormat.Hl7));
+        Assert.Equal("record", FileFormatDetector.DescribeRecordUnit(DetectedFileFormat.EpathDat));
+    }
+
     private static string WriteTempFile(string prefix, string extension, string content)
     {
         var path = Path.Combine(Path.GetTempPath(), $"parrat-{prefix}-{Guid.NewGuid():N}{extension}");
