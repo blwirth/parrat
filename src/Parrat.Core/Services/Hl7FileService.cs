@@ -17,15 +17,27 @@ public class Hl7FileService : IHl7FileService
         _parser = parser;
     }
 
+    /// <summary>Buffer size for streaming reads; large enough that IO is not the bottleneck.</summary>
+    private const int ReadBufferSize = 64 * 1024;
+
     public List<Hl7Message> LoadHl7File(string filePath)
     {
+        // Streamed a line at a time rather than read whole. Buffering the text
+        // of a large file costs several copies of it — the string itself, then
+        // one per line-ending normalization pass — before parsing even starts.
         // Read as ASCII, matching PS: Get-Content -Encoding ASCII
-        var content = File.ReadAllText(filePath, Encoding.ASCII);
+        return _parser.ParseLines(ReadLines(filePath));
+    }
 
-        if (string.IsNullOrWhiteSpace(content))
-            return new List<Hl7Message>();
+    private static IEnumerable<string> ReadLines(string filePath)
+    {
+        using var stream = new FileStream(
+            filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize);
+        using var reader = new StreamReader(stream, Encoding.ASCII, false, ReadBufferSize);
 
-        return _parser.Parse(content);
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+            yield return line;
     }
 
     public void SaveHl7File(string filePath, List<Hl7Message> messages)

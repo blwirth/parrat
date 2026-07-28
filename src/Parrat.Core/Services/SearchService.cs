@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text;
 using System.Xml;
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
@@ -29,6 +30,23 @@ public class SearchService : ISearchService
         _tumors = tumors;
         _nsMgr = nsMgr;
         _hl7Messages = hl7Messages;
+    }
+
+    /// <summary>
+    /// Appends a range of text in lower case, separating entries with a space
+    /// so joined values do not run together. Empty ranges append nothing,
+    /// matching the old behaviour of skipping blank parts before joining.
+    /// </summary>
+    private static void AppendLower(StringBuilder buffer, string? text, int start, int length)
+    {
+        if (string.IsNullOrEmpty(text) || length <= 0)
+            return;
+
+        if (buffer.Length > 0)
+            buffer.Append(' ');
+
+        for (int i = start; i < start + length; i++)
+            buffer.Append(char.ToLower(text[i]));
     }
 
     public string[] BuildSearchIndex(string fileType)
@@ -72,10 +90,16 @@ public class SearchService : ISearchService
 
                 var index = new string[_hl7Messages.Count];
 
+                // Built into a reused buffer, lowercasing as we go. Joining the
+                // parts and then lowercasing the result would materialize every
+                // report narrative twice more than necessary, which is the
+                // dominant allocation once a load holds thousands of messages.
+                var buffer = new StringBuilder(1024);
+
                 for (int i = 0; i < _hl7Messages.Count; i++)
                 {
                     var msg = _hl7Messages[i];
-                    var parts = new List<string>();
+                    buffer.Clear();
 
                     // Add parsed fields
                     string[] fieldProps = { msg.PatientId, msg.PatientLastName, msg.PatientFirstName,
@@ -84,29 +108,27 @@ public class SearchService : ISearchService
                         msg.OrderDateTime, msg.OrderingProvider };
 
                     foreach (var val in fieldProps)
-                    {
-                        if (!string.IsNullOrEmpty(val))
-                            parts.Add(val);
-                    }
+                        AppendLower(buffer, val, 0, val?.Length ?? 0);
 
                     // Source file name, so a folder load can be filtered down to
                     // the records that came from one report.
                     if (!string.IsNullOrEmpty(msg.SourceFile))
-                        parts.Add(Path.GetFileName(msg.SourceFile));
+                    {
+                        var name = Path.GetFileName(msg.SourceFile);
+                        AppendLower(buffer, name, 0, name.Length);
+                    }
 
-                    // OBX text content
+                    // OBX-5 (observation value) carries the report text.
                     if (msg.Segments.TryGetValue("OBX", out var obxSegs) && obxSegs.Count > 0)
                     {
-                        // Extract OBX-5 (observation value) from each OBX segment
                         foreach (var seg in obxSegs)
                         {
-                            var fields = seg.Split('|');
-                            if (fields.Length > 5 && !string.IsNullOrEmpty(fields[5]))
-                                parts.Add(fields[5]);
+                            if (Hl7FieldHelper.TryGetFieldBounds(seg, 5, out var start, out var length))
+                                AppendLower(buffer, seg, start, length);
                         }
                     }
 
-                    index[i] = string.Join(" ", parts).ToLower();
+                    index[i] = buffer.ToString();
                 }
 
                 return index;

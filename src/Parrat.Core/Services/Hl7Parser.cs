@@ -20,13 +20,7 @@ public class Hl7Parser : IHl7Parser
     }
 
     public string GetField(string segment, int fieldIndex)
-    {
-        if (string.IsNullOrWhiteSpace(segment))
-            return "";
-
-        var fields = segment.Split('|');
-        return fieldIndex < fields.Length ? fields[fieldIndex] : "";
-    }
+        => Hl7FieldHelper.GetField(segment, fieldIndex);
 
     public string GetComponent(string field, int componentIndex)
     {
@@ -39,21 +33,49 @@ public class Hl7Parser : IHl7Parser
 
     public List<Hl7Message> Parse(string content)
     {
+        if (string.IsNullOrEmpty(content))
+            return new List<Hl7Message>();
+
+        return ParseLines(EnumerateLines(content));
+    }
+
+    /// <summary>
+    /// Splits text into lines without materializing an array of every line,
+    /// and without the two full-string copies that normalizing \r\n and \r
+    /// would otherwise cost.
+    /// </summary>
+    private static IEnumerable<string> EnumerateLines(string content)
+    {
+        int start = 0;
+
+        for (int i = 0; i < content.Length; i++)
+        {
+            var c = content[i];
+            if (c != '\n' && c != '\r') continue;
+
+            yield return content[start..i];
+
+            // Treat \r\n as one break.
+            if (c == '\r' && i + 1 < content.Length && content[i + 1] == '\n')
+                i++;
+
+            start = i + 1;
+        }
+
+        if (start < content.Length)
+            yield return content[start..];
+    }
+
+    public List<Hl7Message> ParseLines(IEnumerable<string> lines)
+    {
         var messages = new List<Hl7Message>();
 
-        if (string.IsNullOrEmpty(content))
-            return messages;
-
-        // Normalize line endings to \n
-        content = content.Replace("\r\n", "\n").Replace("\r", "\n");
-
-        // Split content into individual messages by MSH segments
-        var messageTexts = new List<string>();
+        // Lines are accumulated per message and the message is built as soon as
+        // the next MSH arrives, so the whole file is never held as text in
+        // addition to the parsed messages.
         var currentMessageLines = new List<string>();
 
-        var allLines = content.Split('\n');
-
-        foreach (var line in allLines)
+        foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
             if (string.IsNullOrEmpty(trimmedLine))
@@ -65,77 +87,82 @@ public class Hl7Parser : IHl7Parser
             if (Hl7BatchHelper.IsEnvelopeSegment(trimmedLine))
                 continue;
 
-            if (trimmedLine.StartsWith("MSH|"))
+            if (trimmedLine.StartsWith("MSH|", StringComparison.Ordinal))
             {
                 if (currentMessageLines.Count > 0)
                 {
-                    messageTexts.Add(string.Join("\n", currentMessageLines));
-                    currentMessageLines.Clear();
+                    messages.Add(BuildMessage(currentMessageLines, messages.Count));
+                    currentMessageLines = new List<string>();
                 }
                 currentMessageLines.Add(trimmedLine);
             }
-            else
+            else if (currentMessageLines.Count > 0)
             {
-                if (currentMessageLines.Count > 0)
-                    currentMessageLines.Add(trimmedLine);
+                currentMessageLines.Add(trimmedLine);
             }
         }
 
         if (currentMessageLines.Count > 0)
-            messageTexts.Add(string.Join("\n", currentMessageLines));
-
-        for (int i = 0; i < messageTexts.Count; i++)
-        {
-            var msg = messageTexts[i];
-
-            var segments = new Dictionary<string, List<string>>();
-            var allSegments = new List<string>();
-            var lines = msg.Split('\n');
-
-            foreach (var line in lines)
-            {
-                var trimmedLine = line.Trim();
-                if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.Length < 3)
-                    continue;
-
-                var segmentType = trimmedLine[..3];
-                if (!segments.ContainsKey(segmentType))
-                    segments[segmentType] = new List<string>();
-                segments[segmentType].Add(trimmedLine);
-                allSegments.Add(trimmedLine);
-            }
-
-            var mshLine = segments.TryGetValue("MSH", out var mshList) ? mshList[0] : "";
-            var pidLine = segments.TryGetValue("PID", out var pidList) ? pidList[0] : "";
-            var obrLine = segments.TryGetValue("OBR", out var obrList) ? obrList[0] : "";
-
-            var parsedMsh = ParseMsh(mshLine);
-            var parsedPid = ParsePid(pidLine);
-            var parsedObr = ParseObr(obrLine);
-
-            messages.Add(new Hl7Message
-            {
-                Index = i,
-                RawContent = msg,
-                Segments = segments,
-                AllSegments = allSegments,
-                PatientId = parsedPid.PatientId,
-                PatientName = parsedPid.PatientName,
-                PatientLastName = parsedPid.LastName,
-                PatientFirstName = parsedPid.FirstName,
-                DateOfBirth = parsedPid.DateOfBirth,
-                Sex = parsedPid.Sex,
-                MessageType = parsedMsh.MessageType,
-                MessageDateTime = parsedMsh.MessageDateTime,
-                SendingApplication = parsedMsh.SendingApplication,
-                SendingFacility = parsedMsh.SendingFacility,
-                AccessionNumber = parsedObr.AccessionNumber,
-                OrderDateTime = parsedObr.OrderDateTime,
-                OrderingProvider = parsedObr.OrderingProvider
-            });
-        }
+            messages.Add(BuildMessage(currentMessageLines, messages.Count));
 
         return messages;
+    }
+
+    /// <summary>
+    /// Builds one message from its segment lines. The lines list becomes the
+    /// message's AllSegments, and the segment dictionary holds references to
+    /// those same strings rather than copies.
+    /// </summary>
+    private Hl7Message BuildMessage(List<string> lines, int index)
+    {
+        var segments = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (var line in lines)
+        {
+            if (line.Length < 3)
+                continue;
+
+            var segmentType = line[..3];
+            if (!segments.TryGetValue(segmentType, out var ofType))
+                segments[segmentType] = ofType = new List<string>(1);
+            ofType.Add(line);
+        }
+
+        var mshLine = segments.TryGetValue("MSH", out var mshList) ? mshList[0] : "";
+        var pidLine = segments.TryGetValue("PID", out var pidList) ? pidList[0] : "";
+        var obrLine = segments.TryGetValue("OBR", out var obrList) ? obrList[0] : "";
+
+        var parsedMsh = ParseMsh(mshLine);
+        var parsedPid = ParsePid(pidLine);
+        var parsedObr = ParseObr(obrLine);
+
+        // Lines too short to carry a segment id are excluded from AllSegments
+        // but kept in RawContent, matching the previous behaviour. The common
+        // case has none, and then the accumulated list is used as-is.
+        var allSegments = lines.TrueForAll(l => l.Length >= 3)
+            ? lines
+            : lines.Where(l => l.Length >= 3).ToList();
+
+        return new Hl7Message
+        {
+            Index = index,
+            RawContent = string.Join("\n", lines),
+            Segments = segments,
+            AllSegments = allSegments,
+            PatientId = parsedPid.PatientId,
+            PatientName = parsedPid.PatientName,
+            PatientLastName = parsedPid.LastName,
+            PatientFirstName = parsedPid.FirstName,
+            DateOfBirth = parsedPid.DateOfBirth,
+            Sex = parsedPid.Sex,
+            MessageType = parsedMsh.MessageType,
+            MessageDateTime = parsedMsh.MessageDateTime,
+            SendingApplication = parsedMsh.SendingApplication,
+            SendingFacility = parsedMsh.SendingFacility,
+            AccessionNumber = parsedObr.AccessionNumber,
+            OrderDateTime = parsedObr.OrderDateTime,
+            OrderingProvider = parsedObr.OrderingProvider
+        };
     }
 
     public MshSegment ParseMsh(string mshSegment)

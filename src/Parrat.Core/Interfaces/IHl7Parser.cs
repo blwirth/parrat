@@ -7,6 +7,12 @@ public interface IHl7Parser
     string GetField(string segment, int fieldIndex);
     string GetComponent(string field, int componentIndex);
     List<Hl7Message> Parse(string content);
+
+    /// <summary>
+    /// Parses messages from a sequence of lines. Lets callers stream a file
+    /// rather than buffering its whole text, which matters for large files.
+    /// </summary>
+    List<Hl7Message> ParseLines(IEnumerable<string> lines);
     MshSegment ParseMsh(string mshSegment);
     PidSegment ParsePid(string pidSegment);
     ObrSegment ParseObr(string obrSegment);
