@@ -146,12 +146,12 @@ public class SearchServiceTests
         table.Columns.Add("Index", typeof(int));
         table.Rows.Add(1);
         table.Rows.Add(2);
-        table.DefaultView.RowFilter = "Index = 1";
 
         var service = new SearchService();
+        service.ApplyFilter("a", table, new[] { "a", "b" });
         service.ApplyFilter("", table, new[] { "a", "b" });
 
-        Assert.Equal("", table.DefaultView.RowFilter);
+        Assert.Equal(2, table.DefaultView.Count);
     }
 
     [Fact]
