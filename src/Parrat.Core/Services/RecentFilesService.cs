@@ -47,10 +47,25 @@ public class RecentFilesService : IRecentFilesService
             if (string.IsNullOrWhiteSpace(content)) return new List<RecentFileEntry>();
 
             var wrapper = JsonSerializer.Deserialize<RecentFilesWrapper>(content, ReadOptions);
-            return wrapper?.Files ?? new List<RecentFileEntry>();
+            var entries = wrapper?.Files ?? new List<RecentFileEntry>();
+
+            // An entry with no path cannot be opened and would show as a blank
+            // menu item, so drop it rather than surface it.
+            var usable = entries.Where(e => !string.IsNullOrWhiteSpace(e.FilePath)).ToList();
+
+            if (usable.Count != entries.Count)
+            {
+                _logger.Log("WARN",
+                    $"Discarded {entries.Count - usable.Count} recent entr(y/ies) with no path",
+                    "RECENT_FILES_LOAD");
+            }
+
+            return usable;
         }
         catch (Exception ex)
         {
+            // The recent list is a convenience, never a prerequisite. A file we
+            // cannot read costs the history, not the session.
             _logger.LogError("Failed to read recent files list", "RECENT_FILES_LOAD", ex);
             return new List<RecentFileEntry>();
         }

@@ -142,6 +142,71 @@ public class RecentFilesServiceTests : IDisposable
         Assert.Contains("persist.xml", files[0].FilePath);
     }
 
+    // ── Corrupt or unexpected recent-files.json ──────────────────────────
+
+    private static void WriteRecentJson(string content)
+    {
+        Directory.CreateDirectory(PathHelper.ConfigDir);
+        File.WriteAllText(Path.Combine(PathHelper.ConfigDir, "recent-files.json"), content);
+    }
+
+    [Theory]
+    [InlineData("not json at all")]
+    [InlineData("{ \"files\": ")]
+    [InlineData("{ \"files\": \"not-an-array\" }")]
+    [InlineData("[]")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("null")]
+    public void GetRecentFiles_CorruptFile_ReturnsEmptyWithoutThrowing(string content)
+    {
+        WriteRecentJson(content);
+
+        var files = new RecentFilesService().GetRecentFiles();
+
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public void GetRecentFiles_WrongTypeOnIsFolder_ReturnsEmptyWithoutThrowing()
+    {
+        WriteRecentJson("""
+        { "version": 1, "files": [
+          { "filePath": "C:\\a.xml", "fileType": "xml", "isFolder": "yes" }
+        ] }
+        """);
+
+        Assert.Empty(new RecentFilesService().GetRecentFiles());
+    }
+
+    [Fact]
+    public void GetRecentFiles_EntriesMissingAPath_AreDroppedNotReturned()
+    {
+        WriteRecentJson("""
+        { "version": 1, "files": [
+          { "fileType": "xml" },
+          { "filePath": null, "fileType": "hl7" },
+          { "filePath": "", "fileType": "hl7" },
+          { "filePath": "C:\\good.xml", "fileType": "xml" }
+        ] }
+        """);
+
+        var entry = Assert.Single(new RecentFilesService().GetRecentFiles());
+        Assert.Equal(@"C:\good.xml", entry.FilePath);
+    }
+
+    [Fact]
+    public void AddRecentFile_AfterACorruptFile_StillRecordsTheNewEntry()
+    {
+        WriteRecentJson("not json at all");
+
+        var service = new RecentFilesService();
+        service.AddRecentFile("/tmp/after-corruption.xml", "xml");
+
+        var entry = Assert.Single(service.GetRecentFiles());
+        Assert.Contains("after-corruption.xml", entry.FilePath);
+    }
+
     // ── Folder entries ───────────────────────────────────────────────────
 
     [Fact]
