@@ -146,6 +146,76 @@ The match count displays to the right of the search bar (e.g., "42 / 150"). Clic
 
 To clear the search, click the clear button (*✕*) or press `Escape` while the search bar is focused. Checkbox selections are preserved when filtering.
 
+=== Filtering Records by Field
+
+Search matches text anywhere in a record. When you need to narrow by a specific field — diagnoses in a given year, a primary site range, records missing a value — use *View → Filter Records...* or press `Ctrl+Shift+F`.
+
+The filter dialog builds a list of conditions, each naming a field, an operator, and a value. Conditions are combined top to bottom with *AND* or *OR* and evaluated strictly left to right: `A AND B OR C` means `(A AND B) OR C`. There is no grouping with parentheses.
+
+* *NAACCR XML*: click *Choose field...* to pick any NAACCR item. The picker opens showing only the fields present in the loaded file; tick *Show all dictionary fields* to search the full dictionary. Patient-level and file-level fields (such as `sex` or `registryId`) can be filtered from a tumor row — the value is resolved at the level the item lives at.
+* *HL7*: choose from the fields the parser extracts — patient ID, name, date of birth, sex, message type, accession number, order date/time, ordering provider, sending application and facility, and the source file name.
+
+==== Operators
+
+All values are compared as *text*, including dates. NAACCR and HL7 dates are zero-padded `CCYYMMDD` strings, so text comparison orders them exactly as date comparison would.
+
+[cols="1,3"]
+|===
+| Operator | Matches
+
+| `=`, `<>` | Exact value, or anything but it
+| `contains`, `does not contain` | Value appears anywhere in the field
+| `starts with`, `ends with` | Value at the beginning or end of the field
+| `LIKE`, `NOT LIKE` | SQL wildcards: `%` matches any run of characters, `_` matches exactly one. `C50%` matches `C500` through `C509`
+| `IN (a,b,c)` | Any entry in a comma-separated list
+| `BETWEEN` | Inclusive range, e.g. `20260101` and `20261231`
+| `>`, `>=`, `<`, `<=` | Ordering comparison
+| `is empty`, `is not empty` | Field missing, blank, or whitespace only
+|===
+
+Matching is case-insensitive throughout.
+
+==== Filtering on Part of a Value
+
+The dropdown beside each field selects which part of the value is compared — the SQL `LEFT()` equivalent:
+
+* *whole value* — the value as stored
+* *year (1-4)* — the first four characters, so `= 2026` finds every diagnosis in 2026
+* *year+month (1-6)* — the first six characters
+* *date (1-8)* — the first eight characters, which drops the time from an HL7 timestamp
+
+Date fields default to *year*, since that is the usual question. Two ways to ask for a calendar year, both correct:
+
+* `dateOfDiagnosis`, *year*, `=`, `2026`
+* `dateOfDiagnosis`, *whole value*, `BETWEEN`, `20260101` and `20261231`
+
+==== Previewing and Applying
+
+*Preview* reports how many records the filter matches without applying it, so a mistyped value shows up before it hides anything.
+
+*Apply* narrows the navigation grid. While a filter is applied:
+
+* an amber *FILTER ACTIVE* banner appears above the grid showing the record count and the conditions in force
+* the status bar and record label report the filtered count alongside the total
+* *Previous* and *Next* step only through records the filter leaves visible
+
+The filter and the search bar work together — a record must satisfy both to appear. This means you can filter to a year and then type a name to search within that year.
+
+==== Acting on Filtered Records
+
+*Select all N* on the banner ticks the checkbox on every record currently shown. Every feature that works on selected records — export, split, deduplication, field assignment — then operates on the filtered set.
+
+==== Clearing the Filter
+
+Any of these clears it:
+
+* the *✕ Clear filter* button on the banner
+* *View → Clear Filter*
+* `Escape` while the navigation grid has focus
+* loading a different file or folder, which clears the filter automatically since its fields may not exist in the new file
+
+Clearing the filter leaves the search bar and checkbox selections untouched.
+
 === Comparing Records
 
 To compare two records against each other, select them by highlighting rows using `Ctrl + Left Click` or `Shift + Left Click`, then select *Diff Records* from the *View* menu.
