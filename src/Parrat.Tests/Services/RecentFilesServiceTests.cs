@@ -141,4 +141,157 @@ public class RecentFilesServiceTests : IDisposable
         Assert.Single(files);
         Assert.Contains("persist.xml", files[0].FilePath);
     }
+
+    // ── Corrupt or unexpected recent-files.json ──────────────────────────
+
+    private static void WriteRecentJson(string content)
+    {
+        Directory.CreateDirectory(PathHelper.ConfigDir);
+        File.WriteAllText(Path.Combine(PathHelper.ConfigDir, "recent-files.json"), content);
+    }
+
+    [Theory]
+    [InlineData("not json at all")]
+    [InlineData("{ \"files\": ")]
+    [InlineData("{ \"files\": \"not-an-array\" }")]
+    [InlineData("[]")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("null")]
+    public void GetRecentFiles_CorruptFile_ReturnsEmptyWithoutThrowing(string content)
+    {
+        WriteRecentJson(content);
+
+        var files = new RecentFilesService().GetRecentFiles();
+
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public void GetRecentFiles_WrongTypeOnIsFolder_ReturnsEmptyWithoutThrowing()
+    {
+        WriteRecentJson("""
+        { "version": 1, "files": [
+          { "filePath": "C:\\a.xml", "fileType": "xml", "isFolder": "yes" }
+        ] }
+        """);
+
+        Assert.Empty(new RecentFilesService().GetRecentFiles());
+    }
+
+    [Fact]
+    public void GetRecentFiles_EntriesMissingAPath_AreDroppedNotReturned()
+    {
+        WriteRecentJson("""
+        { "version": 1, "files": [
+          { "fileType": "xml" },
+          { "filePath": null, "fileType": "hl7" },
+          { "filePath": "", "fileType": "hl7" },
+          { "filePath": "C:\\good.xml", "fileType": "xml" }
+        ] }
+        """);
+
+        var entry = Assert.Single(new RecentFilesService().GetRecentFiles());
+        Assert.Equal(@"C:\good.xml", entry.FilePath);
+    }
+
+    [Fact]
+    public void AddRecentFile_AfterACorruptFile_StillRecordsTheNewEntry()
+    {
+        WriteRecentJson("not json at all");
+
+        var service = new RecentFilesService();
+        service.AddRecentFile("/tmp/after-corruption.xml", "xml");
+
+        var entry = Assert.Single(service.GetRecentFiles());
+        Assert.Contains("after-corruption.xml", entry.FilePath);
+    }
+
+    // ── Folder entries ───────────────────────────────────────────────────
+
+    [Fact]
+    public void AddRecentFolder_MarksTheEntryAsAFolderAndKeepsItsFormat()
+    {
+        var folder = Path.Combine(_tempDir, "qa-batch");
+        Directory.CreateDirectory(folder);
+
+        var service = new RecentFilesService();
+        service.AddRecentFolder(folder, "hl7");
+
+        var entry = Assert.Single(service.GetRecentFiles());
+        Assert.True(entry.IsFolder);
+        Assert.Equal("hl7", entry.FileType);
+        Assert.Equal(folder, entry.FilePath);
+    }
+
+    [Fact]
+    public void AddRecentFile_LeavesEntriesMarkedAsNotFolders()
+    {
+        var service = new RecentFilesService();
+        service.AddRecentFile("/tmp/cases.xml", "xml");
+
+        Assert.False(service.GetRecentFiles()[0].IsFolder);
+    }
+
+    [Fact]
+    public void AddRecentFolder_StripsTrailingSeparatorSoTheEntryHasAName()
+    {
+        var folder = Path.Combine(_tempDir, "qa-batch");
+        Directory.CreateDirectory(folder);
+
+        var service = new RecentFilesService();
+        service.AddRecentFolder(folder + Path.DirectorySeparatorChar, "xml");
+
+        var entry = Assert.Single(service.GetRecentFiles());
+        Assert.Equal("qa-batch", Path.GetFileName(entry.FilePath));
+    }
+
+    [Fact]
+    public void AddRecentFolder_ReopeningTheSameFolderDoesNotDuplicateIt()
+    {
+        var folder = Path.Combine(_tempDir, "qa-batch");
+        Directory.CreateDirectory(folder);
+
+        var service = new RecentFilesService();
+        service.AddRecentFolder(folder, "hl7");
+        service.AddRecentFolder(folder, "xml");
+
+        var entry = Assert.Single(service.GetRecentFiles());
+        // The most recent choice wins.
+        Assert.Equal("xml", entry.FileType);
+    }
+
+    [Fact]
+    public void GetLastOpenedDirectory_ForAFolderEntry_ReturnsTheFolderItself()
+    {
+        var folder = Path.Combine(_tempDir, "qa-batch");
+        Directory.CreateDirectory(folder);
+
+        var service = new RecentFilesService();
+        service.AddRecentFolder(folder, "hl7");
+
+        Assert.Equal(folder, service.GetLastOpenedDirectory());
+    }
+
+    [Fact]
+    public void GetRecentFiles_EntriesWrittenBeforeFolderSupport_LoadAsFiles()
+    {
+        // recent-files.json predating folder loading has no isFolder field.
+        var path = Path.Combine(PathHelper.ConfigDir, "recent-files.json");
+        Directory.CreateDirectory(PathHelper.ConfigDir);
+        File.WriteAllText(path, """
+        {
+          "version": 1,
+          "maxItems": 10,
+          "files": [
+            { "filePath": "C:\\reports\\cases.xml", "fileType": "xml", "openedAt": "2026-01-01T00:00:00Z" }
+          ]
+        }
+        """);
+
+        var entry = Assert.Single(new RecentFilesService().GetRecentFiles());
+
+        Assert.False(entry.IsFolder);
+        Assert.Equal("xml", entry.FileType);
+    }
 }

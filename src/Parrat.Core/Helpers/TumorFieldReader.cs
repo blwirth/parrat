@@ -49,21 +49,29 @@ public static class TumorFieldReader
 
         if (tumors != null && tumorIndices != null && fieldIds.Count > 0)
         {
+            var reader = new NaaccrLeveledItemReader(
+                fieldIds.Select(id => new KeyValuePair<string, string>(id, parentElementResolver(id))));
+
+            var values = new Dictionary<string, string>(fieldIds.Count, StringComparer.Ordinal);
+
             foreach (var tumorIndex in tumorIndices)
             {
                 if (tumorIndex < 0 || tumorIndex >= tumors.Count) continue;
 
                 var tumor = tumors[tumorIndex];
                 if (tumor == null) continue;
-                var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr);
 
-                foreach (var fieldId in fieldIds)
-                {
-                    if (populated.Contains(fieldId)) continue;
-                    var parentElement = parentElementResolver(fieldId);
-                    if (!string.IsNullOrEmpty(ReadValue(tumor, patient, fieldId, parentElement, nsMgr)))
-                        populated.Add(fieldId);
-                }
+                values.Clear();
+                reader.ReadRow(tumor, NaaccrLeveledItemReader.FindPatient(tumor), values);
+
+                // Only non-empty values are recorded by the reader, so anything
+                // present here counts as populated.
+                foreach (var value in values)
+                    populated.Add(value.Key);
+
+                // Every field has been seen with a value; nothing left to find.
+                if (populated.Count == fieldIds.Count)
+                    break;
             }
         }
 

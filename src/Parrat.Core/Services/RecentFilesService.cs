@@ -47,10 +47,25 @@ public class RecentFilesService : IRecentFilesService
             if (string.IsNullOrWhiteSpace(content)) return new List<RecentFileEntry>();
 
             var wrapper = JsonSerializer.Deserialize<RecentFilesWrapper>(content, ReadOptions);
-            return wrapper?.Files ?? new List<RecentFileEntry>();
+            var entries = wrapper?.Files ?? new List<RecentFileEntry>();
+
+            // An entry with no path cannot be opened and would show as a blank
+            // menu item, so drop it rather than surface it.
+            var usable = entries.Where(e => !string.IsNullOrWhiteSpace(e.FilePath)).ToList();
+
+            if (usable.Count != entries.Count)
+            {
+                _logger.Log("WARN",
+                    $"Discarded {entries.Count - usable.Count} recent entr(y/ies) with no path",
+                    "RECENT_FILES_LOAD");
+            }
+
+            return usable;
         }
         catch (Exception ex)
         {
+            // The recent list is a convenience, never a prerequisite. A file we
+            // cannot read costs the history, not the session.
             _logger.LogError("Failed to read recent files list", "RECENT_FILES_LOAD", ex);
             return new List<RecentFileEntry>();
         }
@@ -80,18 +95,35 @@ public class RecentFilesService : IRecentFilesService
     }
 
     public void AddRecentFile(string filePath, string fileType)
+        => AddRecent(filePath, fileType, isFolder: false);
+
+    public void AddRecentFolder(string folderPath, string fileType)
+        => AddRecent(folderPath, fileType, isFolder: true);
+
+    private void AddRecent(string path, string fileType, bool isFolder)
     {
-        if (string.IsNullOrWhiteSpace(filePath)) return;
+        if (string.IsNullOrWhiteSpace(path)) return;
 
         string normalizedPath;
         try
         {
-            normalizedPath = Path.GetFullPath(filePath);
+            normalizedPath = Path.GetFullPath(path);
+
+            // A trailing separator would leave the entry with no name to show.
+            // Drives keep theirs, since "C:" alone means something different.
+            if (isFolder)
+            {
+                var trimmed = normalizedPath.TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (trimmed.Length > 0 && !trimmed.EndsWith(Path.VolumeSeparatorChar))
+                    normalizedPath = trimmed;
+            }
         }
         catch (Exception ex)
         {
-            _logger.Log("WARN", "Failed to normalize file path, using raw path", "RECENT_FILES_PATH", ex.Message);
-            normalizedPath = filePath;
+            _logger.Log("WARN", "Failed to normalize path, using raw path", "RECENT_FILES_PATH", ex.Message);
+            normalizedPath = path;
         }
 
         var files = GetRecentFiles();
@@ -104,6 +136,7 @@ public class RecentFilesService : IRecentFilesService
         {
             FilePath = normalizedPath,
             FileType = fileType,
+            IsFolder = isFolder,
             OpenedAt = DateTime.UtcNow
         });
 
@@ -131,7 +164,10 @@ public class RecentFilesService : IRecentFilesService
 
         try
         {
-            var dir = Path.GetDirectoryName(mostRecent.FilePath);
+            // A folder entry is already the directory to return to.
+            var dir = mostRecent.IsFolder
+                ? mostRecent.FilePath
+                : Path.GetDirectoryName(mostRecent.FilePath);
             if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
             {
                 return dir;

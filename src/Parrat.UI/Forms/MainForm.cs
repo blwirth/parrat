@@ -151,6 +151,8 @@ public partial class MainForm : ParratFormBase
         // Wire file/navigation menu handlers
         _menuBuilder.MnuOpen.Click += (s, e) => _fileHandlers.HandleOpen(this);
 
+        _menuBuilder.MnuOpenFolderSet.Click += (s, e) => _fileHandlers.HandleOpenFolder(this);
+
         _menuBuilder.MnuOpenRecent.DropDownOpening += (s, e) =>
             _fileHandlers.PopulateOpenRecentMenu(_menuBuilder.MnuOpenRecent, this);
 
@@ -490,6 +492,12 @@ public partial class MainForm : ParratFormBase
         {
             var fileName = Path.GetFileName(_state.CurrentFilePath);
             Text = $"{appTitle} - {fileName}";
+        }
+        else if (_state.IsFolderLoad)
+        {
+            var folderName = Path.GetFileName(
+                _state.LoadedFolderPath!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            Text = $"{appTitle} - [{(string.IsNullOrEmpty(folderName) ? _state.LoadedFolderPath : folderName)}]";
         }
         else
         {

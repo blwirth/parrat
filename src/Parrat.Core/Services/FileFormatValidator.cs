@@ -1,5 +1,6 @@
 using System.Text;
 using System.Xml;
+using Parrat.Core.Helpers;
 
 namespace Parrat.Core.Services;
 
@@ -52,6 +53,10 @@ public static class FileFormatValidator
         {
             var line = rawLine.Trim();
             if (string.IsNullOrEmpty(line)) continue;
+
+            // Batch envelope segments wrap the messages; they are valid but carry
+            // nothing PARRAT reports on.
+            if (Hl7BatchHelper.IsEnvelopeSegment(line)) continue;
 
             if (line.StartsWith("MSH|"))
             {
@@ -301,11 +306,16 @@ public static class FileFormatValidator
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests whether a segment identifier is well-formed per HL7 v2 chapter 2:
+    /// exactly three uppercase alphanumeric characters, beginning with a letter.
+    /// Digits are legal in positions 2 and 3 (PV1, NK1, IN1, DG1, GT1, AL1, FT1, ...),
+    /// and Z-prefixed IDs are locally defined but follow the same shape.
+    /// </summary>
     private static bool IsValidSegmentId(string segId)
     {
         if (segId.Length != 3) return false;
-        // Standard HL7 v2 segment IDs: 2-3 uppercase letters, or specific known IDs
-        // Some segments use alphanumeric (e.g., ZCS, ZPI for Z-segments)
-        return segId.All(c => char.IsLetterOrDigit(c) && char.IsUpper(c));
+        if (segId[0] is < 'A' or > 'Z') return false;
+        return segId.All(c => c is >= 'A' and <= 'Z' or >= '0' and <= '9');
     }
 }

@@ -4,12 +4,17 @@ on:
   push:
     branches: [main]
     paths: ['src/**']
+  # No paths filter on pull requests. "C# Tests" is a required check, and a
+  # check that never runs is never reported — a docs-only PR would wait for it
+  # forever rather than being allowed through.
   pull_request:
     branches: [main]
-    paths: ['src/**']
 
 jobs:
   build-and-test:
+    # Quoted: an unquoted # would start a YAML comment. This name is what the
+    # branch ruleset requires, so the two must stay in step.
+    name: "C# Tests"
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

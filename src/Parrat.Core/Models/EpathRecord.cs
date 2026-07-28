@@ -9,6 +9,13 @@ public class EpathRecord
     public int Index { get; set; }
     public string RawLine { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Path of the file this record was read from. Set when a folder is loaded
+    /// so a record can be traced back to its original report; empty otherwise.
+    /// </summary>
+    public string SourceFile { get; set; } = string.Empty;
+
+
     /// <summary>NAACCR item number → field value. Only non-empty fields are stored.</summary>
     public Dictionary<int, string> Fields { get; set; } = new();
 

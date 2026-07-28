@@ -22,6 +22,7 @@ public class MenuBuilder
     // File menu
     public ToolStripMenuItem MnuOpen { get; private set; } = null!;
     public ToolStripMenuItem MnuOpenRecent { get; private set; } = null!;
+    public ToolStripMenuItem MnuOpenFolderSet { get; private set; } = null!;
     public ToolStripMenuItem MnuOpenFolder { get; private set; } = null!;
     public ToolStripMenuItem MnuDiffFiles { get; private set; } = null!;
     public ToolStripMenuItem MnuConcatenate { get; private set; } = null!;
@@ -117,6 +118,14 @@ public class MenuBuilder
         };
         // Click handler wired by MainForm via FileHandlers
         mnuFile.DropDownItems.Add(MnuOpen);
+
+        MnuOpenFolderSet = new ToolStripMenuItem("Open Folder...")
+        {
+            ShortcutKeys = Keys.Control | Keys.Shift | Keys.O,
+            ToolTipText = "Load every report in a folder as one set (subfolders are not searched)"
+        };
+        // Click handler wired by MainForm via FileHandlers
+        mnuFile.DropDownItems.Add(MnuOpenFolderSet);
 
         MnuOpenRecent = new ToolStripMenuItem("Open Recent");
         // DropDownOpening handler wired by MainForm via FileHandlers
@@ -392,16 +401,22 @@ public class MenuBuilder
 
         MnuRawRecord.Enabled = hasFile;
         MnuDiffRecords.Enabled = hasFile;
-        MnuDeduplicate.Enabled = hasFile;
         MnuExport.Enabled = hasFile;
         MnuOpenFolder.Enabled = hasFile;
         MnuOpenReference.Enabled = hasFile;
 
+        // Actions that rewrite the loaded file in place have no single file to
+        // write back to when a folder is open, so they stay disabled. Read-only
+        // views and Export (which writes a new file) remain available.
+        bool canModifyInPlace = !_state.IsFolderLoad;
+
         bool isXml = fileType == "xml";
-        MnuAssign.Enabled = isXml;
-        MnuModifyXml.Enabled = isXml;
+        MnuAssign.Enabled = isXml && canModifyInPlace;
+        MnuModifyXml.Enabled = isXml && canModifyInPlace;
 
         bool isHl7 = fileType == "hl7";
-        MnuModifyHl7.Enabled = isHl7;
+        MnuModifyHl7.Enabled = isHl7 && canModifyInPlace;
+
+        MnuDeduplicate.Enabled = hasFile && canModifyInPlace;
     }
 }
