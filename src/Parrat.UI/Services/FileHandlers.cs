@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 using Parrat.Core.Services;
@@ -369,23 +370,27 @@ public class FileHandlers
             foreach (var col in xmlCols)
                 table.Columns.Add(col.Id, typeof(string));
 
+            // One pass over each element's children per record, rather than an
+            // XPath lookup per cell — the difference is roughly tenfold once a
+            // file holds thousands of tumors.
+            var itemReader = new NaaccrItemReader(xmlCols.Select(c => c.Id));
+            var values = new Dictionary<string, string>(xmlCols.Count, StringComparer.Ordinal);
+
             table.BeginLoadData();
             for (int i = 0; i < tumors.Count; i++)
             {
                 var tumor = tumors[i]!;
-                var patient = _xmlFileService.GetPatientForTumor(tumor);
+
+                values.Clear();
+                itemReader.ReadInto(tumor, values);
+                if (values.Count < xmlCols.Count)
+                    itemReader.ReadInto(_xmlFileService.GetPatientForTumor(tumor), values);
 
                 var row = table.NewRow();
                 row["Selected"] = false;
                 row["Index"] = i + 1;
                 foreach (var col in xmlCols)
-                {
-                    // Try tumor first, then patient
-                    var val = _xmlFileService.GetItemValue(tumor, col.Id, nsMgr);
-                    if (string.IsNullOrEmpty(val) && patient != null)
-                        val = _xmlFileService.GetItemValue(patient, col.Id, nsMgr);
-                    row[col.Id] = val;
-                }
+                    row[col.Id] = values.TryGetValue(col.Id, out var val) ? val : "";
 
                 table.Rows.Add(row);
             }

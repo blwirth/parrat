@@ -1,5 +1,6 @@
 using System.Data;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 
@@ -41,9 +42,14 @@ public class SearchService : ISearchService
 
                 var index = new string[_tumors.Count];
 
+                // Child elements are walked directly rather than via XPath: at
+                // thousands of tumors, compiling "./n:Item" per record costs far
+                // more than the walk itself.
+                var parts = new List<string>();
+
                 for (int i = 0; i < _tumors.Count; i++)
                 {
-                    var parts = new List<string>();
+                    parts.Clear();
                     var tumor = _tumors[i]!;
 
                     // Walk up to Patient node
@@ -51,32 +57,8 @@ public class SearchService : ISearchService
                     while (patient != null && patient.LocalName != "Patient")
                         patient = patient.ParentNode;
 
-                    // Patient-level items
-                    if (patient != null)
-                    {
-                        var items = patient.SelectNodes("./n:Item", _nsMgr);
-                        if (items != null)
-                        {
-                            foreach (XmlNode item in items)
-                            {
-                                string text = item.InnerText;
-                                if (!string.IsNullOrEmpty(text))
-                                    parts.Add(text);
-                            }
-                        }
-                    }
-
-                    // Tumor-level items
-                    var tumorItems = tumor.SelectNodes("./n:Item", _nsMgr);
-                    if (tumorItems != null)
-                    {
-                        foreach (XmlNode item in tumorItems)
-                        {
-                            string text = item.InnerText;
-                            if (!string.IsNullOrEmpty(text))
-                                parts.Add(text);
-                        }
-                    }
+                    NaaccrItemReader.CollectAllItemText(patient, parts);
+                    NaaccrItemReader.CollectAllItemText(tumor, parts);
 
                     index[i] = string.Join(" ", parts).ToLower();
                 }
