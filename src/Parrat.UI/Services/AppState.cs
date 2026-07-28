@@ -15,6 +15,16 @@ public class AppState
     public string? CurrentFilePath { get; set; }
     public string? FileType { get; set; } // "xml", "hl7", or "epath"
 
+    /// <summary>
+    /// Folder whose reports are currently loaded as one set, or null when a
+    /// single file is open. CurrentFilePath is null during a folder load, since
+    /// the records come from many files and no single file can be written back.
+    /// </summary>
+    public string? LoadedFolderPath { get; set; }
+
+    /// <summary>True when records were loaded from a folder rather than one file.</summary>
+    public bool IsFolderLoad => !string.IsNullOrEmpty(LoadedFolderPath);
+
     // Navigation state
     public int CurrentIndex { get; set; } = -1;
     public DataTable? NavTable { get; set; }
@@ -41,6 +51,7 @@ public class AppState
         Hl7Messages.Clear();
         EpathRecords.Clear();
         CurrentFilePath = null;
+        LoadedFolderPath = null;
         FileType = null;
         CurrentIndex = -1;
         NavTable = null;

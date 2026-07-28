@@ -25,6 +25,7 @@ public class FileHandlers
     private readonly MenuBuilder _menuBuilder;
     private readonly IGridSettingsService _gridSettingsService;
     private readonly IEpathParserService _epathParserService;
+    private readonly IFolderLoadService _folderLoadService;
 
     private System.Windows.Forms.Timer? _searchTimer;
 
@@ -37,8 +38,10 @@ public class FileHandlers
         NavigationService navigationService,
         MenuBuilder menuBuilder,
         IGridSettingsService gridSettingsService,
-        IEpathParserService epathParserService)
+        IEpathParserService epathParserService,
+        IFolderLoadService folderLoadService)
     {
+        _folderLoadService = folderLoadService;
         _state = state;
         _xmlFileService = xmlFileService;
         _hl7FileService = hl7FileService;
@@ -133,6 +136,184 @@ public class FileHandlers
             ImportXmlFile(filePath, form);
     }
 
+    // ── Open Folder ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads every report in a chosen folder as one navigable set, without
+    /// writing a concatenated file to disk. Only the selected folder is read;
+    /// subfolders are deliberately not searched.
+    /// </summary>
+    public void HandleOpenFolder(MainForm form)
+    {
+        using var fbd = new FolderBrowserDialog
+        {
+            Description = "Select a folder of reports to load (subfolders are not searched)",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = false
+        };
+
+        var lastDir = _recentFilesService.GetLastOpenedDirectory();
+        if (lastDir != null)
+            fbd.SelectedPath = lastDir;
+
+        if (fbd.ShowDialog() != DialogResult.OK)
+            return;
+
+        OpenFolder(fbd.SelectedPath, form);
+    }
+
+    /// <summary>Loads a folder by path. Separated from the dialog for reuse and testing.</summary>
+    public void OpenFolder(string folderPath, MainForm form)
+    {
+        try
+        {
+            var scan = _folderLoadService.ScanFolder(folderPath);
+
+            if (!scan.HasLoadableFiles)
+            {
+                MessageBox.Show(
+                    $"No HL7 or ePath reports found directly in:\n\n{folderPath}\n\n" +
+                    $"{scan.SkippedFiles.Count} file(s) in this folder are not a supported record format. " +
+                    "Subfolders are not searched.",
+                    "Nothing to Load", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var format = ChooseFormat(scan);
+            if (format == null)
+                return;
+
+            var paths = scan.FilesOfFormat(format.Value).Select(f => f.FilePath).ToList();
+
+            // Set folder state before populating the view: the grid adds its
+            // source file column based on it.
+            _state.CurrentFilePath = null;
+            _state.LoadedFolderPath = folderPath;
+
+            var folderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrEmpty(folderName))
+                folderName = folderPath;
+
+            if (format == DetectedFileFormat.Hl7)
+            {
+                var result = _folderLoadService.LoadHl7Files(paths);
+                if (!EnsureRecordsLoaded(result.Records.Count, result, folderPath, form))
+                    return;
+
+                _logger.Log("INFO",
+                    $"Loaded folder {folderPath}: {result.Records.Count} messages from {result.FileCount} file(s)",
+                    "OPEN_FOLDER");
+
+                ShowHl7Messages(result.Records, form,
+                    $"Loaded folder: {folderName} ({result.FileCount} files, Messages: {result.Records.Count})",
+                    $"Folder: {folderPath}");
+
+                ReportLoadIssues(result.Failures, scan);
+            }
+            else
+            {
+                var result = _folderLoadService.LoadEpathFiles(paths);
+                if (!EnsureRecordsLoaded(result.Records.Count, result, folderPath, form))
+                    return;
+
+                _logger.Log("INFO",
+                    $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {result.FileCount} file(s)",
+                    "OPEN_FOLDER");
+
+                ShowEpathRecords(result.Records, form,
+                    $"Loaded folder: {folderName} ({result.FileCount} files, Records: {result.Records.Count})",
+                    $"Folder: {folderPath}");
+
+                ReportLoadIssues(result.Failures, scan);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to load folder {folderPath}", "OPEN_FOLDER", ex);
+            MessageBox.Show($"Error loading folder: {ex.Message}", "Error");
+        }
+    }
+
+    /// <summary>
+    /// Picks which format to load. A folder holding more than one record format
+    /// cannot be merged into a single view, so the user chooses.
+    /// </summary>
+    private DetectedFileFormat? ChooseFormat(FolderScanResult scan)
+    {
+        var formats = scan.AvailableFormats;
+        if (formats.Count == 1)
+            return formats[0];
+
+        using var chooser = new FolderFormatChooserForm(scan);
+        return chooser.ShowDialog() == DialogResult.OK ? chooser.SelectedFormat : null;
+    }
+
+    /// <summary>
+    /// Reports the case where every candidate file failed and restores the
+    /// non-folder state so the app is not left claiming a folder is open.
+    /// </summary>
+    private bool EnsureRecordsLoaded<T>(int recordCount, FolderLoadResult<T> result, string folderPath, MainForm form)
+    {
+        if (recordCount > 0)
+            return true;
+
+        _state.LoadedFolderPath = null;
+
+        var detail = result.Failures.Count > 0
+            ? "\n\n" + string.Join("\n", result.Failures.Take(10).Select(f => $"  • {f.FileName}: {f.Reason}"))
+            : "";
+
+        MessageBox.Show(
+            $"No records could be read from the reports in:\n\n{folderPath}{detail}",
+            "Nothing Loaded", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+        ClearRecordView(form, "No records loaded", $"Folder: {folderPath}");
+        return false;
+    }
+
+    /// <summary>
+    /// Surfaces files that were left out of the load. Skipped and failed files
+    /// are always reported — a report silently missing from a QA pass is worse
+    /// than an extra dialog.
+    /// </summary>
+    private static void ReportLoadIssues(List<FolderFileFailure> failures, FolderScanResult scan)
+    {
+        if (failures.Count == 0 && scan.SkippedFiles.Count == 0)
+            return;
+
+        var lines = new List<string>();
+
+        if (failures.Count > 0)
+        {
+            lines.Add($"{failures.Count} file(s) could not be read:");
+            lines.AddRange(failures.Take(10).Select(f => $"  • {f.FileName}: {f.Reason}"));
+            if (failures.Count > 10)
+                lines.Add($"  ... and {failures.Count - 10} more.");
+        }
+
+        if (scan.SkippedFiles.Count > 0)
+        {
+            if (lines.Count > 0) lines.Add("");
+            lines.Add($"{scan.SkippedFiles.Count} file(s) were not loaded:");
+            lines.AddRange(scan.SkippedFiles.Take(10).Select(f =>
+                $"  • {f.FileName} ({FileFormatDetector.DescribeFormat(f.Format)})"));
+            if (scan.SkippedFiles.Count > 10)
+                lines.Add($"  ... and {scan.SkippedFiles.Count - 10} more.");
+
+            if (scan.SkippedFiles.Any(f => f.Format == DetectedFileFormat.NaaccrXml))
+            {
+                lines.Add("");
+                lines.Add("NAACCR XML cannot be folder-loaded: merging documents requires " +
+                          "reconciling their headers. Open XML files individually, or use " +
+                          "File → Concatenate → Concatenate XML.");
+            }
+        }
+
+        MessageBox.Show(string.Join("\n", lines), "Files Not Loaded",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
     // ── Import XML ───────────────────────────────────────────────────────
 
     private void ImportXmlFile(string filePath, MainForm form)
@@ -155,6 +336,7 @@ public class FileHandlers
             _state.Tumors = tumors;
             _state.NsMgr = nsMgr;
             _state.CurrentFilePath = filePath;
+            _state.LoadedFolderPath = null;
             _state.FileType = "xml";
             _state.CurrentIndex = -1;
 
@@ -166,16 +348,7 @@ public class FileHandlers
             if (tumors.Count == 0)
             {
                 MessageBox.Show("No <Tumor> elements found in this file.", "No Tumors");
-                form.SetStatusText("No tumors found");
-                form.SetFileNameText($"File: {filePath}");
-                form.RtbPath.Clear();
-                form.RtbItems.Clear();
-                form.GridNav.DataSource = null;
-                form.BtnPrev.Enabled = false;
-                form.BtnNext.Enabled = false;
-                form.LblIndex.Text = "";
-                form.PnlSearch.Visible = false;
-                form.UpdateTitle();
+                ClearRecordView(form, "No tumors found", $"File: {filePath}");
                 return;
             }
 
@@ -269,105 +442,113 @@ public class FileHandlers
             if (messages.Count == 0)
             {
                 MessageBox.Show("No HL7 messages found in this file.", "No Messages");
-                form.SetStatusText("No messages found");
-                form.SetFileNameText($"File: {filePath}");
-                form.RtbPath.Clear();
-                form.RtbItems.Clear();
-                form.GridNav.DataSource = null;
-                form.BtnPrev.Enabled = false;
-                form.BtnNext.Enabled = false;
-                form.LblIndex.Text = "";
-                form.PnlSearch.Visible = false;
-                form.UpdateTitle();
+                ClearRecordView(form, "No messages found", $"File: {filePath}");
                 return;
             }
 
-            // Set state
-            _state.Hl7Messages = messages;
             _state.CurrentFilePath = filePath;
-            _state.FileType = "hl7";
-            _state.CurrentIndex = -1;
-
-            // Clear XML data
-            _state.XmlDoc = null;
-            _state.Tumors = null;
-            _state.NsMgr = null;
-
-            _menuBuilder.UpdateMenuStatesForFileType("hl7");
+            _state.LoadedFolderPath = null;
 
             var fileName = Path.GetFileName(filePath);
-            form.SetStatusText($"Loaded: {fileName} (Messages: {messages.Count})");
-            form.SetFileNameText($"File: {filePath}");
-
             _logger.Log("INFO", $"Loaded {fileName} with {messages.Count} messages", "OPEN_FILE");
             _recentFilesService.AddRecentFile(filePath, "hl7");
 
-            // Build navigation table for HL7 (fixed columns, widths from settings)
-            var gridSettings = _gridSettingsService.Load();
-
-            var table = new DataTable();
-            table.Columns.Add("Selected", typeof(bool));
-            table.Columns.Add("Index", typeof(int));
-            table.Columns.Add("nameLast", typeof(string));
-            table.Columns.Add("nameFirst", typeof(string));
-            table.Columns.Add("dateOfBirth", typeof(string));
-            table.Columns.Add("accessionNumber", typeof(string));
-            table.Columns.Add("patientId", typeof(string));
-            table.Columns.Add("messageType", typeof(string));
-            table.Columns.Add("orderDateTime", typeof(string));
-
-            table.BeginLoadData();
-            foreach (var msg in messages)
-            {
-                var row = table.NewRow();
-                row["Selected"] = false;
-                row["Index"] = msg.Index + 1;
-                row["nameLast"] = msg.PatientLastName;
-                row["nameFirst"] = msg.PatientFirstName;
-                row["dateOfBirth"] = msg.DateOfBirth;
-                row["accessionNumber"] = msg.AccessionNumber;
-                row["patientId"] = msg.PatientId;
-                row["messageType"] = msg.MessageType;
-                row["orderDateTime"] = msg.OrderDateTime;
-
-                table.Rows.Add(row);
-            }
-            table.EndLoadData();
-
-            _state.NavTable = table;
-
-            // Temporarily disable event handling while loading data
-            _state.IsLoadingData = true;
-            form.GridNav.DataSource = null;
-            form.GridNav.Columns.Clear();
-            form.GridNav.DataSource = table;
-
-            ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
-
-            _state.IsLoadingData = false;
-
-            // Select first row and show first message
-            if (form.GridNav.Rows.Count > 0)
-            {
-                form.GridNav.Rows[0].Selected = true;
-                form.GridNav.CurrentCell = form.GridNav.Rows[0].Cells[0];
-            }
-            _navigationService.ShowHl7Message(0);
-
-            // Build search index
-            var searchService = new SearchService(_logger, null, null, messages);
-            _state.SearchIndex = searchService.BuildSearchIndex("hl7");
-
-            form.PnlSearch.Visible = true;
-            form.TxtSearch.Text = "";
-            form.LblSearchCount.Text = "";
-            form.UpdateTitle();
+            ShowHl7Messages(messages, form,
+                $"Loaded: {fileName} (Messages: {messages.Count})",
+                $"File: {filePath}");
         }
         catch (Exception ex)
         {
             _logger.LogError("Failed to load HL7 file", "OPEN_FILE", ex);
             MessageBox.Show($"Error loading HL7: {ex.Message}", "Error");
         }
+    }
+
+    /// <summary>
+    /// Populates state, grid and search index from a set of HL7 messages.
+    /// Shared by single-file and folder loads; the caller has already set the
+    /// path state that determines which of the two this is.
+    /// </summary>
+    private void ShowHl7Messages(List<Hl7Message> messages, MainForm form, string statusText, string fileNameText)
+    {
+        _state.Hl7Messages = messages;
+        _state.FileType = "hl7";
+        _state.CurrentIndex = -1;
+
+        // Clear XML data
+        _state.XmlDoc = null;
+        _state.Tumors = null;
+        _state.NsMgr = null;
+        _state.EpathRecords.Clear();
+
+        _menuBuilder.UpdateMenuStatesForFileType("hl7");
+
+        form.SetStatusText(statusText);
+        form.SetFileNameText(fileNameText);
+
+        // Build navigation table for HL7 (fixed columns, widths from settings)
+        var gridSettings = _gridSettingsService.Load();
+
+        var table = new DataTable();
+        table.Columns.Add("Selected", typeof(bool));
+        table.Columns.Add("Index", typeof(int));
+        AddSourceFileColumn(table);
+        table.Columns.Add("nameLast", typeof(string));
+        table.Columns.Add("nameFirst", typeof(string));
+        table.Columns.Add("dateOfBirth", typeof(string));
+        table.Columns.Add("accessionNumber", typeof(string));
+        table.Columns.Add("patientId", typeof(string));
+        table.Columns.Add("messageType", typeof(string));
+        table.Columns.Add("orderDateTime", typeof(string));
+
+        table.BeginLoadData();
+        foreach (var msg in messages)
+        {
+            var row = table.NewRow();
+            row["Selected"] = false;
+            row["Index"] = msg.Index + 1;
+            if (_state.IsFolderLoad)
+                row[SourceFileColumn] = Path.GetFileName(msg.SourceFile);
+            row["nameLast"] = msg.PatientLastName;
+            row["nameFirst"] = msg.PatientFirstName;
+            row["dateOfBirth"] = msg.DateOfBirth;
+            row["accessionNumber"] = msg.AccessionNumber;
+            row["patientId"] = msg.PatientId;
+            row["messageType"] = msg.MessageType;
+            row["orderDateTime"] = msg.OrderDateTime;
+
+            table.Rows.Add(row);
+        }
+        table.EndLoadData();
+
+        _state.NavTable = table;
+
+        // Temporarily disable event handling while loading data
+        _state.IsLoadingData = true;
+        form.GridNav.DataSource = null;
+        form.GridNav.Columns.Clear();
+        form.GridNav.DataSource = table;
+
+        ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
+
+        _state.IsLoadingData = false;
+
+        // Select first row and show first message
+        if (form.GridNav.Rows.Count > 0)
+        {
+            form.GridNav.Rows[0].Selected = true;
+            form.GridNav.CurrentCell = form.GridNav.Rows[0].Cells[0];
+        }
+        _navigationService.ShowHl7Message(0);
+
+        // Build search index
+        var searchService = new SearchService(_logger, null, null, messages);
+        _state.SearchIndex = searchService.BuildSearchIndex("hl7");
+
+        form.PnlSearch.Visible = true;
+        form.TxtSearch.Text = "";
+        form.LblSearchCount.Text = "";
+        form.UpdateTitle();
     }
 
     // ── Import ePath (.dat) ─────────────────────────────────────────────
@@ -391,106 +572,145 @@ public class FileHandlers
             if (records.Count == 0)
             {
                 MessageBox.Show("No ePath records found in this file.", "No Records");
-                form.SetStatusText("No records found");
-                form.SetFileNameText($"File: {filePath}");
-                form.RtbPath.Clear();
-                form.RtbItems.Clear();
-                form.GridNav.DataSource = null;
-                form.BtnPrev.Enabled = false;
-                form.BtnNext.Enabled = false;
-                form.LblIndex.Text = "";
-                form.PnlSearch.Visible = false;
-                form.UpdateTitle();
+                ClearRecordView(form, "No records found", $"File: {filePath}");
                 return;
             }
 
-            // Set state
-            _state.EpathRecords = records;
             _state.CurrentFilePath = filePath;
-            _state.FileType = "epath";
-            _state.CurrentIndex = -1;
-
-            // Clear other data
-            _state.XmlDoc = null;
-            _state.Tumors = null;
-            _state.NsMgr = null;
-            _state.Hl7Messages.Clear();
-
-            _menuBuilder.UpdateMenuStatesForFileType("epath");
+            _state.LoadedFolderPath = null;
 
             var fileName = Path.GetFileName(filePath);
             var version = records[0].FormatVersion;
-            form.SetStatusText($"Loaded: {fileName} (ePath {version}, Records: {records.Count})");
-            form.SetFileNameText($"File: {filePath}");
 
             _logger.Log("INFO", $"Loaded {fileName} with {records.Count} ePath records ({version})", "OPEN_FILE");
             _recentFilesService.AddRecentFile(filePath, "epath");
 
-            // Build navigation table
-            var gridSettings = _gridSettingsService.Load();
-
-            var table = new DataTable();
-            table.Columns.Add("Selected", typeof(bool));
-            table.Columns.Add("Index", typeof(int));
-            table.Columns.Add("nameLast", typeof(string));
-            table.Columns.Add("nameFirst", typeof(string));
-            table.Columns.Add("dateOfBirth", typeof(string));
-            table.Columns.Add("pathReportNumber", typeof(string));
-            table.Columns.Add("patientId", typeof(string));
-            table.Columns.Add("sendingFacility", typeof(string));
-            table.Columns.Add("formatVersion", typeof(string));
-
-            table.BeginLoadData();
-            foreach (var rec in records)
-            {
-                var row = table.NewRow();
-                row["Selected"] = false;
-                row["Index"] = rec.Index + 1;
-                row["nameLast"] = rec.PatientLastName;
-                row["nameFirst"] = rec.PatientFirstName;
-                row["dateOfBirth"] = rec.DateOfBirth;
-                row["pathReportNumber"] = rec.PathReportNumber;
-                row["patientId"] = rec.PatientId;
-                row["sendingFacility"] = rec.SendingFacility;
-                row["formatVersion"] = rec.FormatVersion;
-
-                table.Rows.Add(row);
-            }
-            table.EndLoadData();
-
-            _state.NavTable = table;
-
-            _state.IsLoadingData = true;
-            form.GridNav.DataSource = null;
-            form.GridNav.Columns.Clear();
-            form.GridNav.DataSource = table;
-
-            ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
-
-            _state.IsLoadingData = false;
-
-            if (form.GridNav.Rows.Count > 0)
-            {
-                form.GridNav.Rows[0].Selected = true;
-                form.GridNav.CurrentCell = form.GridNav.Rows[0].Cells[0];
-            }
-            _navigationService.ShowEpathRecord(0);
-
-            // Build search index from display fields
-            var searchEntries = records.Select(r =>
-                string.Join(" ", r.DisplayFields.Select(f => f.Value))).ToArray();
-            _state.SearchIndex = searchEntries;
-
-            form.PnlSearch.Visible = true;
-            form.TxtSearch.Text = "";
-            form.LblSearchCount.Text = "";
-            form.UpdateTitle();
+            ShowEpathRecords(records, form,
+                $"Loaded: {fileName} (ePath {version}, Records: {records.Count})",
+                $"File: {filePath}");
         }
         catch (Exception ex)
         {
             _logger.LogError("Failed to load ePath file", "OPEN_FILE", ex);
             MessageBox.Show($"Error loading ePath file: {ex.Message}", "Error");
         }
+    }
+
+    /// <summary>
+    /// Populates state, grid and search index from a set of ePath records.
+    /// Shared by single-file and folder loads.
+    /// </summary>
+    private void ShowEpathRecords(List<EpathRecord> records, MainForm form, string statusText, string fileNameText)
+    {
+        _state.EpathRecords = records;
+        _state.FileType = "epath";
+        _state.CurrentIndex = -1;
+
+        // Clear other data
+        _state.XmlDoc = null;
+        _state.Tumors = null;
+        _state.NsMgr = null;
+        _state.Hl7Messages.Clear();
+
+        _menuBuilder.UpdateMenuStatesForFileType("epath");
+
+        form.SetStatusText(statusText);
+        form.SetFileNameText(fileNameText);
+
+        // Build navigation table
+        var gridSettings = _gridSettingsService.Load();
+
+        var table = new DataTable();
+        table.Columns.Add("Selected", typeof(bool));
+        table.Columns.Add("Index", typeof(int));
+        AddSourceFileColumn(table);
+        table.Columns.Add("nameLast", typeof(string));
+        table.Columns.Add("nameFirst", typeof(string));
+        table.Columns.Add("dateOfBirth", typeof(string));
+        table.Columns.Add("pathReportNumber", typeof(string));
+        table.Columns.Add("patientId", typeof(string));
+        table.Columns.Add("sendingFacility", typeof(string));
+        table.Columns.Add("formatVersion", typeof(string));
+
+        table.BeginLoadData();
+        foreach (var rec in records)
+        {
+            var row = table.NewRow();
+            row["Selected"] = false;
+            row["Index"] = rec.Index + 1;
+            if (_state.IsFolderLoad)
+                row[SourceFileColumn] = Path.GetFileName(rec.SourceFile);
+            row["nameLast"] = rec.PatientLastName;
+            row["nameFirst"] = rec.PatientFirstName;
+            row["dateOfBirth"] = rec.DateOfBirth;
+            row["pathReportNumber"] = rec.PathReportNumber;
+            row["patientId"] = rec.PatientId;
+            row["sendingFacility"] = rec.SendingFacility;
+            row["formatVersion"] = rec.FormatVersion;
+
+            table.Rows.Add(row);
+        }
+        table.EndLoadData();
+
+        _state.NavTable = table;
+
+        _state.IsLoadingData = true;
+        form.GridNav.DataSource = null;
+        form.GridNav.Columns.Clear();
+        form.GridNav.DataSource = table;
+
+        ConfigureGridColumns(form.GridNav, gridSettings.Hl7.Columns);
+
+        _state.IsLoadingData = false;
+
+        if (form.GridNav.Rows.Count > 0)
+        {
+            form.GridNav.Rows[0].Selected = true;
+            form.GridNav.CurrentCell = form.GridNav.Rows[0].Cells[0];
+        }
+        _navigationService.ShowEpathRecord(0);
+
+        // Build search index from display fields, plus the source file name so a
+        // folder load can be filtered down to one report.
+        var searchEntries = records.Select(r =>
+            string.Join(" ", r.DisplayFields.Select(f => f.Value)
+                .Append(Path.GetFileName(r.SourceFile)))).ToArray();
+        _state.SearchIndex = searchEntries;
+
+        form.PnlSearch.Visible = true;
+        form.TxtSearch.Text = "";
+        form.LblSearchCount.Text = "";
+        form.UpdateTitle();
+    }
+
+    // ── Shared view helpers ─────────────────────────────────────────────
+
+    /// <summary>Grid column showing which file a record came from during a folder load.</summary>
+    internal const string SourceFileColumn = "sourceFile";
+
+    /// <summary>
+    /// Adds the source file column, but only for folder loads — for a single
+    /// file it would repeat the same value on every row.
+    /// </summary>
+    private void AddSourceFileColumn(DataTable table)
+    {
+        if (_state.IsFolderLoad)
+            table.Columns.Add(SourceFileColumn, typeof(string));
+    }
+
+    /// <summary>Resets the record panels when a load produced nothing to show.</summary>
+    private static void ClearRecordView(MainForm form, string statusText, string fileNameText)
+    {
+        form.SetStatusText(statusText);
+        form.SetFileNameText(fileNameText);
+        form.RtbPath.Clear();
+        form.RtbItems.Clear();
+        form.GridNav.DataSource = null;
+        form.BtnPrev.Enabled = false;
+        form.BtnNext.Enabled = false;
+        form.LblIndex.Text = "";
+        form.PnlSearch.Visible = false;
+        form.UpdateTitle();
     }
 
     // ── Validation warnings ────────────────────────────────────────────
@@ -645,9 +865,14 @@ public class FileHandlers
     /// </summary>
     public void HandleOpenContainingFolder()
     {
-        if (string.IsNullOrEmpty(_state.CurrentFilePath)) return;
+        // During a folder load there is no single current file, so open the
+        // folder that was loaded.
+        var dir = _state.IsFolderLoad
+            ? _state.LoadedFolderPath
+            : string.IsNullOrEmpty(_state.CurrentFilePath)
+                ? null
+                : Path.GetDirectoryName(_state.CurrentFilePath);
 
-        var dir = Path.GetDirectoryName(_state.CurrentFilePath);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return;
 
         try

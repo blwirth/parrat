@@ -107,6 +107,11 @@ public class SearchService : ISearchService
                             parts.Add(val);
                     }
 
+                    // Source file name, so a folder load can be filtered down to
+                    // the records that came from one report.
+                    if (!string.IsNullOrEmpty(msg.SourceFile))
+                        parts.Add(Path.GetFileName(msg.SourceFile));
+
                     // OBX text content
                     if (msg.Segments.TryGetValue("OBX", out var obxSegs) && obxSegs.Count > 0)
                     {

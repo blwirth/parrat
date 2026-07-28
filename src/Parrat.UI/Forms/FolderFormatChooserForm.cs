@@ -1,0 +1,85 @@
+using System.Drawing;
+using System.Windows.Forms;
+using Parrat.Core.Models;
+using Parrat.Core.Services;
+
+namespace Parrat.UI.Forms;
+
+/// <summary>
+/// Asks which record format to load when a folder holds more than one.
+/// Formats cannot be merged into a single view, so exactly one is loaded.
+/// </summary>
+public class FolderFormatChooserForm : ParratFormBase
+{
+    private readonly List<RadioButton> _options = new();
+
+    /// <summary>The format the user chose. Only meaningful when DialogResult is OK.</summary>
+    public DetectedFileFormat SelectedFormat { get; private set; }
+
+    public FolderFormatChooserForm(FolderScanResult scan)
+    {
+        Text = "Choose Format to Load";
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        StartPosition = FormStartPosition.CenterParent;
+        MinimizeBox = false;
+        MaximizeBox = false;
+        ClientSize = new Size(420, 190);
+
+        var prompt = new Label
+        {
+            Text = "This folder contains more than one record format.\n" +
+                   "Choose which one to load:",
+            Location = new Point(14, 14),
+            Size = new Size(390, 36),
+            AutoSize = false
+        };
+        Controls.Add(prompt);
+
+        var y = 58;
+        foreach (var format in scan.AvailableFormats)
+        {
+            var count = scan.FilesOfFormat(format).Count;
+            var radio = new RadioButton
+            {
+                Text = $"{FileFormatDetector.DescribeFormat(format)}  —  {count} file(s)",
+                Location = new Point(24, y),
+                Size = new Size(370, 24),
+                Tag = format,
+                Checked = _options.Count == 0
+            };
+
+            _options.Add(radio);
+            Controls.Add(radio);
+            y += 26;
+        }
+
+        SelectedFormat = scan.AvailableFormats[0];
+
+        var btnOk = new Button
+        {
+            Text = "Load",
+            DialogResult = DialogResult.OK,
+            Location = new Point(232, 148),
+            Size = new Size(85, 28)
+        };
+        btnOk.Click += (s, e) =>
+        {
+            var chosen = _options.FirstOrDefault(r => r.Checked);
+            if (chosen?.Tag is DetectedFileFormat format)
+                SelectedFormat = format;
+        };
+        Controls.Add(btnOk);
+
+        var btnCancel = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Location = new Point(323, 148),
+            Size = new Size(85, 28)
+        };
+        Controls.Add(btnCancel);
+
+        AcceptButton = btnOk;
+        CancelButton = btnCancel;
+    }
+}

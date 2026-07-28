@@ -78,6 +78,7 @@ internal static class Program
         services.AddSingleton<ICsvImportService, CsvImportService>();
         services.AddSingleton<IXlsxParserService, XlsxParserService>();
         services.AddSingleton<IEpathParserService, EpathParserService>();
+        services.AddSingleton<IFolderLoadService, FolderLoadService>();
         services.AddSingleton<IGridSettingsService, GridSettingsService>();
         services.AddSingleton<INoahService, NoahService>();
         services.AddSingleton<IRemoveVariableService, RemoveVariableService>();

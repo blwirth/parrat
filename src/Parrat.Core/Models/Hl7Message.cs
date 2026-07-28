@@ -4,6 +4,13 @@ public class Hl7Message
 {
     public int Index { get; set; }
     public string RawContent { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Path of the file this message was read from. Set when a folder is loaded
+    /// so a record can be traced back to its original report; empty otherwise.
+    /// </summary>
+    public string SourceFile { get; set; } = string.Empty;
+
     public Dictionary<string, List<string>> Segments { get; set; } = new();
     public List<string> AllSegments { get; set; } = new();
     public string PatientId { get; set; } = string.Empty;
