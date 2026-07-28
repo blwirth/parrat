@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
@@ -67,6 +68,102 @@ public class FolderLoadService : IFolderLoadService
         }
 
         return total;
+    }
+
+    public int CountRecords(DetectedFileFormat format, IEnumerable<string> filePaths)
+    {
+        int total = 0;
+
+        foreach (var path in filePaths)
+        {
+            try
+            {
+                total += format switch
+                {
+                    DetectedFileFormat.NaaccrXml => CountXmlTumors(path),
+                    DetectedFileFormat.Hl7 => CountHl7Messages(path),
+                    DetectedFileFormat.EpathDat => CountEpathRecords(path),
+                    _ => 0
+                };
+            }
+            catch (Exception ex)
+            {
+                // Counting is for display only. A file that cannot be read is
+                // reported properly when the load runs.
+                _logger.Log("WARN", $"Could not count records in {path}: {ex.Message}", "FOLDER_COUNT");
+            }
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// Counts Tumor elements by streaming the document. One patient may carry
+    /// several tumors, so patients are not a stand-in for the record count.
+    /// </summary>
+    private static int CountXmlTumors(string path)
+    {
+        var settings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true,
+            IgnoreWhitespace = true
+        };
+
+        using var reader = XmlReader.Create(path, settings);
+
+        int count = 0;
+        while (reader.Read())
+        {
+            if (reader.NodeType == XmlNodeType.Element &&
+                string.Equals(reader.LocalName, "Tumor", StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>Counts message headers, ignoring the batch envelope.</summary>
+    private static int CountHl7Messages(string path)
+    {
+        int count = 0;
+
+        foreach (var line in ReadLines(path, Encoding.ASCII))
+        {
+            // Trimmed, matching how the parser decides a line starts a message.
+            if (line.AsSpan().Trim().StartsWith("MSH|".AsSpan(), StringComparison.Ordinal))
+                count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>Counts ePath records, which are one per non-empty line.</summary>
+    private static int CountEpathRecords(string path)
+    {
+        int count = 0;
+
+        foreach (var line in ReadLines(path, Encoding.UTF8))
+        {
+            if (line.AsSpan().Trim().Length > 0)
+                count++;
+        }
+
+        return count;
+    }
+
+    private static IEnumerable<string> ReadLines(string path, Encoding encoding)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024);
+        using var reader = new StreamReader(stream, encoding, false, 64 * 1024);
+
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+            yield return line;
     }
 
     public FolderScanResult ScanFolder(string folderPath)

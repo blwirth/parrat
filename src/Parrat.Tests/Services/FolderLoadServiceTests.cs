@@ -381,6 +381,84 @@ public class FolderLoadServiceTests : IDisposable
         Assert.Single(scan.FilesOfFormat(DetectedFileFormat.NaaccrXml));
     }
 
+    // ── Record counts ────────────────────────────────────────────────────
+
+    [Fact]
+    public void CountRecords_Hl7_CountsMessagesAcrossFiles()
+    {
+        var first = WriteHl7("first.hl7", messageCount: 2);
+        var second = WriteHl7("second.hl7", messageCount: 3);
+
+        Assert.Equal(5, _service.CountRecords(DetectedFileFormat.Hl7, new[] { first, second }));
+    }
+
+    [Fact]
+    public void CountRecords_Hl7_IgnoresBatchEnvelope()
+    {
+        var path = Path.Combine(_folder, "batch.hl7");
+        File.WriteAllText(path,
+            "FHS|^~\\&|App|Fac\nBHS|^~\\&|App|Fac\n" + BuildHl7(3) + "BTS|3\nFTS|1\n");
+
+        Assert.Equal(3, _service.CountRecords(DetectedFileFormat.Hl7, new[] { path }));
+    }
+
+    [Fact]
+    public void CountRecords_Hl7_MatchesWhatLoadingProduces()
+    {
+        var first = WriteHl7("first.hl7", messageCount: 4);
+        var second = WriteHl7("second.hl7", messageCount: 7);
+        var files = new[] { first, second };
+
+        Assert.Equal(
+            _service.LoadHl7Files(files).Records.Count,
+            _service.CountRecords(DetectedFileFormat.Hl7, files));
+    }
+
+    [Fact]
+    public void CountRecords_Xml_CountsTumorsNotPatients()
+    {
+        // A patient may carry several tumors, so the two counts differ.
+        var path = WriteXml("cases.xml", patients: 3, tumorsPerPatient: 2);
+
+        Assert.Equal(6, _service.CountRecords(DetectedFileFormat.NaaccrXml, new[] { path }));
+    }
+
+    [Fact]
+    public void CountRecords_Xml_MatchesWhatMergingProduces()
+    {
+        var first = WriteXml("first.xml", patients: 2, tumorsPerPatient: 3);
+        var second = WriteXml("second.xml", patients: 1, tumorsPerPatient: 4);
+        var files = new[] { first, second };
+
+        Assert.Equal(
+            _service.LoadXmlFiles(files).TumorCount,
+            _service.CountRecords(DetectedFileFormat.NaaccrXml, files));
+    }
+
+    [Fact]
+    public void CountRecords_UnreadableFile_ContributesNothingAndDoesNotThrow()
+    {
+        var good = WriteHl7("good.hl7", messageCount: 2);
+        var missing = Path.Combine(_folder, "gone.hl7");
+
+        Assert.Equal(2, _service.CountRecords(DetectedFileFormat.Hl7, new[] { good, missing }));
+    }
+
+    [Fact]
+    public void CountRecords_MalformedXml_ContributesNothingAndDoesNotThrow()
+    {
+        var good = WriteXml("good.xml", patients: 1, tumorsPerPatient: 2);
+        var bad = WriteFile("bad.xml", "<NaaccrData><Patient>truncated");
+
+        Assert.Equal(2, _service.CountRecords(DetectedFileFormat.NaaccrXml, new[] { good, bad }));
+    }
+
+    [Fact]
+    public void CountRecords_NoFiles_ReturnsZero()
+    {
+        Assert.Equal(0, _service.CountRecords(DetectedFileFormat.Hl7, Array.Empty<string>()));
+    }
+
     [Fact]
     public void TotalBytes_SumsExistingFilesAndIgnoresMissing()
     {

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using Parrat.Core.Helpers;
 using Parrat.Core.Models;
 using Parrat.Core.Services;
 
@@ -16,7 +17,7 @@ public class FolderFormatChooserForm : ParratFormBase
     /// <summary>The format the user chose. Only meaningful when DialogResult is OK.</summary>
     public DetectedFileFormat SelectedFormat { get; private set; }
 
-    public FolderFormatChooserForm(FolderScanResult scan)
+    public FolderFormatChooserForm(FolderScanResult scan, IReadOnlyDictionary<DetectedFileFormat, int> recordCounts)
     {
         Text = "Choose Format to Load";
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -38,10 +39,16 @@ public class FolderFormatChooserForm : ParratFormBase
         var y = 58;
         foreach (var format in scan.AvailableFormats)
         {
-            var count = scan.FilesOfFormat(format).Count;
+            var fileCount = scan.FilesOfFormat(format).Count;
+            var files = PluralHelper.Count(fileCount, "file");
+
+            var detail = recordCounts.TryGetValue(format, out var records)
+                ? $"{files}, {PluralHelper.Count(records, FileFormatDetector.DescribeRecordUnit(format))}"
+                : files;
+
             var radio = new RadioButton
             {
-                Text = $"{FileFormatDetector.DescribeFormat(format)}  —  {count} file(s)",
+                Text = $"{FileFormatDetector.DescribeFormat(format)}  ({detail})",
                 Location = new Point(24, y),
                 Size = new Size(370, 24),
                 Tag = format,

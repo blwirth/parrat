@@ -126,4 +126,16 @@ public static class FileFormatDetector
         DetectedFileFormat.PlainText => "plain text",
         _ => "unrecognized"
     };
+
+    /// <summary>
+    /// What a single navigable record is called in this format, singular. A
+    /// NAACCR file is counted in tumors rather than patients, since one patient
+    /// may carry several.
+    /// </summary>
+    public static string DescribeRecordUnit(DetectedFileFormat format) => format switch
+    {
+        DetectedFileFormat.Hl7 => "message",
+        DetectedFileFormat.NaaccrXml => "tumor",
+        _ => "record"
+    };
 }

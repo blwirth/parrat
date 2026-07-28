@@ -36,4 +36,12 @@ public interface IFolderLoadService
 
     /// <summary>Total size in bytes of the given files, for load-size warnings.</summary>
     long TotalBytes(IEnumerable<string> filePaths);
+
+    /// <summary>
+    /// Counts the records the given files would contribute — tumors for NAACCR
+    /// XML, messages for HL7, records for ePath — without parsing them into
+    /// objects. Files that cannot be read contribute nothing; they are reported
+    /// when the load itself is attempted.
+    /// </summary>
+    int CountRecords(DetectedFileFormat format, IEnumerable<string> filePaths);
 }

@@ -174,13 +174,13 @@ public class FileHandlers
             {
                 MessageBox.Show(
                     $"No NAACCR XML, HL7, or ePath reports found directly in:\n\n{folderPath}\n\n" +
-                    $"{scan.SkippedFiles.Count} file(s) in this folder are not a supported record format. " +
+                    $"{PluralHelper.Count(scan.SkippedFiles.Count, "file")} in this folder are not a supported record format. " +
                     "Subfolders are not searched.",
                     "Nothing to Load", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var format = ChooseFormat(scan);
+            var format = ChooseFormat(scan, form);
             if (format == null)
                 return;
 
@@ -204,7 +204,7 @@ public class FileHandlers
             // this the window simply looks frozen.
             var previousCursor = form.Cursor;
             form.Cursor = Cursors.WaitCursor;
-            form.SetStatusText($"Loading {paths.Count} file(s) from {folderName}...");
+            form.SetStatusText($"Loading {PluralHelper.Count(paths.Count, "file")} from {folderName}...");
             Application.DoEvents();
 
             try
@@ -218,7 +218,7 @@ public class FileHandlers
                             return;
 
                         _logger.Log("INFO",
-                            $"Loaded folder {folderPath}: {result.Records.Count} messages from {result.FileCount} file(s)",
+                            $"Loaded folder {folderPath}: {result.Records.Count} messages from {PluralHelper.Count(result.FileCount, "file")}",
                             "OPEN_FOLDER");
 
                         ShowHl7Messages(result.Records, form,
@@ -236,7 +236,7 @@ public class FileHandlers
                             return;
 
                         _logger.Log("INFO",
-                            $"Loaded folder {folderPath}: {result.TumorCount} tumors from {result.FileCount} file(s)",
+                            $"Loaded folder {folderPath}: {result.TumorCount} tumors from {PluralHelper.Count(result.FileCount, "file")}",
                             "OPEN_FOLDER");
 
                         _state.TumorSourceFiles = result.TumorSourceFiles;
@@ -256,7 +256,7 @@ public class FileHandlers
                             return;
 
                         _logger.Log("INFO",
-                            $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {result.FileCount} file(s)",
+                            $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {PluralHelper.Count(result.FileCount, "file")}",
                             "OPEN_FOLDER");
 
                         ShowEpathRecords(result.Records, form,
@@ -300,7 +300,7 @@ public class FileHandlers
         var megabytes = bytes / (1024 * 1024);
 
         var answer = MessageBox.Show(
-            $"This folder holds {paths.Count} {FileFormatDetector.DescribeFormat(format)} file(s) " +
+            $"This folder holds {PluralHelper.Count(paths.Count, $"{FileFormatDetector.DescribeFormat(format)} file")} " +
             $"totalling {megabytes:N0} MB.\n\n" +
             "Folder loads are held entirely in memory, and parsed records take several times " +
             "their file size. This may take a while and use several gigabytes.\n\n" +
@@ -317,13 +317,35 @@ public class FileHandlers
     /// Picks which format to load. A folder holding more than one record format
     /// cannot be merged into a single view, so the user chooses.
     /// </summary>
-    private DetectedFileFormat? ChooseFormat(FolderScanResult scan)
+    private DetectedFileFormat? ChooseFormat(FolderScanResult scan, MainForm form)
     {
         var formats = scan.AvailableFormats;
         if (formats.Count == 1)
             return formats[0];
 
-        using var chooser = new FolderFormatChooserForm(scan);
+        // Counting streams each file, so it is far cheaper than loading — but
+        // not free, and it only happens when there is actually a choice to make.
+        var recordCounts = new Dictionary<DetectedFileFormat, int>();
+
+        var previousCursor = form.Cursor;
+        form.Cursor = Cursors.WaitCursor;
+        form.SetStatusText("Counting records...");
+        Application.DoEvents();
+
+        try
+        {
+            foreach (var format in formats)
+            {
+                recordCounts[format] = _folderLoadService.CountRecords(
+                    format, scan.FilesOfFormat(format).Select(f => f.FilePath));
+            }
+        }
+        finally
+        {
+            form.Cursor = previousCursor;
+        }
+
+        using var chooser = new FolderFormatChooserForm(scan, recordCounts);
         return chooser.ShowDialog() == DialogResult.OK ? chooser.SelectedFormat : null;
     }
 
@@ -369,7 +391,7 @@ public class FileHandlers
 
         if (failures.Count > 0)
         {
-            lines.Add($"{failures.Count} file(s) could not be read:");
+            lines.Add($"{PluralHelper.Count(failures.Count, "file")} could not be read:");
             lines.AddRange(failures.Take(10).Select(f => $"  • {f.FileName}: {f.Reason}"));
             if (failures.Count > 10)
                 lines.Add($"  ... and {failures.Count - 10} more.");
@@ -378,7 +400,7 @@ public class FileHandlers
         if (scan.SkippedFiles.Count > 0)
         {
             if (lines.Count > 0) lines.Add("");
-            lines.Add($"{scan.SkippedFiles.Count} file(s) were not loaded:");
+            lines.Add($"{PluralHelper.Count(scan.SkippedFiles.Count, "file")} were not loaded:");
             lines.AddRange(scan.SkippedFiles.Take(10).Select(f =>
                 $"  • {f.FileName} ({FileFormatDetector.DescribeFormat(f.Format)})"));
             if (scan.SkippedFiles.Count > 10)
