@@ -60,7 +60,7 @@ public class FileHandlers
     {
         using var ofd = new OpenFileDialog
         {
-            Filter = "NAACCR/HL7/ePath Files (*.xml;*.hl7;*.dat)|*.xml;*.hl7;*.dat|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7)|*.hl7|ePath Flat Files (*.dat)|*.dat|All files (*.*)|*.*",
+            Filter = "NAACCR/HL7/ePath Files (*.xml;*.hl7;*.txt;*.dat)|*.xml;*.hl7;*.txt;*.dat|NAACCR XML (*.xml)|*.xml|HL7 Files (*.hl7;*.txt)|*.hl7;*.txt|ePath Flat Files (*.dat)|*.dat|All files (*.*)|*.*",
             Title = "Select NAACCR XML, HL7, or ePath file"
         };
 
@@ -76,12 +76,56 @@ public class FileHandlers
 
     /// <summary>
     /// Opens a file by path (used by both Open and Open Recent).
+    /// Routing is driven by file content, not extension: HL7 path reports
+    /// frequently arrive as .txt, and .txt is also used for raw pathology
+    /// narrative, so the extension alone cannot tell them apart.
     /// </summary>
     public void OpenFile(string filePath, MainForm form)
     {
+        if (!File.Exists(filePath))
+        {
+            MessageBox.Show($"File not found: {filePath}", "File Not Found",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        switch (FileFormatDetector.DetectFile(filePath))
+        {
+            case DetectedFileFormat.Hl7:
+                ImportHl7File(filePath, form);
+                break;
+
+            case DetectedFileFormat.NaaccrXml:
+                ImportXmlFile(filePath, form);
+                break;
+
+            case DetectedFileFormat.EpathDat:
+                ImportEpathFile(filePath, form);
+                break;
+
+            case DetectedFileFormat.PlainText:
+                _logger.Log("INFO", $"Declined to open plain-text file {Path.GetFileName(filePath)}", "OPEN_FILE");
+                MessageBox.Show(
+                    "This file is readable text but does not contain HL7 messages, " +
+                    "NAACCR XML, or ePath records.\n\n" +
+                    "If it is a raw pathology report, use File → Convert .txt to .hl7 first.",
+                    "Unsupported File", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                break;
+
+            default:
+                // Content was inconclusive — fall back to the extension so the
+                // format-specific validator can report exactly what is wrong.
+                OpenByExtension(filePath, form);
+                break;
+        }
+    }
+
+    /// <summary>Fallback routing when content detection is inconclusive.</summary>
+    private void OpenByExtension(string filePath, MainForm form)
+    {
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
 
-        if (extension == ".hl7")
+        if (extension is ".hl7" or ".txt")
             ImportHl7File(filePath, form);
         else if (extension == ".dat")
             ImportEpathFile(filePath, form);
