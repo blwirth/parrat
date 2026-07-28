@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -27,6 +27,8 @@ public class FileHandlers
     private readonly IGridSettingsService _gridSettingsService;
     private readonly IEpathParserService _epathParserService;
     private readonly IFolderLoadService _folderLoadService;
+    private readonly IFilterService _filterService;
+    private readonly INaaccrDictionary _naaccrDictionary;
 
     private System.Windows.Forms.Timer? _searchTimer;
 
@@ -40,9 +42,13 @@ public class FileHandlers
         MenuBuilder menuBuilder,
         IGridSettingsService gridSettingsService,
         IEpathParserService epathParserService,
-        IFolderLoadService folderLoadService)
+        IFolderLoadService folderLoadService,
+        IFilterService filterService,
+        INaaccrDictionary naaccrDictionary)
     {
         _folderLoadService = folderLoadService;
+        _filterService = filterService;
+        _naaccrDictionary = naaccrDictionary;
         _state = state;
         _xmlFileService = xmlFileService;
         _hl7FileService = hl7FileService;
@@ -520,6 +526,7 @@ public class FileHandlers
         AddSourceFileColumn(table);
         foreach (var col in xmlCols)
             table.Columns.Add(col.Id, typeof(string));
+        NavMatchHelper.AddMatchColumn(table);
 
         // One pass over each element's children per record, rather than an
         // XPath lookup per cell — the difference is roughly tenfold once a
@@ -584,6 +591,7 @@ public class FileHandlers
         form.PnlSearch.Visible = true;
         form.TxtSearch.Text = "";
         form.LblSearchCount.Text = "";
+        ResetRecordFilter(form);
         form.UpdateTitle();
     }
 
@@ -666,6 +674,7 @@ public class FileHandlers
         table.Columns.Add("patientId", typeof(string));
         table.Columns.Add("messageType", typeof(string));
         table.Columns.Add("orderDateTime", typeof(string));
+        NavMatchHelper.AddMatchColumn(table);
 
         table.BeginLoadData();
         foreach (var msg in messages)
@@ -714,6 +723,7 @@ public class FileHandlers
         form.PnlSearch.Visible = true;
         form.TxtSearch.Text = "";
         form.LblSearchCount.Text = "";
+        ResetRecordFilter(form);
         form.UpdateTitle();
     }
 
@@ -797,6 +807,7 @@ public class FileHandlers
         table.Columns.Add("patientId", typeof(string));
         table.Columns.Add("sendingFacility", typeof(string));
         table.Columns.Add("formatVersion", typeof(string));
+        NavMatchHelper.AddMatchColumn(table);
 
         table.BeginLoadData();
         foreach (var rec in records)
@@ -846,6 +857,7 @@ public class FileHandlers
         form.PnlSearch.Visible = true;
         form.TxtSearch.Text = "";
         form.LblSearchCount.Text = "";
+        ResetRecordFilter(form);
         form.UpdateTitle();
     }
 
@@ -865,8 +877,9 @@ public class FileHandlers
     }
 
     /// <summary>Resets the record panels when a load produced nothing to show.</summary>
-    private static void ClearRecordView(MainForm form, string statusText, string fileNameText)
+    private void ClearRecordView(MainForm form, string statusText, string fileNameText)
     {
+        ResetRecordFilter(form);
         form.SetStatusText(statusText);
         form.SetFileNameText(fileNameText);
         form.RtbPath.Clear();
@@ -876,6 +889,7 @@ public class FileHandlers
         form.BtnNext.Enabled = false;
         form.LblIndex.Text = "";
         form.PnlSearch.Visible = false;
+        form.HideFilterBanner();
         form.UpdateTitle();
     }
 
@@ -911,6 +925,12 @@ public class FileHandlers
                 col.DisplayIndex = 0;
                 col.Resizable = DataGridViewTriState.False;
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
+            else if (col.Name == NavMatchHelper.MatchColumn)
+            {
+                // Bookkeeping for the search box and the record filter; the row
+                // filter reads it, the user never should.
+                col.Visible = false;
             }
             else if (col.Name == "Index")
             {
@@ -1121,21 +1141,11 @@ public class FileHandlers
 
                     if (navTable == null) return;
 
-                    // Use a SearchService instance for ApplyFilter
                     var searchService = new SearchService(_logger);
-                    searchService.ApplyFilter(searchText, navTable, searchIndex);
 
-                    int totalCount = searchIndex.Length;
-
-                    if (string.IsNullOrWhiteSpace(searchText))
-                    {
-                        form.LblSearchCount.Text = "";
-                    }
-                    else
-                    {
-                        int matchCount = navTable.DefaultView.Count;
-                        form.LblSearchCount.Text = $"{matchCount} / {totalCount}";
-                    }
+                    // The record filter stays in force while the user types: the
+                    // grid shows what satisfies both, not whichever was applied last.
+                    ApplyNavFilters(form, searchService.GetMatchingIndices(searchText, searchIndex));
 
                     // Re-highlight current record panels
                     searchService.HighlightMatches(form.RtbPath, searchText);
@@ -1159,6 +1169,114 @@ public class FileHandlers
     public void HandleSearchClear(MainForm form)
     {
         form.TxtSearch.Text = "";
+    }
+
+    // ── Record filter ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds a field source for the loaded records, covering the fields the
+    /// filter refers to. Returns null for a file type the filter does not
+    /// support, or when nothing is loaded.
+    /// </summary>
+    public IFilterFieldSource? CreateFilterFieldSource(FilterDefinition? filter)
+    {
+        var fields = _filterService.GetReferencedFields(filter);
+
+        return _state.FileType switch
+        {
+            "xml" => new XmlFilterFieldSource(_state.Tumors, fields, ResolveNaaccrLevel),
+            "hl7" => new Hl7FilterFieldSource(_state.Hl7Messages),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// The element a NAACCR item lives under, so a filter on a patient- or
+    /// file-level field resolves correctly from a tumor row.
+    /// </summary>
+    private string ResolveNaaccrLevel(string fieldId) => _naaccrDictionary.GetParentElement(fieldId);
+
+    /// <summary>
+    /// Runs a filter over the loaded records and narrows the grid to what
+    /// survives it and the search box together. A null or empty filter clears
+    /// the filter and leaves the search box alone.
+    /// </summary>
+    public void ApplyRecordFilter(MainForm form, FilterDefinition? filter)
+    {
+        try
+        {
+            if (filter == null || filter.IsEmpty)
+            {
+                _state.ActiveFilter = null;
+                _state.FilterMatches = null;
+            }
+            else
+            {
+                var source = CreateFilterFieldSource(filter);
+                if (source == null)
+                {
+                    _logger.Log("WARN", $"Record filter not supported for file type '{_state.FileType}'", "FILTER");
+                    return;
+                }
+
+                _state.ActiveFilter = filter;
+                _state.FilterMatches = _filterService.GetMatchingIndices(filter, source);
+            }
+
+            RefreshNavFilters(form);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to apply record filter", "FILTER", ex);
+            MessageBox.Show($"Error applying filter: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>Drops the active filter, leaving the search box untouched.</summary>
+    public void ClearRecordFilter(MainForm form) => ApplyRecordFilter(form, null);
+
+    /// <summary>
+    /// Drops the filter as part of a load. Filters name fields, and the fields
+    /// of the file just closed may not exist in the one just opened — carrying
+    /// one over would silently hide records for a reason the user cannot see.
+    /// </summary>
+    private void ResetRecordFilter(MainForm form)
+    {
+        _state.ActiveFilter = null;
+        _state.FilterMatches = null;
+        _menuBuilder.MnuClearFilter.Enabled = false;
+        form.HideFilterBanner();
+    }
+
+    /// <summary>
+    /// Re-narrows the grid using the current search text and the active filter.
+    /// </summary>
+    public void RefreshNavFilters(MainForm form)
+    {
+        var searchService = new SearchService(_logger);
+        ApplyNavFilters(form, searchService.GetMatchingIndices(form.TxtSearch.Text, _state.SearchIndex));
+    }
+
+    /// <summary>
+    /// The single place the nav grid is narrowed. Both constraints are applied
+    /// together — a record has to satisfy the search box and the filter — and
+    /// the labels that report what is showing are refreshed from the result.
+    /// </summary>
+    private void ApplyNavFilters(MainForm form, int[]? searchMatches)
+    {
+        var navTable = _state.NavTable;
+        if (navTable == null) return;
+
+        NavMatchHelper.Apply(navTable, searchMatches, _state.FilterMatches);
+
+        int visible = navTable.DefaultView.Count;
+        int total = _state.RecordCount;
+
+        form.LblSearchCount.Text = searchMatches == null ? "" : $"{visible} / {total}";
+        _menuBuilder.MnuClearFilter.Enabled = _state.HasActiveFilter;
+        form.UpdateFilterBanner(visible, total);
+        _navigationService.UpdateIndexLabel();
     }
 
     // ── Restart Application ──────────────────────────────────────────────

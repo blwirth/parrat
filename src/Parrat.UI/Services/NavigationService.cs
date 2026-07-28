@@ -150,7 +150,7 @@ public class NavigationService
 
             // Update index label and button states
             int selectedCount = GetSelectedCount();
-            LblIndex.Text = $"Tumor {index + 1} of {tumors.Count} ({selectedCount} selected)";
+            LblIndex.Text = $"Tumor {index + 1} of {tumors.Count} ({selectedCount} selected){FilterSuffix}";
             BtnPrev.Enabled = index > 0;
             BtnNext.Enabled = index < tumors.Count - 1;
 
@@ -316,7 +316,7 @@ public class NavigationService
 
         // Update index label and button states
         int selectedCount = GetSelectedCount();
-        LblIndex.Text = $"Message {index + 1} of {messages.Count} ({selectedCount} selected)";
+        LblIndex.Text = $"Message {index + 1} of {messages.Count} ({selectedCount} selected){FilterSuffix}";
         BtnPrev.Enabled = index > 0;
         BtnNext.Enabled = index < messages.Count - 1;
     }
@@ -458,7 +458,7 @@ public class NavigationService
         );
 
         int selectedCount = GetSelectedCount();
-        LblIndex.Text = $"Record {index + 1} of {records.Count} ({selectedCount} selected)";
+        LblIndex.Text = $"Record {index + 1} of {records.Count} ({selectedCount} selected){FilterSuffix}";
         BtnPrev.Enabled = index > 0;
         BtnNext.Enabled = index < records.Count - 1;
     }
@@ -474,19 +474,52 @@ public class NavigationService
     /// <summary>
     /// Navigates to the previous record.
     /// </summary>
-    public void NavigatePrevious()
-    {
-        if (_state.CurrentIndex > 0)
-            ShowRecord(_state.CurrentIndex - 1);
-    }
+    public void NavigatePrevious() => NavigateBy(-1);
 
     /// <summary>
     /// Navigates to the next record.
     /// </summary>
-    public void NavigateNext()
+    public void NavigateNext() => NavigateBy(1);
+
+    /// <summary>
+    /// Steps to the next record in the given direction that the search box and
+    /// record filter leave visible. Walking hidden records would make Next look
+    /// broken while a filter is applied — the grid would not move and the panels
+    /// would show a record the user has filtered out.
+    /// </summary>
+    private void NavigateBy(int step)
     {
-        if (_state.CurrentIndex < _state.RecordCount - 1)
-            ShowRecord(_state.CurrentIndex + 1);
+        int count = _state.RecordCount;
+        var visible = VisibleRecordIndices();
+
+        for (int i = _state.CurrentIndex + step; i >= 0 && i < count; i += step)
+        {
+            if (visible == null || visible.Contains(i))
+            {
+                ShowRecord(i);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The 0-based indices the grid is currently showing, or null when nothing
+    /// is hidden and every record is reachable.
+    /// </summary>
+    private HashSet<int>? VisibleRecordIndices()
+    {
+        var view = _state.NavTable?.DefaultView;
+        if (view == null || string.IsNullOrEmpty(view.RowFilter))
+            return null;
+
+        var indices = new HashSet<int>(view.Count);
+        foreach (DataRowView row in view)
+        {
+            if (row["Index"] is int index)
+                indices.Add(index - 1);
+        }
+
+        return indices;
     }
 
     /// <summary>
@@ -535,9 +568,33 @@ public class NavigationService
     {
         int selectedCount = GetSelectedCount();
         int totalCount = _state.RecordCount;
-        string recordType = _state.FileType == "hl7" ? "Message" : "Tumor";
-        LblIndex.Text = $"{recordType} {_state.CurrentIndex + 1} of {totalCount} ({selectedCount} selected)";
+        LblIndex.Text = $"{RecordTypeName} {_state.CurrentIndex + 1} of {totalCount} ({selectedCount} selected){FilterSuffix}";
     }
+
+    /// <summary>
+    /// Refreshes the record label after the visible set changes. Does nothing
+    /// when no record is showing, so it is safe to call from the filter path.
+    /// </summary>
+    public void UpdateIndexLabel()
+    {
+        if (_state.RecordCount == 0 || _state.CurrentIndex < 0) return;
+        UpdateSelectedCountLabel();
+    }
+
+    /// <summary>What this file type calls one record.</summary>
+    private string RecordTypeName => _state.FileType switch
+    {
+        "hl7" => "Message",
+        "epath" => "Record",
+        _ => "Tumor"
+    };
+
+    /// <summary>
+    /// Appended to the record label while a filter is applied, so the count the
+    /// label reports is never mistaken for the whole file.
+    /// </summary>
+    private string FilterSuffix =>
+        _state.HasActiveFilter ? $"  —  filtered: {_state.FilteredRecordCount}" : "";
 
     // ── Private helpers ──────────────────────────────────────────────────
 

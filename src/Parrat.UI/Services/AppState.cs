@@ -38,6 +38,25 @@ public class AppState
     public DataTable? NavTable { get; set; }
     public string[] SearchIndex { get; set; } = Array.Empty<string>();
 
+    /// <summary>
+    /// The record filter in force, or null when none is applied. Cleared on
+    /// every load: its field ids belong to the file it was built against.
+    /// </summary>
+    public FilterDefinition? ActiveFilter { get; set; }
+
+    /// <summary>
+    /// 0-based indices of the records the active filter matched, or null when
+    /// no filter is applied. Cached so retyping in the search box re-intersects
+    /// rather than re-scanning every record.
+    /// </summary>
+    public int[]? FilterMatches { get; set; }
+
+    /// <summary>True when a filter is narrowing the record list.</summary>
+    public bool HasActiveFilter => ActiveFilter is { IsEmpty: false };
+
+    /// <summary>How many records survive the filter; the full count when none is applied.</summary>
+    public int FilteredRecordCount => FilterMatches?.Length ?? RecordCount;
+
     // UI flags
     public bool IsLoadingData { get; set; }
     public bool IsShowingTumor { get; set; }
@@ -65,6 +84,8 @@ public class AppState
         CurrentIndex = -1;
         NavTable = null;
         SearchIndex = Array.Empty<string>();
+        ActiveFilter = null;
+        FilterMatches = null;
         IsLoadingData = false;
         IsShowingTumor = false;
         SpaceBatchToggling = false;
