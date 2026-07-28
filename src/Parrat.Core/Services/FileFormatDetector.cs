@@ -26,8 +26,13 @@ public enum DetectedFileFormat
 /// </summary>
 public static class FileFormatDetector
 {
-    /// <summary>Bytes inspected when detecting from a file. Ample for any header.</summary>
-    private const int DetectionByteLimit = 64 * 1024;
+    /// <summary>
+    /// Characters inspected when detecting from a file. Every decision is made
+    /// from the first line or two, so this only needs to be comfortably past any
+    /// realistic header — and scanning a folder reads this much per file, which
+    /// adds up over a network share.
+    /// </summary>
+    private const int DetectionByteLimit = 16 * 1024;
 
     /// <summary>Minimum pipe-delimited field count for ePath, matching the .dat validator.</summary>
     private const int MinEpathFieldCount = 20;

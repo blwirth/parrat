@@ -43,6 +43,33 @@ public class FolderScanResult
 }
 
 /// <summary>
+/// The merged result of loading several NAACCR XML files. Unlike HL7 and ePath,
+/// which merge as flat record lists, XML files merge into one document so the
+/// rest of the application sees exactly what it sees for a single file.
+/// </summary>
+public class XmlFolderLoadResult
+{
+    public System.Xml.XmlDocument? Document { get; init; }
+    public System.Xml.XmlNodeList? Tumors { get; init; }
+    public System.Xml.XmlNamespaceManager? NsMgr { get; init; }
+
+    /// <summary>Source file for each tumor, parallel to <see cref="Tumors"/>.</summary>
+    public string[] TumorSourceFiles { get; init; } = Array.Empty<string>();
+
+    public List<string> LoadedFiles { get; init; } = new();
+    public List<FolderFileFailure> Failures { get; init; } = new();
+
+    /// <summary>
+    /// Differences between files that do not prevent the merge but could
+    /// mislead — chiefly file-level items that disagree between documents.
+    /// </summary>
+    public List<string> Warnings { get; init; } = new();
+
+    public int TumorCount => Tumors?.Count ?? 0;
+    public int FileCount => LoadedFiles.Count;
+}
+
+/// <summary>
 /// Records loaded from a set of files, together with any files that failed.
 /// Records carry the file they came from so a search hit can be traced back to
 /// its original report.

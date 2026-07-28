@@ -25,6 +25,14 @@ public class AppState
     /// <summary>True when records were loaded from a folder rather than one file.</summary>
     public bool IsFolderLoad => !string.IsNullOrEmpty(LoadedFolderPath);
 
+    /// <summary>
+    /// Source file for each tumor during an XML folder load, parallel to
+    /// <see cref="Tumors"/>. HL7 and ePath records carry their source on the
+    /// record itself; XML nodes have nowhere to put it without altering the
+    /// document, so it is tracked alongside.
+    /// </summary>
+    public string[]? TumorSourceFiles { get; set; }
+
     // Navigation state
     public int CurrentIndex { get; set; } = -1;
     public DataTable? NavTable { get; set; }
@@ -52,6 +60,7 @@ public class AppState
         EpathRecords.Clear();
         CurrentFilePath = null;
         LoadedFolderPath = null;
+        TumorSourceFiles = null;
         FileType = null;
         CurrentIndex = -1;
         NavTable = null;

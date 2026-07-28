@@ -72,9 +72,19 @@ Only the folder you select is read. Subfolders are not searched.
 
 Each file in the folder is identified by its content, and the loadable files are merged in file-name order. The navigation grid gains a *sourceFile* column showing which report each record came from, and that file name is searchable — typing it into the search box filters the view down to the records from that one file. Selecting *Open Containing Folder* opens the loaded folder in Windows Explorer.
 
-HL7 and ePath files can be folder-loaded. NAACCR XML cannot: merging several NAACCR documents means reconciling their headers, so XML files are opened individually or combined with *Concatenate XML*.
+A file that fails to parse is reported and skipped; the rest of the folder still loads.
 
-If the folder contains more than one loadable format, the application asks which one to load, since formats cannot be merged into a single view. Any files that were not loaded, or that could not be read, are listed after the load rather than passed over silently.
+NAACCR XML, HL7, and ePath files can all be folder-loaded. If the folder contains more than one of these formats, the application asks which one to load, since formats cannot be merged into a single view. Any files that were not loaded, or that could not be read, are listed after the load rather than passed over silently.
+
+==== Merging NAACCR XML Files
+
+XML files are merged into a single in-memory document, so the merged view behaves exactly like an ordinary loaded file. The first file loaded supplies the header, and every later file must agree with it on namespace, `baseDictionaryUri`, and `recordType`. A file that disagrees is reported and left out rather than merged, because its records would not mean the same thing alongside the others.
+
+File-level items — those sitting directly on `NaaccrData` rather than on a patient or tumor — are not merged; the first file's values govern. Where a later file carries a different value for one of them, the difference is reported after the load, since an export would otherwise silently use the first file's value for every record.
+
+==== Folder Size
+
+Folder loads are held entirely in memory, and parsed records occupy several times their file size. Loading a folder larger than 500 MB asks for confirmation first. As a rough guide, 25,000 records loads in a few seconds and occupies roughly 1 GB.
 
 Because the records come from many files, actions that rewrite the loaded file in place — *Assign*, *Modify HL7*, *Modify XML*, and *Deduplicate* — are unavailable during a folder load. *Export* remains available, as it writes a new file.
 

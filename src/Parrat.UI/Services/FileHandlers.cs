@@ -173,7 +173,7 @@ public class FileHandlers
             if (!scan.HasLoadableFiles)
             {
                 MessageBox.Show(
-                    $"No HL7 or ePath reports found directly in:\n\n{folderPath}\n\n" +
+                    $"No NAACCR XML, HL7, or ePath reports found directly in:\n\n{folderPath}\n\n" +
                     $"{scan.SkippedFiles.Count} file(s) in this folder are not a supported record format. " +
                     "Subfolders are not searched.",
                     "Nothing to Load", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -186,47 +186,91 @@ public class FileHandlers
 
             var paths = scan.FilesOfFormat(format.Value).Select(f => f.FilePath).ToList();
 
-            // Set folder state before populating the view: the grid adds its
-            // source file column based on it.
-            _state.CurrentFilePath = null;
-            _state.LoadedFolderPath = folderPath;
+            if (!ConfirmLoadSize(paths, format.Value))
+                return;
 
             var folderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar,
                 Path.AltDirectorySeparatorChar));
             if (string.IsNullOrEmpty(folderName))
                 folderName = folderPath;
 
-            if (format == DetectedFileFormat.Hl7)
+            // Set folder state before populating the view: the grid adds its
+            // source file column based on it.
+            _state.CurrentFilePath = null;
+            _state.LoadedFolderPath = folderPath;
+            _state.TumorSourceFiles = null;
+
+            // A folder of thousands of records takes seconds to read; without
+            // this the window simply looks frozen.
+            var previousCursor = form.Cursor;
+            form.Cursor = Cursors.WaitCursor;
+            form.SetStatusText($"Loading {paths.Count} file(s) from {folderName}...");
+            Application.DoEvents();
+
+            try
             {
-                var result = _folderLoadService.LoadHl7Files(paths);
-                if (!EnsureRecordsLoaded(result.Records.Count, result, folderPath, form))
-                    return;
+                switch (format.Value)
+                {
+                    case DetectedFileFormat.Hl7:
+                    {
+                        var result = _folderLoadService.LoadHl7Files(paths);
+                        if (!EnsureRecordsLoaded(result.Records.Count, result.Failures, folderPath, form))
+                            return;
 
-                _logger.Log("INFO",
-                    $"Loaded folder {folderPath}: {result.Records.Count} messages from {result.FileCount} file(s)",
-                    "OPEN_FOLDER");
+                        _logger.Log("INFO",
+                            $"Loaded folder {folderPath}: {result.Records.Count} messages from {result.FileCount} file(s)",
+                            "OPEN_FOLDER");
 
-                ShowHl7Messages(result.Records, form,
-                    $"Loaded folder: {folderName} ({result.FileCount} files, Messages: {result.Records.Count})",
-                    $"Folder: {folderPath}");
+                        ShowHl7Messages(result.Records, form,
+                            $"Loaded folder: {folderName} ({result.FileCount} files, Messages: {result.Records.Count})",
+                            $"Folder: {folderPath}");
 
-                ReportLoadIssues(result.Failures, scan);
+                        ReportLoadIssues(result.Failures, scan, null);
+                        break;
+                    }
+
+                    case DetectedFileFormat.NaaccrXml:
+                    {
+                        var result = _folderLoadService.LoadXmlFiles(paths);
+                        if (!EnsureRecordsLoaded(result.TumorCount, result.Failures, folderPath, form))
+                            return;
+
+                        _logger.Log("INFO",
+                            $"Loaded folder {folderPath}: {result.TumorCount} tumors from {result.FileCount} file(s)",
+                            "OPEN_FOLDER");
+
+                        _state.TumorSourceFiles = result.TumorSourceFiles;
+
+                        ShowXmlTumors(result.Document!, result.Tumors!, result.NsMgr!, form,
+                            $"Loaded folder: {folderName} ({result.FileCount} files, Tumors: {result.TumorCount})",
+                            $"Folder: {folderPath}");
+
+                        ReportLoadIssues(result.Failures, scan, result.Warnings);
+                        break;
+                    }
+
+                    default:
+                    {
+                        var result = _folderLoadService.LoadEpathFiles(paths);
+                        if (!EnsureRecordsLoaded(result.Records.Count, result.Failures, folderPath, form))
+                            return;
+
+                        _logger.Log("INFO",
+                            $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {result.FileCount} file(s)",
+                            "OPEN_FOLDER");
+
+                        ShowEpathRecords(result.Records, form,
+                            $"Loaded folder: {folderName} ({result.FileCount} files, Records: {result.Records.Count})",
+                            $"Folder: {folderPath}");
+
+                        ReportLoadIssues(result.Failures, scan, null);
+                        break;
+                    }
+                }
             }
-            else
+            finally
             {
-                var result = _folderLoadService.LoadEpathFiles(paths);
-                if (!EnsureRecordsLoaded(result.Records.Count, result, folderPath, form))
-                    return;
-
-                _logger.Log("INFO",
-                    $"Loaded folder {folderPath}: {result.Records.Count} ePath records from {result.FileCount} file(s)",
-                    "OPEN_FOLDER");
-
-                ShowEpathRecords(result.Records, form,
-                    $"Loaded folder: {folderName} ({result.FileCount} files, Records: {result.Records.Count})",
-                    $"Folder: {folderPath}");
-
-                ReportLoadIssues(result.Failures, scan);
+                form.Cursor = previousCursor;
             }
         }
         catch (Exception ex)
@@ -234,6 +278,39 @@ public class FileHandlers
             _logger.LogError($"Failed to load folder {folderPath}", "OPEN_FOLDER", ex);
             MessageBox.Show($"Error loading folder: {ex.Message}", "Error");
         }
+    }
+
+    /// <summary>
+    /// Bytes of source data above which a folder load is worth confirming.
+    /// Parsed records occupy several times their file size in memory, so a
+    /// folder this large is where a load starts to be felt.
+    /// </summary>
+    private const long LargeLoadBytes = 500L * 1024 * 1024;
+
+    /// <summary>
+    /// Warns before loading a very large folder, since everything is held in
+    /// memory at once. Returns false if the user backs out.
+    /// </summary>
+    private bool ConfirmLoadSize(List<string> paths, DetectedFileFormat format)
+    {
+        var bytes = _folderLoadService.TotalBytes(paths);
+        if (bytes < LargeLoadBytes)
+            return true;
+
+        var megabytes = bytes / (1024 * 1024);
+
+        var answer = MessageBox.Show(
+            $"This folder holds {paths.Count} {FileFormatDetector.DescribeFormat(format)} file(s) " +
+            $"totalling {megabytes:N0} MB.\n\n" +
+            "Folder loads are held entirely in memory, and parsed records take several times " +
+            "their file size. This may take a while and use several gigabytes.\n\n" +
+            "Load anyway?",
+            "Large Folder", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+        if (answer != DialogResult.Yes)
+            _logger.Log("INFO", $"User declined folder load of {megabytes} MB", "OPEN_FOLDER");
+
+        return answer == DialogResult.Yes;
     }
 
     /// <summary>
@@ -254,15 +331,17 @@ public class FileHandlers
     /// Reports the case where every candidate file failed and restores the
     /// non-folder state so the app is not left claiming a folder is open.
     /// </summary>
-    private bool EnsureRecordsLoaded<T>(int recordCount, FolderLoadResult<T> result, string folderPath, MainForm form)
+    private bool EnsureRecordsLoaded(
+        int recordCount, List<FolderFileFailure> failures, string folderPath, MainForm form)
     {
         if (recordCount > 0)
             return true;
 
         _state.LoadedFolderPath = null;
+        _state.TumorSourceFiles = null;
 
-        var detail = result.Failures.Count > 0
-            ? "\n\n" + string.Join("\n", result.Failures.Take(10).Select(f => $"  • {f.FileName}: {f.Reason}"))
+        var detail = failures.Count > 0
+            ? "\n\n" + string.Join("\n", failures.Take(10).Select(f => $"  • {f.FileName}: {f.Reason}"))
             : "";
 
         MessageBox.Show(
@@ -278,9 +357,12 @@ public class FileHandlers
     /// are always reported — a report silently missing from a QA pass is worse
     /// than an extra dialog.
     /// </summary>
-    private static void ReportLoadIssues(List<FolderFileFailure> failures, FolderScanResult scan)
+    private static void ReportLoadIssues(
+        List<FolderFileFailure> failures, FolderScanResult scan, List<string>? warnings)
     {
-        if (failures.Count == 0 && scan.SkippedFiles.Count == 0)
+        warnings ??= new List<string>();
+
+        if (failures.Count == 0 && scan.SkippedFiles.Count == 0 && warnings.Count == 0)
             return;
 
         var lines = new List<string>();
@@ -301,14 +383,15 @@ public class FileHandlers
                 $"  • {f.FileName} ({FileFormatDetector.DescribeFormat(f.Format)})"));
             if (scan.SkippedFiles.Count > 10)
                 lines.Add($"  ... and {scan.SkippedFiles.Count - 10} more.");
+        }
 
-            if (scan.SkippedFiles.Any(f => f.Format == DetectedFileFormat.NaaccrXml))
-            {
-                lines.Add("");
-                lines.Add("NAACCR XML cannot be folder-loaded: merging documents requires " +
-                          "reconciling their headers. Open XML files individually, or use " +
-                          "File → Concatenate → Concatenate XML.");
-            }
+        if (warnings.Count > 0)
+        {
+            if (lines.Count > 0) lines.Add("");
+            lines.Add("The merged files disagree on file-level values:");
+            lines.AddRange(warnings.Take(10).Select(w => $"  • {w}"));
+            if (warnings.Count > 10)
+                lines.Add($"  ... and {warnings.Count - 10} more.");
         }
 
         MessageBox.Show(string.Join("\n", lines), "Files Not Loaded",
@@ -333,97 +416,140 @@ public class FileHandlers
 
             var (doc, tumors, nsMgr) = _xmlFileService.LoadNaaccrXml(filePath);
 
-            _state.XmlDoc = doc;
-            _state.Tumors = tumors;
-            _state.NsMgr = nsMgr;
-            _state.CurrentFilePath = filePath;
-            _state.LoadedFolderPath = null;
-            _state.FileType = "xml";
-            _state.CurrentIndex = -1;
-
-            // Clear HL7 data
-            _state.Hl7Messages.Clear();
-
-            _menuBuilder.UpdateMenuStatesForFileType("xml");
-
             if (tumors.Count == 0)
             {
+                _state.XmlDoc = doc;
+                _state.Tumors = tumors;
+                _state.NsMgr = nsMgr;
+                _state.CurrentFilePath = filePath;
+                _state.LoadedFolderPath = null;
+                _state.FileType = "xml";
+                _state.CurrentIndex = -1;
+                _state.Hl7Messages.Clear();
+                _menuBuilder.UpdateMenuStatesForFileType("xml");
+
                 MessageBox.Show("No <Tumor> elements found in this file.", "No Tumors");
                 ClearRecordView(form, "No tumors found", $"File: {filePath}");
                 return;
             }
 
-            var fileName = Path.GetFileName(filePath);
-            form.SetStatusText($"Loaded: {fileName} (Tumors: {tumors.Count})");
-            form.SetFileNameText($"File: {filePath}");
+            _state.CurrentFilePath = filePath;
+            _state.LoadedFolderPath = null;
 
+            var fileName = Path.GetFileName(filePath);
             _logger.Log("INFO", $"Loaded {fileName} with {tumors.Count} tumors", "OPEN_FILE");
             _recentFilesService.AddRecentFile(filePath, "xml");
 
-            // Build navigation table using grid settings
-            var gridSettings = _gridSettingsService.Load();
-            var xmlCols = gridSettings.Xml.Columns;
-
-            var table = new DataTable();
-            table.Columns.Add("Selected", typeof(bool));
-            table.Columns.Add("Index", typeof(int));
-            foreach (var col in xmlCols)
-                table.Columns.Add(col.Id, typeof(string));
-
-            // One pass over each element's children per record, rather than an
-            // XPath lookup per cell — the difference is roughly tenfold once a
-            // file holds thousands of tumors.
-            var itemReader = new NaaccrItemReader(xmlCols.Select(c => c.Id));
-            var values = new Dictionary<string, string>(xmlCols.Count, StringComparer.Ordinal);
-
-            table.BeginLoadData();
-            for (int i = 0; i < tumors.Count; i++)
-            {
-                var tumor = tumors[i]!;
-
-                values.Clear();
-                itemReader.ReadInto(tumor, values);
-                if (values.Count < xmlCols.Count)
-                    itemReader.ReadInto(_xmlFileService.GetPatientForTumor(tumor), values);
-
-                var row = table.NewRow();
-                row["Selected"] = false;
-                row["Index"] = i + 1;
-                foreach (var col in xmlCols)
-                    row[col.Id] = values.TryGetValue(col.Id, out var val) ? val : "";
-
-                table.Rows.Add(row);
-            }
-            table.EndLoadData();
-
-            _state.NavTable = table;
-
-            // Temporarily disable event handling while loading data
-            _state.IsLoadingData = true;
-            form.GridNav.DataSource = null;
-            form.GridNav.Columns.Clear();
-            form.GridNav.DataSource = table;
-
-            ConfigureGridColumns(form.GridNav, xmlCols);
-
-            _state.IsLoadingData = false;
-
-            _navigationService.ShowTumor(0);
-
-            // Build search index
-            var searchService = new SearchService(_logger, tumors, nsMgr);
-            _state.SearchIndex = searchService.BuildSearchIndex("xml");
-
-            form.PnlSearch.Visible = true;
-            form.TxtSearch.Text = "";
-            form.LblSearchCount.Text = "";
-            form.UpdateTitle();
+            ShowXmlTumors(doc, tumors, nsMgr, form,
+                $"Loaded: {fileName} (Tumors: {tumors.Count})",
+                $"File: {filePath}");
         }
         catch (Exception ex)
         {
             _logger.LogError("Failed to load XML file", "OPEN_FILE", ex);
             MessageBox.Show($"Error loading XML: {ex.Message}", "Error");
         }
+    }
+
+    /// <summary>
+    /// Populates state, grid and search index from a NAACCR document.
+    /// Shared by single-file and folder loads; for a folder load the caller has
+    /// already set <see cref="AppState.TumorSourceFiles"/>.
+    /// </summary>
+    private void ShowXmlTumors(
+        XmlDocument doc, XmlNodeList tumors, XmlNamespaceManager nsMgr,
+        MainForm form, string statusText, string fileNameText)
+    {
+        _state.XmlDoc = doc;
+        _state.Tumors = tumors;
+        _state.NsMgr = nsMgr;
+        _state.FileType = "xml";
+        _state.CurrentIndex = -1;
+
+        // Clear other data
+        _state.Hl7Messages.Clear();
+        _state.EpathRecords.Clear();
+
+        _menuBuilder.UpdateMenuStatesForFileType("xml");
+
+        form.SetStatusText(statusText);
+        form.SetFileNameText(fileNameText);
+
+        // Build navigation table using grid settings
+        var gridSettings = _gridSettingsService.Load();
+        var xmlCols = gridSettings.Xml.Columns;
+
+        var table = new DataTable();
+        table.Columns.Add("Selected", typeof(bool));
+        table.Columns.Add("Index", typeof(int));
+        AddSourceFileColumn(table);
+        foreach (var col in xmlCols)
+            table.Columns.Add(col.Id, typeof(string));
+
+        // One pass over each element's children per record, rather than an
+        // XPath lookup per cell — the difference is roughly tenfold once a
+        // file holds thousands of tumors.
+        var itemReader = new NaaccrItemReader(xmlCols.Select(c => c.Id));
+        var values = new Dictionary<string, string>(xmlCols.Count, StringComparer.Ordinal);
+        var sourceFiles = _state.TumorSourceFiles;
+
+        table.BeginLoadData();
+        for (int i = 0; i < tumors.Count; i++)
+        {
+            var tumor = tumors[i]!;
+
+            values.Clear();
+            itemReader.ReadInto(tumor, values);
+            if (values.Count < xmlCols.Count)
+                itemReader.ReadInto(_xmlFileService.GetPatientForTumor(tumor), values);
+
+            var row = table.NewRow();
+            row["Selected"] = false;
+            row["Index"] = i + 1;
+            if (_state.IsFolderLoad)
+            {
+                row[SourceFileColumn] = sourceFiles != null && i < sourceFiles.Length
+                    ? Path.GetFileName(sourceFiles[i])
+                    : "";
+            }
+            foreach (var col in xmlCols)
+                row[col.Id] = values.TryGetValue(col.Id, out var val) ? val : "";
+
+            table.Rows.Add(row);
+        }
+        table.EndLoadData();
+
+        _state.NavTable = table;
+
+        // Temporarily disable event handling while loading data
+        _state.IsLoadingData = true;
+        form.GridNav.DataSource = null;
+        form.GridNav.Columns.Clear();
+        form.GridNav.DataSource = table;
+
+        ConfigureGridColumns(form.GridNav, xmlCols);
+
+        _state.IsLoadingData = false;
+
+        _navigationService.ShowTumor(0);
+
+        // Build search index, including the source file name for folder loads so
+        // typing a file name filters the view down to that report's tumors.
+        var searchService = new SearchService(_logger, tumors, nsMgr);
+        var searchIndex = searchService.BuildSearchIndex("xml");
+
+        if (_state.IsFolderLoad && sourceFiles != null)
+        {
+            for (int i = 0; i < searchIndex.Length && i < sourceFiles.Length; i++)
+                searchIndex[i] = $"{searchIndex[i]} {Path.GetFileName(sourceFiles[i]).ToLower()}";
+        }
+
+        _state.SearchIndex = searchIndex;
+
+        form.PnlSearch.Visible = true;
+        form.TxtSearch.Text = "";
+        form.LblSearchCount.Text = "";
+        form.UpdateTitle();
     }
 
     // ── Import HL7 ───────────────────────────────────────────────────────

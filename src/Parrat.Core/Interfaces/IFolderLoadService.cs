@@ -26,4 +26,14 @@ public interface IFolderLoadService
     /// record with its source file and renumbering indexes across the set.
     /// </summary>
     FolderLoadResult<EpathRecord> LoadEpathFiles(IEnumerable<string> filePaths);
+
+    /// <summary>
+    /// Merges NAACCR XML files into a single in-memory document, recording
+    /// which file each tumor came from. Files whose headers are incompatible
+    /// with the first loaded file are reported as failures rather than merged.
+    /// </summary>
+    XmlFolderLoadResult LoadXmlFiles(IEnumerable<string> filePaths);
+
+    /// <summary>Total size in bytes of the given files, for load-size warnings.</summary>
+    long TotalBytes(IEnumerable<string> filePaths);
 }
