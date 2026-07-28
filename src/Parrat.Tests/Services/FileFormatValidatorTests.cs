@@ -82,6 +82,42 @@ public class FileFormatValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Theory]
+    [InlineData("PV1")]  // patient visit — the common false positive
+    [InlineData("NK1")]  // next of kin
+    [InlineData("IN1")]  // insurance
+    [InlineData("DG1")]  // diagnosis
+    [InlineData("GT1")]  // guarantor
+    [InlineData("AL1")]  // patient allergy
+    [InlineData("FT1")]  // financial transaction
+    [InlineData("ZPS")]  // locally defined Z-segment
+    public void ValidateHl7_AlphanumericSegmentId_DoesNotWarn(string segmentId)
+    {
+        var content = "MSH|^~\\&|App|Fac|||20240101||ORU^R01|1|P|2.5.1\n" +
+                      "PID|1||MRN001||Smith^Jane||19850315|F\n" +
+                      $"{segmentId}|1|O|\n";
+
+        var result = FileFormatValidator.ValidateHl7(content);
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("Unexpected segment"));
+    }
+
+    [Theory]
+    [InlineData("1PV")]  // must begin with a letter
+    [InlineData("pv1")]  // must be uppercase
+    [InlineData("P-1")]  // punctuation is not alphanumeric
+    public void ValidateHl7_MalformedSegmentId_Warns(string segmentId)
+    {
+        var content = "MSH|^~\\&|App|Fac|||20240101||ORU^R01|1|P|2.5.1\n" +
+                      "PID|1||MRN001||Smith^Jane||19850315|F\n" +
+                      $"{segmentId}|1|O|\n";
+
+        var result = FileFormatValidator.ValidateHl7(content);
+
+        Assert.Contains(result.Warnings, w => w.Contains("Unexpected segment"));
+    }
+
     [Fact]
     public void ValidateHl7_PlainTextFile_ReturnsInvalid()
     {
