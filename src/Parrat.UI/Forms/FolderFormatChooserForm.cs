@@ -24,7 +24,6 @@ public class FolderFormatChooserForm : ParratFormBase
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
         MaximizeBox = false;
-        ClientSize = new Size(420, 190);
 
         var prompt = new Label
         {
@@ -62,11 +61,17 @@ public class FolderFormatChooserForm : ParratFormBase
 
         SelectedFormat = scan.AvailableFormats[0];
 
+        // Sized to its content: the dialog holds one row per format present, so
+        // a fixed height either gapes or crowds depending on how many there are.
+        const int width = 420;
+        int buttonsTop = y + 22;
+        ClientSize = new Size(width, buttonsTop + 28 + 14);
+
         var btnOk = new Button
         {
             Text = "Load",
             DialogResult = DialogResult.OK,
-            Location = new Point(232, 148),
+            Location = new Point(width - 188, buttonsTop),
             Size = new Size(85, 28)
         };
         btnOk.Click += (s, e) =>
@@ -81,7 +86,7 @@ public class FolderFormatChooserForm : ParratFormBase
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(323, 148),
+            Location = new Point(width - 97, buttonsTop),
             Size = new Size(85, 28)
         };
         Controls.Add(btnCancel);
