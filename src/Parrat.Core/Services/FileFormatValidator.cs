@@ -1,5 +1,6 @@
 using System.Text;
 using System.Xml;
+using Parrat.Core.Helpers;
 
 namespace Parrat.Core.Services;
 
@@ -52,6 +53,10 @@ public static class FileFormatValidator
         {
             var line = rawLine.Trim();
             if (string.IsNullOrEmpty(line)) continue;
+
+            // Batch envelope segments wrap the messages; they are valid but carry
+            // nothing PARRAT reports on.
+            if (Hl7BatchHelper.IsEnvelopeSegment(line)) continue;
 
             if (line.StartsWith("MSH|"))
             {

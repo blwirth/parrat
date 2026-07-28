@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 
 namespace Parrat.Core.Services;
@@ -378,7 +379,9 @@ public class ConcatenateService : IConcatenateService
             if (string.IsNullOrEmpty(content))
                 continue;
 
-            var trimmedContent = content.TrimEnd('\r', '\n');
+            // Drop each source file's batch envelope: concatenating them verbatim
+            // would interleave FHS/BHS/BTS/FTS through the combined output.
+            var trimmedContent = Hl7BatchHelper.StripEnvelopeSegments(content).TrimEnd('\r', '\n');
             if (string.IsNullOrEmpty(trimmedContent))
                 continue;
 
@@ -404,7 +407,7 @@ public class ConcatenateService : IConcatenateService
             if (string.IsNullOrEmpty(content))
                 continue;
 
-            var trimmedContent = content.TrimEnd('\r', '\n');
+            var trimmedContent = Hl7BatchHelper.StripEnvelopeSegments(content).TrimEnd('\r', '\n');
             if (string.IsNullOrEmpty(trimmedContent))
                 continue;
 

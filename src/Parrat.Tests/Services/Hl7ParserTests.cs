@@ -529,4 +529,67 @@ public class Hl7ParserTests
     }
 
     #endregion
+
+    #region Batch envelope (FHS/BHS/BTS/FTS)
+
+    [Fact]
+    public void Parse_BatchWrappedFile_ExcludesEnvelopeFromMessages()
+    {
+        var content = "FHS|^~\\&|App|Fac|||20240101\n" +
+                      "BHS|^~\\&|App|Fac|||20240101\n" +
+                      "MSH|^~\\&|App|Fac|||20240101||ORU^R01|1|P|2.5.1\n" +
+                      "PID|1||123||Test^Patient||19900101|M\n" +
+                      "BTS|1\n" +
+                      "FTS|1";
+
+        var messages = _parser.Parse(content);
+
+        Assert.Single(messages);
+        Assert.False(messages[0].Segments.ContainsKey("BTS"),
+            "Batch trailer must not be absorbed into the last message");
+        Assert.False(messages[0].Segments.ContainsKey("FTS"),
+            "File trailer must not be absorbed into the last message");
+        Assert.DoesNotContain("BTS|", messages[0].RawContent);
+        Assert.DoesNotContain("FTS|", messages[0].RawContent);
+        Assert.Equal(2, messages[0].AllSegments.Count);
+    }
+
+    [Fact]
+    public void Parse_MultipleBatches_ParsesEveryMessage()
+    {
+        var content = "FHS|^~\\&|App|Fac\n" +
+                      "BHS|^~\\&|App|Fac\n" +
+                      "MSH|^~\\&|App|Fac|||20240101||ORU^R01|1|P|2.5.1\n" +
+                      "PID|1||123||Test^Patient||19900101|M\n" +
+                      "BTS|1\n" +
+                      "BHS|^~\\&|App|Fac\n" +
+                      "MSH|^~\\&|App|Fac|||20240102||ORU^R01|2|P|2.5.1\n" +
+                      "PID|1||456||Other^Patient||19850101|F\n" +
+                      "BTS|1\n" +
+                      "FTS|2";
+
+        var messages = _parser.Parse(content);
+
+        Assert.Equal(2, messages.Count);
+        Assert.Equal("123", messages[0].PatientId);
+        Assert.Equal("456", messages[1].PatientId);
+        Assert.All(messages, m => Assert.Equal(2, m.AllSegments.Count));
+    }
+
+    [Fact]
+    public void Parse_ObxNarrativeResemblingTrailer_IsPreserved()
+    {
+        // OBX text that happens to start with an envelope identifier must survive.
+        var content = "MSH|^~\\&|App|Fac|||20240101||ORU^R01|1|P|2.5.1\n" +
+                      "PID|1||123||Test^Patient||19900101|M\n" +
+                      "OBX|1|TX|PATH_DX||FTS was noted in the specimen||||||F";
+
+        var messages = _parser.Parse(content);
+
+        Assert.Single(messages);
+        Assert.True(messages[0].Segments.ContainsKey("OBX"));
+        Assert.Contains("FTS was noted", messages[0].RawContent);
+    }
+
+    #endregion
 }

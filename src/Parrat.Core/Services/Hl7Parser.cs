@@ -59,6 +59,12 @@ public class Hl7Parser : IHl7Parser
             if (string.IsNullOrEmpty(trimmedLine))
                 continue;
 
+            // Batch envelope segments (FHS/BHS/BTS/FTS) are not message content.
+            // Trailers in particular would otherwise be absorbed by the message
+            // that precedes them.
+            if (Hl7BatchHelper.IsEnvelopeSegment(trimmedLine))
+                continue;
+
             if (trimmedLine.StartsWith("MSH|"))
             {
                 if (currentMessageLines.Count > 0)
