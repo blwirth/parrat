@@ -51,8 +51,27 @@ public class AppState
     /// </summary>
     public int[]? FilterMatches { get; set; }
 
+    /// <summary>
+    /// How many records existed when <see cref="FilterMatches"/> was captured.
+    ///
+    /// The matches are positions, not identities. Should the loaded records
+    /// ever change underneath them, those positions would quietly point at
+    /// different records than the ones the filter actually matched. Today every
+    /// operation that alters the record set saves and reopens the file, which
+    /// clears the filter, so this cannot happen — recording the count makes
+    /// that a checked assumption rather than a lucky one.
+    /// </summary>
+    public int FilterMatchesRecordCount { get; set; }
+
     /// <summary>True when a filter is narrowing the record list.</summary>
     public bool HasActiveFilter => ActiveFilter is { IsEmpty: false };
+
+    /// <summary>
+    /// True when the filter was applied against a record set that no longer
+    /// matches the one loaded, which makes its cached matches meaningless.
+    /// </summary>
+    public bool IsFilterStale =>
+        HasActiveFilter && FilterMatchesRecordCount != RecordCount;
 
     /// <summary>How many records survive the filter; the full count when none is applied.</summary>
     public int FilteredRecordCount => FilterMatches?.Length ?? RecordCount;
@@ -86,6 +105,7 @@ public class AppState
         SearchIndex = Array.Empty<string>();
         ActiveFilter = null;
         FilterMatches = null;
+        FilterMatchesRecordCount = 0;
         IsLoadingData = false;
         IsShowingTumor = false;
         SpaceBatchToggling = false;

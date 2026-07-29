@@ -343,16 +343,9 @@ public partial class MainForm : ParratFormBase
                 e.SuppressKeyPress = true;
             }
         }
-        // Ctrl+Shift+F — Filter records (Ctrl+F already focuses the search box)
-        else if (e.Control && e.Shift && e.KeyCode == Keys.F)
-        {
-            if (_menuBuilder.MnuFilterRecords.Enabled)
-            {
-                OnFilterRecords();
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-        }
+        // Ctrl+Shift+F opens the filter. It is not handled here: the menu item
+        // carries it as ShortcutKeys, which ProcessCmdKey consumes before this
+        // runs, and duplicating it only risks the two drifting apart.
         // Ctrl+R — Find in Reference
         else if (e.Control && !e.Shift && e.KeyCode == Keys.R)
         {

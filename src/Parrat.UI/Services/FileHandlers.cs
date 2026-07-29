@@ -1216,6 +1216,7 @@ public class FileHandlers
             {
                 _state.ActiveFilter = null;
                 _state.FilterMatches = null;
+                _state.FilterMatchesRecordCount = 0;
             }
             else
             {
@@ -1228,6 +1229,7 @@ public class FileHandlers
 
                 _state.ActiveFilter = filter;
                 _state.FilterMatches = _filterService.GetMatchingIndices(filter, source);
+                _state.FilterMatchesRecordCount = _state.RecordCount;
             }
 
             RefreshNavFilters(form);
@@ -1256,6 +1258,7 @@ public class FileHandlers
     {
         _state.ActiveFilter = null;
         _state.FilterMatches = null;
+        _state.FilterMatchesRecordCount = 0;
         _menuBuilder.MnuClearFilter.Enabled = false;
         form.HideFilterBanner();
     }
@@ -1278,6 +1281,22 @@ public class FileHandlers
     {
         var navTable = _state.NavTable;
         if (navTable == null) return;
+
+        // A filter's matches are positions in the record set it was applied to.
+        // If that set has changed size, they now name different records, and
+        // showing them would hide the wrong rows for a reason the user cannot
+        // see. Drop the filter rather than act on positions we cannot trust.
+        if (_state.IsFilterStale)
+        {
+            _logger.Log("WARN",
+                $"Dropping a filter applied to {_state.FilterMatchesRecordCount} records; "
+                + $"{_state.RecordCount} are now loaded",
+                "FILTER_STALE");
+
+            _state.ActiveFilter = null;
+            _state.FilterMatches = null;
+            _state.FilterMatchesRecordCount = 0;
+        }
 
         NavMatchHelper.Apply(navTable, searchMatches, _state.FilterMatches);
 
