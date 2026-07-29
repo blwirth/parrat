@@ -64,7 +64,7 @@ public class NavSelectionHelperTests
         Check(table, 1);
         NavMatchHelper.Apply(table, System.Array.Empty<int>(), null);
 
-        Assert.Equal(0, table.DefaultView.Count);
+        Assert.Empty(table.DefaultView);
         Assert.Equal(new[] { 1 }, NavSelectionHelper.GetCheckedIndices(table));
     }
 

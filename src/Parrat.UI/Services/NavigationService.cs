@@ -483,44 +483,27 @@ public class NavigationService
     public void NavigateNext() => NavigateBy(1);
 
     /// <summary>
-    /// Steps to the next record in the given direction that the search box and
-    /// record filter leave visible. Walking hidden records would make Next look
-    /// broken while a filter is applied — the grid would not move and the panels
-    /// would show a record the user has filtered out.
+    /// Steps one row through the grid's own order, so Previous and Next follow
+    /// what the user is looking at: the current sort, minus whatever the search
+    /// box and the record filter are hiding. Walking record indices instead
+    /// would step onto hidden records and ignore the sort entirely.
     /// </summary>
     private void NavigateBy(int step)
     {
-        int count = _state.RecordCount;
-        var visible = VisibleRecordIndices();
-
-        for (int i = _state.CurrentIndex + step; i >= 0 && i < count; i += step)
-        {
-            if (visible == null || visible.Contains(i))
-            {
-                ShowRecord(i);
-                return;
-            }
-        }
-    }
-
-    /// <summary>
-    /// The 0-based indices the grid is currently showing, or null when nothing
-    /// is hidden and every record is reachable.
-    /// </summary>
-    private HashSet<int>? VisibleRecordIndices()
-    {
         var view = _state.NavTable?.DefaultView;
-        if (view == null || string.IsNullOrEmpty(view.RowFilter))
-            return null;
 
-        var indices = new HashSet<int>(view.Count);
-        foreach (DataRowView row in view)
+        // No grid to follow — fall back to load order so navigation still works.
+        if (view == null || view.Count == 0)
         {
-            if (row["Index"] is int index)
-                indices.Add(index - 1);
+            int fallback = _state.CurrentIndex + step;
+            if (fallback >= 0 && fallback < _state.RecordCount)
+                ShowRecord(fallback);
+            return;
         }
 
-        return indices;
+        int next = NavOrderHelper.NextVisibleIndex(view, _state.CurrentIndex, step);
+        if (next >= 0)
+            ShowRecord(next);
     }
 
     /// <summary>
