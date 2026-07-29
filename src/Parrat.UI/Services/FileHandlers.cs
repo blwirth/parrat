@@ -1203,6 +1203,13 @@ public class FileHandlers
     /// </summary>
     public void ApplyRecordFilter(MainForm form, FilterDefinition? filter)
     {
+        // The scan and the grid rebind both run here, on the UI thread. Four
+        // hundred tumors take about ten milliseconds, but a folder load holding
+        // tens of thousands is a visible pause, and a window that does nothing
+        // for a second reads as one that has ignored the click.
+        var previousCursor = form.Cursor;
+        form.Cursor = Cursors.WaitCursor;
+
         try
         {
             if (filter == null || filter.IsEmpty)
@@ -1230,6 +1237,10 @@ public class FileHandlers
             _logger.LogError("Failed to apply record filter", "FILTER", ex);
             MessageBox.Show($"Error applying filter: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            form.Cursor = previousCursor;
         }
     }
 
