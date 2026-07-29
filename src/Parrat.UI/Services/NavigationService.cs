@@ -1,6 +1,7 @@
 using System.Data;
 using System.Windows.Forms;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 using Parrat.UI.Controls;
@@ -613,19 +614,12 @@ public class NavigationService
         }
     }
 
-    private int GetSelectedCount()
-    {
-        var dataTable = GridNav.DataSource as DataTable;
-        if (dataTable == null) return 0;
-
-        int count = 0;
-        foreach (DataRow row in dataTable.Rows)
-        {
-            if (row["Selected"] is bool selected && selected)
-                count++;
-        }
-        return count;
-    }
+    /// <summary>
+    /// Counts checked records from the same place the operations that act on
+    /// them read, so the label and the export can never disagree.
+    /// </summary>
+    private int GetSelectedCount() =>
+        NavSelectionHelper.GetCheckedCount(GridNav.DataSource as DataTable);
 
     /// <summary>
     /// Formats an HL7 datetime string for display.

@@ -974,21 +974,16 @@ public partial class MainForm
         mb.MnuExportSelectedCsv.Enabled = isXml || isHl7;
     }
 
+    /// <summary>
+    /// The records an operation should act on: every checked record, whether or
+    /// not the filter is currently showing it. Reading the grid's visible rows
+    /// instead would quietly drop checked records that a filter had hidden,
+    /// while the record label went on reporting the full count.
+    /// </summary>
     private int[] GetCheckedIndices()
     {
         _gridNav.EndEdit();
-        var checkedIndices = new List<int>();
-        foreach (DataGridViewRow row in _gridNav.Rows)
-        {
-            var cell = row.Cells["Selected"];
-            if (cell.EditedFormattedValue is true)
-            {
-                var indexVal = row.Cells["Index"].Value;
-                if (indexVal != null && indexVal != DBNull.Value)
-                    checkedIndices.Add(Convert.ToInt32(indexVal) - 1);
-            }
-        }
-        return checkedIndices.ToArray();
+        return NavSelectionHelper.GetCheckedIndices(_state.NavTable);
     }
 
     private void OnExportSelectedXml()
