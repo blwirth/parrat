@@ -197,13 +197,15 @@ Date fields default to *year*, since that is the usual question. Two ways to ask
 
 * an amber *FILTER ACTIVE* banner appears above the grid showing the record count and the conditions in force
 * the status bar and record label report the filtered count alongside the total
-* *Previous* and *Next* step only through records the filter leaves visible
+* *Previous* and *Next* step through the grid as it is displayed, following the current sort and skipping anything the filter hides
 
 The filter and the search bar work together — a record must satisfy both to appear. This means you can filter to a year and then type a name to search within that year.
 
 ==== Acting on Filtered Records
 
 *Select all N* on the banner ticks the checkbox on every record currently shown. Every feature that works on selected records — export, split, deduplication, field assignment — then operates on the filtered set.
+
+A checked record stays checked whether or not the filter is showing it, so operations always act on everything you have ticked. Where that means acting on records you cannot currently see, or exporting every record while a filter is showing only some, PARRAT says so and asks before going ahead.
 
 ==== Clearing the Filter
 
