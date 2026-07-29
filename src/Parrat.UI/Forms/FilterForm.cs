@@ -22,7 +22,7 @@ public class FilterForm : ParratFormBase
     private readonly int _recordCount;
     private readonly IReadOnlyCollection<string>? _presentFieldIds;
 
-    private readonly Panel _pnlRows;
+    private readonly FlowLayoutPanel _pnlRows;
     private readonly Label _lblMatches;
     private readonly List<ConditionRow> _rows = new();
 
@@ -53,7 +53,7 @@ public class FilterForm : ParratFormBase
 
         string typeName = fileType == "hl7" ? "HL7" : "NAACCR XML";
 
-        Text = $"Filter Records — {typeName} ({recordCount:N0} records)";
+        Text = $"Filter Records: {typeName} ({recordCount:N0} records)";
         Size = new Size(880, 520);
         MinimumSize = new Size(720, 380);
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -64,26 +64,34 @@ public class FilterForm : ParratFormBase
         var lblHint = new Label
         {
             Text = "Conditions are combined top to bottom: \"A AND B OR C\" means \"(A AND B) OR C\". "
-                 + "Values are compared as text — dates included.",
+                 + "Values are compared as text, dates included.",
             Location = new Point(12, 10),
             Size = new Size(840, 32),
             ForeColor = Color.DimGray
         };
 
-        _pnlRows = new Panel
+        // Rows stack themselves at whatever height they actually are. Placing
+        // them by hand meant spacing them by a constant, which stops matching
+        // the rows the moment DPI scaling changes their height.
+        _pnlRows = new FlowLayoutPanel
         {
             Location = new Point(12, 46),
             Size = new Size(840, 300),
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
             AutoScroll = true,
             BorderStyle = BorderStyle.FixedSingle,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left
+            // Extra height goes to the conditions, which is the part of this
+            // dialog that can grow, rather than to dead space above the buttons.
+            Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
         };
 
         var btnAdd = new Button
         {
             Text = "+ Add condition",
             Location = new Point(12, 356),
-            Size = new Size(130, 26)
+            Size = new Size(130, 26),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
         };
         btnAdd.Click += (_, _) => AddRow(new FilterCondition());
 
@@ -91,7 +99,8 @@ public class FilterForm : ParratFormBase
         {
             Text = "Preview",
             Location = new Point(150, 356),
-            Size = new Size(90, 26)
+            Size = new Size(90, 26),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
         };
         btnPreview.Click += (_, _) => RunPreview();
 
@@ -100,14 +109,16 @@ public class FilterForm : ParratFormBase
             Text = "",
             Location = new Point(250, 361),
             Size = new Size(300, 20),
-            ForeColor = Color.DimGray
+            ForeColor = Color.DimGray,
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
         };
 
         var btnClear = new Button
         {
             Text = "Clear filter",
             Location = new Point(560, 392),
-            Size = new Size(90, 28)
+            Size = new Size(90, 28),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
         };
         btnClear.Click += (_, _) => ClearFilter();
 
@@ -116,14 +127,16 @@ public class FilterForm : ParratFormBase
             Text = "Cancel",
             Location = new Point(658, 392),
             Size = new Size(90, 28),
-            DialogResult = DialogResult.Cancel
+            DialogResult = DialogResult.Cancel,
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
         };
 
         var btnApply = new Button
         {
             Text = "Apply",
             Location = new Point(756, 392),
-            Size = new Size(96, 28)
+            Size = new Size(96, 28),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
         };
         btnApply.Click += (_, _) => ApplyFilter();
 
@@ -158,11 +171,13 @@ public class FilterForm : ParratFormBase
         var row = new ConditionRow(this, condition, _rows.Count == 0);
         row.RemoveRequested += () => RemoveRow(row);
 
+        // Rows built after the form loaded missed its one-shot DPI pass, and
+        // would otherwise be a fraction of the height of the row above them.
+        ScaleNewControl(row.Container);
+
         _rows.Add(row);
         _pnlRows.Controls.Add(row.Container);
-        LayoutRows();
-
-        row.Container.Focus();
+        RefreshRowConjunctions();
     }
 
     private void RemoveRow(ConditionRow row)
@@ -178,16 +193,14 @@ public class FilterForm : ParratFormBase
         _rows.Remove(row);
         _pnlRows.Controls.Remove(row.Container);
         row.Container.Dispose();
-        LayoutRows();
+        RefreshRowConjunctions();
     }
 
-    private void LayoutRows()
+    /// <summary>Only the first row has nothing above it to join to.</summary>
+    private void RefreshRowConjunctions()
     {
         for (int i = 0; i < _rows.Count; i++)
-        {
-            _rows[i].Container.Location = new Point(4, 6 + i * (ConditionRow.RowHeight + 4));
             _rows[i].SetIsFirst(i == 0);
-        }
     }
 
     // ── Actions ──────────────────────────────────────────────────────────
@@ -254,7 +267,7 @@ public class FilterForm : ParratFormBase
 
         if (filter.IsEmpty)
         {
-            _lblMatches.Text = $"No conditions — all {_recordCount:N0} records.";
+            _lblMatches.Text = $"No conditions: all {_recordCount:N0} records.";
             return;
         }
 
@@ -377,7 +390,11 @@ public class FilterForm : ParratFormBase
             _owner = owner;
             _fieldId = condition.FieldId;
 
-            Container = new Panel { Size = new Size(800, RowHeight) };
+            Container = new Panel
+            {
+                Size = new Size(800, RowHeight),
+                Margin = new Padding(4, 3, 4, 3)
+            };
 
             _cboConjunction = new ComboBox
             {

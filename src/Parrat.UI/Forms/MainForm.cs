@@ -567,7 +567,7 @@ public partial class MainForm : ParratFormBase
         {
             string description = _state.ActiveFilter!.Describe(DescribeFilterField);
 
-            _lblFilterText.Text = $"▼  FILTER ACTIVE — showing {visibleCount:N0} of {totalCount:N0}";
+            _lblFilterText.Text = $"FILTER ACTIVE: showing {visibleCount:N0} of {totalCount:N0}";
             _lblFilterDescription.Text = description;
             _filterTooltip.SetToolTip(_lblFilterDescription, description);
             _btnSelectFiltered.Text = $"Select all {visibleCount:N0}";

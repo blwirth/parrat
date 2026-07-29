@@ -13,6 +13,29 @@ public class ParratFormBase : Form
     private static Icon? _appIcon;
     private bool _hasScaled;
 
+    /// <summary>
+    /// The factor <see cref="OnLoad"/> scaled this form's controls by, or 1
+    /// when no scaling was needed.
+    ///
+    /// Scaling runs once, at load. Controls a form builds later — rows added
+    /// to a list, say — are created at 96 DPI and miss that pass entirely,
+    /// leaving them a fraction of the height of everything around them. Such a
+    /// form should call <see cref="ScaleNewControl"/> on what it adds.
+    /// </summary>
+    protected float AppliedDpiScale { get; private set; } = 1f;
+
+    /// <summary>
+    /// Brings a control created after load up to the size the rest of the form
+    /// was scaled to. Safe to call when no scaling was applied.
+    /// </summary>
+    protected void ScaleNewControl(Control control)
+    {
+        if (control == null || AppliedDpiScale <= 1.001f && AppliedDpiScale >= 0.999f)
+            return;
+
+        control.Scale(new SizeF(AppliedDpiScale, AppliedDpiScale));
+    }
+
     public ParratFormBase()
     {
         AutoScaleMode = AutoScaleMode.None;
@@ -34,6 +57,7 @@ public class ParratFormBase : Form
             if (scale > 1.01f || scale < 0.99f)
             {
                 ApplyDpiScale(scale);
+                AppliedDpiScale = scale;
                 didScale = true;
             }
         }

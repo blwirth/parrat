@@ -594,7 +594,7 @@ public class NavigationService
     /// label reports is never mistaken for the whole file.
     /// </summary>
     private string FilterSuffix =>
-        _state.HasActiveFilter ? $"  —  filtered: {_state.FilteredRecordCount}" : "";
+        _state.HasActiveFilter ? $"  |  filtered: {_state.FilteredRecordCount}" : "";
 
     // ── Private helpers ──────────────────────────────────────────────────
 
