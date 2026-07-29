@@ -49,7 +49,8 @@ public partial class MainForm : ParratFormBase
         ICsvParserService csvParserService,
         ICsvImportService csvImportService,
         IXlsxParserService xlsxParserService,
-        IEpathParserService epathParserService)
+        IEpathParserService epathParserService,
+        IFilterService filterService)
     {
         _state = state;
         _menuBuilder = menuBuilder;
@@ -79,6 +80,7 @@ public partial class MainForm : ParratFormBase
         _csvImportService = csvImportService;
         _xlsxParserService = xlsxParserService;
         _epathParserService = epathParserService;
+        _filterService = filterService;
 
         InitializeComponent();
         InitializeMenu();
@@ -203,6 +205,11 @@ public partial class MainForm : ParratFormBase
         // Search text changed with debounce
         _txtSearch.TextChanged += (s, e) => _fileHandlers.HandleSearchTextChanged(this);
         _btnClearSearch.Click += (s, e) => _fileHandlers.HandleSearchClear(this);
+
+        // Filter banner
+        _btnClearFilter.Click += (s, e) => _fileHandlers.ClearRecordFilter(this);
+        _btnEditFilter.Click += (s, e) => OnFilterRecords();
+        _btnSelectFiltered.Click += (s, e) => OnSelectAllShown();
 
         // Copy buttons
         foreach (var btn in _btnCopyFields)
@@ -336,6 +343,9 @@ public partial class MainForm : ParratFormBase
                 e.SuppressKeyPress = true;
             }
         }
+        // Ctrl+Shift+F opens the filter. It is not handled here: the menu item
+        // carries it as ShortcutKeys, which ProcessCmdKey consumes before this
+        // runs, and duplicating it only risks the two drifting apart.
         // Ctrl+R — Find in Reference
         else if (e.Control && !e.Shift && e.KeyCode == Keys.R)
         {
@@ -353,12 +363,18 @@ public partial class MainForm : ParratFormBase
             e.Handled = true;
             e.SuppressKeyPress = true;
         }
-        // Escape — Clear search
+        // Escape — clear the search box, or the filter when the grid has focus
         else if (e.KeyCode == Keys.Escape)
         {
             if (_txtSearch.Focused)
             {
                 _txtSearch.Text = "";
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (_gridNav.Focused && _state.HasActiveFilter)
+            {
+                _fileHandlers.ClearRecordFilter(this);
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
@@ -506,11 +522,73 @@ public partial class MainForm : ParratFormBase
     }
 
     /// <summary>
-    /// Updates the status bar text.
+    /// Updates the status bar text. The filter note, if any, is re-appended:
+    /// a load message must never overwrite the fact that records are hidden.
     /// </summary>
     public void SetStatusText(string text)
     {
-        _lblStatus.Text = text;
+        _baseStatusText = text;
+        _lblStatus.Text = text + FilterStatusSuffix;
+    }
+
+    // ── Filter banner ────────────────────────────────────────────────────
+
+    /// <summary>Status text without the filter note, so the note can be re-applied.</summary>
+    private string _baseStatusText = "";
+
+    /// <summary>Records the grid is showing while a filter is applied.</summary>
+    private int _filterVisibleCount;
+
+    private readonly ToolTip _filterTooltip = new();
+
+    private string FilterStatusSuffix =>
+        _state.HasActiveFilter ? $"   |   FILTER: {_filterVisibleCount:N0} shown" : "";
+
+    /// <summary>
+    /// Shows or hides the filter banner and refreshes everything that reports
+    /// the filter state: the banner text, the status bar, and the menu check.
+    /// </summary>
+    public void UpdateFilterBanner(int visibleCount, int totalCount)
+    {
+        bool active = _state.HasActiveFilter;
+
+        _filterVisibleCount = visibleCount;
+        _pnlFilter.Visible = active;
+        _menuBuilder.MnuFilterRecords.Checked = active;
+
+        if (active)
+        {
+            string description = _state.ActiveFilter!.Describe(DescribeFilterField);
+
+            _lblFilterText.Text = $"FILTER ACTIVE: showing {visibleCount:N0} of {totalCount:N0}";
+            _lblFilterDescription.Text = description;
+            _filterTooltip.SetToolTip(_lblFilterDescription, description);
+            _btnSelectFiltered.Text = $"Select all {visibleCount:N0}";
+        }
+
+        _lblStatus.Text = _baseStatusText + FilterStatusSuffix;
+    }
+
+    /// <summary>A readable name for a field id in the banner text.</summary>
+    private string DescribeFilterField(string fieldId)
+    {
+        if (_state.FileType != "hl7")
+            return fieldId;
+
+        // Trim the segment reference — "Date of Birth (PID-7)" is more detail
+        // than a one-line banner has room for.
+        var name = Parrat.Core.Helpers.Hl7FilterFields.GetDisplayName(fieldId);
+        int paren = name.IndexOf(" (", StringComparison.Ordinal);
+        return paren > 0 ? name[..paren] : name;
+    }
+
+    /// <summary>Hides the banner when a load leaves nothing to filter.</summary>
+    public void HideFilterBanner()
+    {
+        _filterVisibleCount = 0;
+        _pnlFilter.Visible = false;
+        _menuBuilder.MnuFilterRecords.Checked = false;
+        _lblStatus.Text = _baseStatusText;
     }
 
     /// <summary>

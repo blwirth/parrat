@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using Parrat.UI.Controls;
 
 namespace Parrat.UI.Forms;
 
@@ -100,6 +101,91 @@ partial class MainForm : ParratFormBase
         _pnlSearch.Controls.Add(_txtSearch);
         _pnlSearch.Controls.Add(_lblSearchCount);
         _pnlSearch.Controls.Add(_btnClearSearch);
+
+        // ── Filter banner (docked above the search panel) ────────────────
+        // Deliberately loud: a filter that is silently on hides records, and a
+        // user who forgets it is on will conclude data is missing from the file.
+        //
+        // The banner is itself a two-column table — text takes the slack,
+        // buttons size to their content. Nesting docked panels inside it placed
+        // the buttons wrongly once the banner spanned the full window; one
+        // table with explicit column styles lays out the same at any width and
+        // any DPI, which is what ParratFormBase's manual scaling needs.
+        _pnlFilter = new TableLayoutPanel();
+        _pnlFilter.Dock = DockStyle.Top;
+        _pnlFilter.Height = 32;
+        _pnlFilter.ColumnCount = 2;
+        _pnlFilter.RowCount = 1;
+        // Everything actionable sits on the left, next to the text it belongs
+        // to. Right-aligning it would put it wherever the window's right edge
+        // happens to be, which is not always somewhere the user can see.
+        _pnlFilter.Visible = false;
+        _pnlFilter.BackColor = FilterBannerBackColor;
+        _pnlFilter.AccessibleName = "Filter banner";
+        _pnlFilter.AccessibleRole = AccessibleRole.Grouping;
+        _pnlFilter.Padding = new Padding(0, 0, 0, 1);
+        _pnlFilter.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _pnlFilter.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _pnlFilter.Paint += (s, e) =>
+        {
+            // Bottom rule, so the banner reads as a persistent state marker
+            // rather than a toolbar that happens to be yellow.
+            using var pen = new Pen(FilterBannerForeColor);
+            e.Graphics.DrawLine(pen, 0, _pnlFilter.Height - 1, _pnlFilter.Width, _pnlFilter.Height - 1);
+        };
+
+        // Announcing: a filter turning on hides records, which a screen reader
+        // user must be told about rather than left to infer from a count.
+        // No AccessibleName on either label: it would override the text, and
+        // the text is the message. Only the description is set.
+        _lblFilterText = new AnnouncingLabel();
+        _lblFilterText.AccessibleDescription = "Filter status";
+        _lblFilterText.AutoSize = true;
+        _lblFilterText.Anchor = AnchorStyles.Left;
+        _lblFilterText.Margin = new Padding(6, 0, 10, 0);
+        _lblFilterText.TextAlign = ContentAlignment.MiddleLeft;
+        _lblFilterText.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+        _lblFilterText.ForeColor = FilterBannerForeColor;
+        _lblFilterText.Text = "";
+
+        // The condition text is the part that can run long, so it takes the
+        // remaining width and ellipsises; the tooltip carries the full text.
+        _lblFilterDescription = new AnnouncingLabel();
+        _lblFilterDescription.AccessibleDescription = "Filter conditions in force";
+        _lblFilterDescription.Dock = DockStyle.Fill;
+        _lblFilterDescription.Margin = new Padding(10, 0, 6, 0);
+        _lblFilterDescription.TextAlign = ContentAlignment.MiddleLeft;
+        _lblFilterDescription.Font = new Font("Segoe UI", 9f);
+        _lblFilterDescription.ForeColor = FilterBannerForeColor;
+        _lblFilterDescription.AutoEllipsis = true;
+        _lblFilterDescription.Text = "";
+
+        _btnSelectFiltered = MakeFilterBannerButton("Select all shown", 120);
+        _btnSelectFiltered.AccessibleDescription =
+            "Checks every record the filter is showing, so operations act on them";
+
+        _btnEditFilter = MakeFilterBannerButton("Edit…", 55);
+        _btnEditFilter.AccessibleName = "Edit filter";
+
+        _btnClearFilter = MakeFilterBannerButton("✕ Clear filter", 100);
+        _btnClearFilter.AccessibleName = "Clear filter";
+
+        var filterBar = new FlowLayoutPanel
+        {
+            Anchor = AnchorStyles.Left,
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            Margin = new Padding(0)
+        };
+        filterBar.Controls.AddRange(new Control[]
+        {
+            _lblFilterText, _btnClearFilter, _btnEditFilter, _btnSelectFiltered
+        });
+
+        _pnlFilter.Controls.Add(filterBar, 0, 0);
+        _pnlFilter.Controls.Add(_lblFilterDescription, 1, 0);
 
         // ── RichTextBox — path/text panel (middle) ───────────────────────
         _rtbPath = new RichTextBox();
@@ -205,7 +291,11 @@ partial class MainForm : ParratFormBase
         _splitInner.Panel2.Controls.Add(_rtbItems);
         _splitOuter.Panel2.Controls.Add(_splitInner);
 
+        // Spans the whole window rather than sitting over the grid: the filter
+        // governs every pane, and the full width leaves room to spell out what
+        // the filter actually is instead of ellipsising it after four words.
         _mainPanel.Controls.Add(_splitOuter);
+        _mainPanel.Controls.Add(_pnlFilter);
 
         // ── Add all to form ──────────────────────────────────────────────
         // Note: _menuStrip is added in the constructor after MenuBuilder creates it
@@ -222,6 +312,36 @@ partial class MainForm : ParratFormBase
         KeyPreview = true;
     }
 
+    // ── Filter banner styling ────────────────────────────────────────────
+
+    private static readonly Color FilterBannerBackColor = Color.FromArgb(255, 243, 205);
+    private static readonly Color FilterBannerForeColor = Color.FromArgb(133, 100, 4);
+
+    /// <summary>A flat button sized to sit on the filter banner without crowding it.</summary>
+    private static Button MakeFilterBannerButton(string text, int width)
+    {
+        var button = new Button
+        {
+            AutoSize = false,
+            Width = width,
+            Height = 24,
+            Anchor = AnchorStyles.None,
+            Text = text,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.White,
+            ForeColor = FilterBannerForeColor,
+            Font = new Font("Segoe UI", 8.5f),
+            Margin = new Padding(2),
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+
+        button.FlatAppearance.BorderColor = FilterBannerForeColor;
+        button.FlatAppearance.BorderSize = 1;
+
+        return button;
+    }
+
     // ── Control fields ───────────────────────────────────────────────────
 
     private StatusStrip _statusStrip = null!;
@@ -235,6 +355,12 @@ partial class MainForm : ParratFormBase
     private TextBox _txtSearch = null!;
     private Label _lblSearchCount = null!;
     private Button _btnClearSearch = null!;
+    private TableLayoutPanel _pnlFilter = null!;
+    private AnnouncingLabel _lblFilterText = null!;
+    private AnnouncingLabel _lblFilterDescription = null!;
+    private Button _btnSelectFiltered = null!;
+    private Button _btnEditFilter = null!;
+    private Button _btnClearFilter = null!;
     private RichTextBox _rtbPath = null!;
     private RichTextBox _rtbItems = null!;
     private FlowLayoutPanel _pnlCopyBar = null!;

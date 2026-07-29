@@ -40,6 +40,8 @@ public class MenuBuilder
     // View menu
     public ToolStripMenuItem MnuRawRecord { get; private set; } = null!;
     public ToolStripMenuItem MnuDiffRecords { get; private set; } = null!;
+    public ToolStripMenuItem MnuFilterRecords { get; private set; } = null!;
+    public ToolStripMenuItem MnuClearFilter { get; private set; } = null!;
 
     // Edit menu
     public ToolStripMenuItem MnuAssign { get; private set; } = null!;
@@ -209,6 +211,23 @@ public class MenuBuilder
         MnuDiffRecords = new ToolStripMenuItem("Diff Records") { Enabled = false };
         // Click handler wired by MainForm.Handlers.cs
         mnuView.DropDownItems.Add(MnuDiffRecords);
+
+        mnuView.DropDownItems.Add(new ToolStripSeparator());
+
+        // Ctrl+F belongs to the search box, so the filter takes the shifted form.
+        MnuFilterRecords = new ToolStripMenuItem("Filter Records...")
+        {
+            ShortcutKeys = Keys.Control | Keys.Shift | Keys.F,
+            Enabled = false,
+            CheckOnClick = false,
+            ToolTipText = "Narrow the record list by field values"
+        };
+        // Click handler wired by MainForm.Handlers.cs
+        mnuView.DropDownItems.Add(MnuFilterRecords);
+
+        MnuClearFilter = new ToolStripMenuItem("Clear Filter") { Enabled = false };
+        // Click handler wired by MainForm.Handlers.cs
+        mnuView.DropDownItems.Add(MnuClearFilter);
 
         return mnuView;
     }
@@ -401,6 +420,11 @@ public class MenuBuilder
 
         MnuRawRecord.Enabled = hasFile;
         MnuDiffRecords.Enabled = hasFile;
+
+        // ePath records are not addressable by field yet, so the filter is
+        // offered only where there is a field catalogue to pick from.
+        MnuFilterRecords.Enabled = fileType is "xml" or "hl7";
+        MnuClearFilter.Enabled = _state.HasActiveFilter;
         MnuExport.Enabled = hasFile;
         MnuOpenFolder.Enabled = hasFile;
         MnuOpenReference.Enabled = hasFile;

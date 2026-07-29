@@ -67,6 +67,7 @@ internal static class Program
         services.AddSingleton<IConcatenateService, ConcatenateService>();
         services.AddSingleton<IConvertTxtService, ConvertTxtService>();
         services.AddSingleton<ISearchService, SearchService>();
+        services.AddSingleton<IFilterService, FilterService>();
         services.AddSingleton<IDiffService, DiffService>();
         services.AddSingleton<IDeduplicationService, DeduplicationService>();
         services.AddSingleton<ISplitFileService, SplitFileService>();

@@ -39,6 +39,7 @@ public partial class MainForm
     private ICsvImportService _csvImportService = null!;
     private IXlsxParserService _xlsxParserService = null!;
     private IEpathParserService _epathParserService = null!;
+    private IFilterService _filterService = null!;
 
     /// <summary>
     /// Wires all menu item Click handlers to the appropriate handler methods.
@@ -50,6 +51,8 @@ public partial class MainForm
         // ── View ──────────────────────────────────────────────────────────
         mb.MnuRawRecord.Click += (s, e) => OnShowRawRecord();
         mb.MnuDiffRecords.Click += (s, e) => OnDiffRecords();
+        mb.MnuFilterRecords.Click += (s, e) => OnFilterRecords();
+        mb.MnuClearFilter.Click += (s, e) => _fileHandlers.ClearRecordFilter(this);
 
         // ── File (items owned by Agent 2) ─────────────────────────────────
         mb.MnuDiffFiles.Click += (s, e) => OnDiffFiles();
@@ -971,21 +974,52 @@ public partial class MainForm
         mb.MnuExportSelectedCsv.Enabled = isXml || isHl7;
     }
 
+    /// <summary>
+    /// The records an operation should act on: every checked record, whether or
+    /// not the filter is currently showing it. Reading the grid's visible rows
+    /// instead would quietly drop checked records that a filter had hidden,
+    /// while the record label went on reporting the full count.
+    /// </summary>
     private int[] GetCheckedIndices()
     {
         _gridNav.EndEdit();
-        var checkedIndices = new List<int>();
-        foreach (DataGridViewRow row in _gridNav.Rows)
-        {
-            var cell = row.Cells["Selected"];
-            if (cell.EditedFormattedValue is true)
-            {
-                var indexVal = row.Cells["Index"].Value;
-                if (indexVal != null && indexVal != DBNull.Value)
-                    checkedIndices.Add(Convert.ToInt32(indexVal) - 1);
-            }
-        }
-        return checkedIndices.ToArray();
+        return NavSelectionHelper.GetCheckedIndices(_state.NavTable);
+    }
+
+    /// <summary>
+    /// Confirms an operation whose checked records include some the filter is
+    /// hiding, so more records are involved than the grid is showing. Returns
+    /// false when the user backs out.
+    /// </summary>
+    private bool ConfirmSelectionIncludesHiddenRecords(string noun)
+    {
+        int hidden = NavSelectionHelper.GetCheckedHiddenCount(_state.NavTable);
+        if (hidden == 0) return true;
+
+        int total = NavSelectionHelper.GetCheckedCount(_state.NavTable);
+
+        return MessageBox.Show(
+            $"{total:N0} {noun} are checked, but the filter is hiding {hidden:N0} of them.\n\n" +
+            $"All {total:N0} will be included, not just the ones on screen.\n\nContinue?",
+            "Filter Active", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK;
+    }
+
+    /// <summary>
+    /// Confirms an operation that acts on every record while a filter is
+    /// showing only some of them, and points at the way to act on just the
+    /// filtered set. Returns false when the user backs out.
+    /// </summary>
+    private bool ConfirmActingOnEveryRecord(int totalRecords, string noun)
+    {
+        if (!_state.HasActiveFilter) return true;
+
+        return MessageBox.Show(
+            $"A filter is showing {_state.FilteredRecordCount:N0} of {totalRecords:N0} {noun}, "
+            + $"but this exports all {totalRecords:N0}.\n\n"
+            + "To export only what the filter shows, use \"Select all shown\" on the filter banner, "
+            + "then Export Selected.\n\n"
+            + $"Export all {totalRecords:N0} {noun}?",
+            "Filter Active", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK;
     }
 
     private void OnExportSelectedXml()
@@ -1003,6 +1037,8 @@ public partial class MainForm
                 "No Tumors Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmSelectionIncludesHiddenRecords("tumors")) return;
 
         try
         {
@@ -1057,6 +1093,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("messages")) return;
+
         try
         {
             using var sfd = new SaveFileDialog
@@ -1110,6 +1148,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("tumors")) return;
+
         RunCsvExport(indices, "selected");
     }
 
@@ -1120,6 +1160,8 @@ public partial class MainForm
             MessageBox.Show("No XML file loaded.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmActingOnEveryRecord(_state.Tumors.Count, "tumors")) return;
 
         var indices = Enumerable.Range(0, _state.Tumors.Count).ToArray();
         RunCsvExport(indices, "all");
@@ -1286,6 +1328,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("messages")) return;
+
         RunHl7CsvExport(indices, "selected");
     }
 
@@ -1296,6 +1340,8 @@ public partial class MainForm
             MessageBox.Show("No HL7 file loaded.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmActingOnEveryRecord(_state.Hl7Messages.Count, "messages")) return;
 
         RunHl7CsvExport(null, "all");
     }
@@ -2052,6 +2098,82 @@ public partial class MainForm
             MessageBox.Show($"Error opening OBX skip codes: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    // ── Record filter ─────────────────────────────────────────────────────
+
+    private void OnFilterRecords()
+    {
+        try
+        {
+            if (_state.FileType is not ("xml" or "hl7"))
+            {
+                MessageBox.Show(
+                    "Filtering is available for NAACCR XML and HL7 records.",
+                    "Filter Records", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var dialog = new FilterForm(
+                _naaccrDictionary,
+                _filterService,
+                _state.FileType!,
+                _state.RecordCount,
+                _state.ActiveFilter,
+                GetFilterablePresentFields(),
+                _fileHandlers.CreateFilterFieldSource);
+
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+                _fileHandlers.ApplyRecordFilter(this, dialog.Result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Record filter failed", "FILTER", ex);
+            MessageBox.Show($"Error opening the filter: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>
+    /// NAACCR ids actually present in the loaded document, so the field picker
+    /// opens on what this file has rather than the whole dictionary. Null for
+    /// HL7, which has its own fixed catalogue.
+    /// </summary>
+    private IReadOnlyCollection<string>? GetFilterablePresentFields()
+    {
+        if (_state.FileType != "xml" || _state.Tumors == null || _state.NsMgr == null)
+            return null;
+
+        // Every tumor is scanned: a field used by one record in a folder load is
+        // still a field worth filtering on. ScanPresentVariables reads nothing
+        // when handed a null index array, so the range is passed explicitly.
+        var indices = Enumerable.Range(0, _state.Tumors.Count).ToArray();
+        var present = VariableScanHelper.ScanPresentVariables(_state.Tumors, indices, _state.NsMgr).Keys;
+
+        // Fall back to the full dictionary rather than showing an empty picker.
+        return present.Count > 0 ? present : null;
+    }
+
+    /// <summary>
+    /// Ticks the Selected checkbox on every record the grid is currently
+    /// showing, so export, split, and dedup act on the filtered set without
+    /// needing to know a filter exists.
+    /// </summary>
+    private void OnSelectAllShown()
+    {
+        var navTable = _state.NavTable;
+        if (navTable == null) return;
+
+        _state.SpaceBatchToggling = true;
+        _gridNav.SuspendLayout();
+
+        foreach (DataRowView row in navTable.DefaultView)
+            row["Selected"] = true;
+
+        _gridNav.ResumeLayout();
+        _state.SpaceBatchToggling = false;
+
+        _navigationService.UpdateSelectedCountLabel();
     }
 
     private void OnGridColumns()

@@ -1,6 +1,7 @@
 using System.Data;
 using System.Windows.Forms;
 using System.Xml;
+using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
 using Parrat.UI.Controls;
@@ -150,7 +151,7 @@ public class NavigationService
 
             // Update index label and button states
             int selectedCount = GetSelectedCount();
-            LblIndex.Text = $"Tumor {index + 1} of {tumors.Count} ({selectedCount} selected)";
+            LblIndex.Text = $"Tumor {index + 1} of {tumors.Count} ({selectedCount} selected){FilterSuffix}";
             BtnPrev.Enabled = index > 0;
             BtnNext.Enabled = index < tumors.Count - 1;
 
@@ -316,7 +317,7 @@ public class NavigationService
 
         // Update index label and button states
         int selectedCount = GetSelectedCount();
-        LblIndex.Text = $"Message {index + 1} of {messages.Count} ({selectedCount} selected)";
+        LblIndex.Text = $"Message {index + 1} of {messages.Count} ({selectedCount} selected){FilterSuffix}";
         BtnPrev.Enabled = index > 0;
         BtnNext.Enabled = index < messages.Count - 1;
     }
@@ -458,7 +459,7 @@ public class NavigationService
         );
 
         int selectedCount = GetSelectedCount();
-        LblIndex.Text = $"Record {index + 1} of {records.Count} ({selectedCount} selected)";
+        LblIndex.Text = $"Record {index + 1} of {records.Count} ({selectedCount} selected){FilterSuffix}";
         BtnPrev.Enabled = index > 0;
         BtnNext.Enabled = index < records.Count - 1;
     }
@@ -474,19 +475,35 @@ public class NavigationService
     /// <summary>
     /// Navigates to the previous record.
     /// </summary>
-    public void NavigatePrevious()
-    {
-        if (_state.CurrentIndex > 0)
-            ShowRecord(_state.CurrentIndex - 1);
-    }
+    public void NavigatePrevious() => NavigateBy(-1);
 
     /// <summary>
     /// Navigates to the next record.
     /// </summary>
-    public void NavigateNext()
+    public void NavigateNext() => NavigateBy(1);
+
+    /// <summary>
+    /// Steps one row through the grid's own order, so Previous and Next follow
+    /// what the user is looking at: the current sort, minus whatever the search
+    /// box and the record filter are hiding. Walking record indices instead
+    /// would step onto hidden records and ignore the sort entirely.
+    /// </summary>
+    private void NavigateBy(int step)
     {
-        if (_state.CurrentIndex < _state.RecordCount - 1)
-            ShowRecord(_state.CurrentIndex + 1);
+        var view = _state.NavTable?.DefaultView;
+
+        // No grid to follow — fall back to load order so navigation still works.
+        if (view == null || view.Count == 0)
+        {
+            int fallback = _state.CurrentIndex + step;
+            if (fallback >= 0 && fallback < _state.RecordCount)
+                ShowRecord(fallback);
+            return;
+        }
+
+        int next = NavOrderHelper.NextVisibleIndex(view, _state.CurrentIndex, step);
+        if (next >= 0)
+            ShowRecord(next);
     }
 
     /// <summary>
@@ -535,9 +552,33 @@ public class NavigationService
     {
         int selectedCount = GetSelectedCount();
         int totalCount = _state.RecordCount;
-        string recordType = _state.FileType == "hl7" ? "Message" : "Tumor";
-        LblIndex.Text = $"{recordType} {_state.CurrentIndex + 1} of {totalCount} ({selectedCount} selected)";
+        LblIndex.Text = $"{RecordTypeName} {_state.CurrentIndex + 1} of {totalCount} ({selectedCount} selected){FilterSuffix}";
     }
+
+    /// <summary>
+    /// Refreshes the record label after the visible set changes. Does nothing
+    /// when no record is showing, so it is safe to call from the filter path.
+    /// </summary>
+    public void UpdateIndexLabel()
+    {
+        if (_state.RecordCount == 0 || _state.CurrentIndex < 0) return;
+        UpdateSelectedCountLabel();
+    }
+
+    /// <summary>What this file type calls one record.</summary>
+    private string RecordTypeName => _state.FileType switch
+    {
+        "hl7" => "Message",
+        "epath" => "Record",
+        _ => "Tumor"
+    };
+
+    /// <summary>
+    /// Appended to the record label while a filter is applied, so the count the
+    /// label reports is never mistaken for the whole file.
+    /// </summary>
+    private string FilterSuffix =>
+        _state.HasActiveFilter ? $"  |  filtered: {_state.FilteredRecordCount}" : "";
 
     // ── Private helpers ──────────────────────────────────────────────────
 
@@ -556,19 +597,12 @@ public class NavigationService
         }
     }
 
-    private int GetSelectedCount()
-    {
-        var dataTable = GridNav.DataSource as DataTable;
-        if (dataTable == null) return 0;
-
-        int count = 0;
-        foreach (DataRow row in dataTable.Rows)
-        {
-            if (row["Selected"] is bool selected && selected)
-                count++;
-        }
-        return count;
-    }
+    /// <summary>
+    /// Counts checked records from the same place the operations that act on
+    /// them read, so the label and the export can never disagree.
+    /// </summary>
+    private int GetSelectedCount() =>
+        NavSelectionHelper.GetCheckedCount(GridNav.DataSource as DataTable);
 
     /// <summary>
     /// Formats an HL7 datetime string for display.

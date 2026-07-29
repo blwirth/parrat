@@ -145,15 +145,16 @@ public class SearchService : ISearchService
         }
     }
 
-    public void ApplyFilter(string searchText, DataTable navTable, string[] searchIndex)
+    /// <summary>
+    /// The 0-based indices of the records whose indexed text contains
+    /// <paramref name="searchText"/>. Returns null for a blank search — "no
+    /// constraint", as distinct from an empty array, which is "nothing matched"
+    /// — so a caller can tell the two apart when combining with a record filter.
+    /// </summary>
+    public int[]? GetMatchingIndices(string searchText, string[] searchIndex)
     {
-        if (navTable == null) return;
-
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            navTable.DefaultView.RowFilter = "";
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(searchText) || searchIndex == null)
+            return null;
 
         string lowerSearch = searchText.ToLower();
         var matchingIndices = new List<int>();
@@ -161,19 +162,19 @@ public class SearchService : ISearchService
         for (int i = 0; i < searchIndex.Length; i++)
         {
             if (searchIndex[i].Contains(lowerSearch))
-                matchingIndices.Add(i + 1); // 1-based Index column
+                matchingIndices.Add(i);
         }
+
+        return matchingIndices.ToArray();
+    }
+
+    public void ApplyFilter(string searchText, DataTable navTable, string[] searchIndex)
+    {
+        if (navTable == null) return;
 
         try
         {
-            if (matchingIndices.Count == 0)
-            {
-                navTable.DefaultView.RowFilter = "Index = -1";
-            }
-            else
-            {
-                navTable.DefaultView.RowFilter = $"Index IN ({string.Join(",", matchingIndices)})";
-            }
+            NavMatchHelper.Apply(navTable, GetMatchingIndices(searchText, searchIndex), null);
         }
         catch (Exception ex)
         {
