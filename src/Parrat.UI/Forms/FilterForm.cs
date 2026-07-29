@@ -1,6 +1,7 @@
 using Parrat.Core.Helpers;
 using Parrat.Core.Interfaces;
 using Parrat.Core.Models;
+using Parrat.UI.Controls;
 
 namespace Parrat.UI.Forms;
 
@@ -23,7 +24,7 @@ public class FilterForm : ParratFormBase
     private readonly IReadOnlyCollection<string>? _presentFieldIds;
 
     private readonly FlowLayoutPanel _pnlRows;
-    private readonly Label _lblMatches;
+    private readonly AnnouncingLabel _lblMatches;
     private readonly List<ConditionRow> _rows = new();
 
     /// <summary>
@@ -75,6 +76,8 @@ public class FilterForm : ParratFormBase
         // the rows the moment DPI scaling changes their height.
         _pnlRows = new FlowLayoutPanel
         {
+            AccessibleName = "Filter conditions",
+            AccessibleRole = AccessibleRole.Grouping,
             Location = new Point(12, 46),
             Size = new Size(840, 300),
             FlowDirection = FlowDirection.TopDown,
@@ -86,39 +89,50 @@ public class FilterForm : ParratFormBase
             Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
         };
 
+        // Access keys are all distinct: c, p, l, a. Cancel takes Escape instead,
+        // as every other dialog in the app does.
         var btnAdd = new Button
         {
-            Text = "+ Add condition",
+            Text = "+ Add &condition",
             Location = new Point(12, 356),
             Size = new Size(130, 26),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            AccessibleDescription = "Adds another condition below the last one"
         };
         btnAdd.Click += (_, _) => AddRow(new FilterCondition());
 
         var btnPreview = new Button
         {
-            Text = "Preview",
+            Text = "&Preview",
             Location = new Point(150, 356),
             Size = new Size(90, 26),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            AccessibleDescription = "Counts the matching records without applying the filter"
         };
         btnPreview.Click += (_, _) => RunPreview();
 
-        _lblMatches = new Label
+        // Announcing: the preview count is the answer to a question the user
+        // just asked, so it has to reach a screen reader as well as the screen.
+        _lblMatches = new AnnouncingLabel
         {
             Text = "",
             Location = new Point(250, 361),
             Size = new Size(300, 20),
             ForeColor = Color.DimGray,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            // No AccessibleName: it would override the text, and the text is
+            // the whole message. A reader would announce "preview result"
+            // forever and never the count.
+            AccessibleDescription = "Result of the last preview"
         };
 
         var btnClear = new Button
         {
-            Text = "Clear filter",
+            Text = "C&lear filter",
             Location = new Point(560, 392),
             Size = new Size(90, 28),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AccessibleDescription = "Closes the dialog and removes the filter from the record list"
         };
         btnClear.Click += (_, _) => ClearFilter();
 
@@ -128,15 +142,17 @@ public class FilterForm : ParratFormBase
             Location = new Point(658, 392),
             Size = new Size(90, 28),
             DialogResult = DialogResult.Cancel,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AccessibleDescription = "Closes the dialog and leaves the record list as it is"
         };
 
         var btnApply = new Button
         {
-            Text = "Apply",
+            Text = "&Apply",
             Location = new Point(756, 392),
             Size = new Size(96, 28),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AccessibleDescription = "Applies these conditions to the record list"
         };
         btnApply.Click += (_, _) => ApplyFilter();
 
@@ -196,11 +212,15 @@ public class FilterForm : ParratFormBase
         RefreshRowConjunctions();
     }
 
-    /// <summary>Only the first row has nothing above it to join to.</summary>
+    /// <summary>
+    /// Renumbers the rows after one is added or removed. Only the first row has
+    /// nothing above it to join to, and the numbers are what a screen reader
+    /// uses to say which condition has focus.
+    /// </summary>
     private void RefreshRowConjunctions()
     {
         for (int i = 0; i < _rows.Count; i++)
-            _rows[i].SetIsFirst(i == 0);
+            _rows[i].SetPosition(i + 1, i == 0);
     }
 
     // ── Actions ──────────────────────────────────────────────────────────
@@ -378,6 +398,7 @@ public class FilterForm : ParratFormBase
         private readonly TextBox _txtValue;
         private readonly Label _lblAnd;
         private readonly TextBox _txtValue2;
+        private readonly Button _btnRemove;
 
         private string _fieldId = "";
 
@@ -471,23 +492,57 @@ public class FilterForm : ParratFormBase
             };
             btnRemove.FlatAppearance.BorderSize = 0;
             btnRemove.Click += (_, _) => RemoveRequested?.Invoke();
+            _btnRemove = btnRemove;
 
             Container.Controls.AddRange(new Control[]
             {
                 _cboConjunction, _btnField, _cboPart, _cboOperator, _txtValue, _lblAnd, _txtValue2, btnRemove
             });
 
-            SetIsFirst(isFirst);
+            SetPosition(1, isFirst);
             UpdateValueVisibility();
         }
 
-        /// <summary>The first row joins to nothing, so it hides its conjunction.</summary>
-        public void SetIsFirst(bool isFirst) => _cboConjunction.Visible = !isFirst;
+        /// <summary>
+        /// Positions the row and names its controls for a screen reader. Without
+        /// this a reader announces "button, combo box, combo box, edit" with no
+        /// way to tell which condition, or which part of it, has focus — and the
+        /// remove button reads out as the bare glyph on its face.
+        /// </summary>
+        public void SetPosition(int number, bool isFirst)
+        {
+            _cboConjunction.Visible = !isFirst;
+
+            _cboConjunction.AccessibleName = $"Condition {number} joined to the previous condition by";
+            _btnField.AccessibleName = $"Condition {number} field";
+            _cboPart.AccessibleName = $"Condition {number} part of value to compare";
+            _cboOperator.AccessibleName = $"Condition {number} operator";
+            _txtValue.AccessibleName = $"Condition {number} value";
+            _txtValue2.AccessibleName = $"Condition {number} range end";
+            _btnRemove.AccessibleName = $"Remove condition {number}";
+
+            Container.AccessibleName = $"Condition {number}";
+            Container.AccessibleRole = AccessibleRole.Grouping;
+
+            RefreshFieldAccessibleValue();
+        }
+
+        /// <summary>
+        /// Restates the chosen field in the button's accessible description, so
+        /// a reader conveys the selection and not only the label it fits.
+        /// </summary>
+        private void RefreshFieldAccessibleValue()
+        {
+            _btnField.AccessibleDescription = string.IsNullOrEmpty(_fieldId)
+                ? "No field chosen. Activate to choose one."
+                : $"Currently {_owner.FieldLabel(_fieldId)}. Activate to change it.";
+        }
 
         public void Reset()
         {
             _fieldId = "";
             _btnField.Text = _owner.FieldLabel("");
+            RefreshFieldAccessibleValue();
             _txtValue.Text = "";
             _txtValue2.Text = "";
             SelectPart(FieldPart.Whole);
@@ -513,6 +568,7 @@ public class FilterForm : ParratFormBase
             bool wasUnset = string.IsNullOrEmpty(_fieldId);
             _fieldId = picked;
             _btnField.Text = _owner.FieldLabel(picked);
+            RefreshFieldAccessibleValue();
 
             // A date field almost always wants a year comparison, which is the
             // whole reason the part selector exists. Only suggested on a fresh

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using Parrat.UI.Controls;
 
 namespace Parrat.UI.Forms;
 
@@ -120,6 +121,8 @@ partial class MainForm : ParratFormBase
         // happens to be, which is not always somewhere the user can see.
         _pnlFilter.Visible = false;
         _pnlFilter.BackColor = FilterBannerBackColor;
+        _pnlFilter.AccessibleName = "Filter banner";
+        _pnlFilter.AccessibleRole = AccessibleRole.Grouping;
         _pnlFilter.Padding = new Padding(0, 0, 0, 1);
         _pnlFilter.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         _pnlFilter.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -131,7 +134,12 @@ partial class MainForm : ParratFormBase
             e.Graphics.DrawLine(pen, 0, _pnlFilter.Height - 1, _pnlFilter.Width, _pnlFilter.Height - 1);
         };
 
-        _lblFilterText = new Label();
+        // Announcing: a filter turning on hides records, which a screen reader
+        // user must be told about rather than left to infer from a count.
+        // No AccessibleName on either label: it would override the text, and
+        // the text is the message. Only the description is set.
+        _lblFilterText = new AnnouncingLabel();
+        _lblFilterText.AccessibleDescription = "Filter status";
         _lblFilterText.AutoSize = true;
         _lblFilterText.Anchor = AnchorStyles.Left;
         _lblFilterText.Margin = new Padding(6, 0, 10, 0);
@@ -142,7 +150,8 @@ partial class MainForm : ParratFormBase
 
         // The condition text is the part that can run long, so it takes the
         // remaining width and ellipsises; the tooltip carries the full text.
-        _lblFilterDescription = new Label();
+        _lblFilterDescription = new AnnouncingLabel();
+        _lblFilterDescription.AccessibleDescription = "Filter conditions in force";
         _lblFilterDescription.Dock = DockStyle.Fill;
         _lblFilterDescription.Margin = new Padding(10, 0, 6, 0);
         _lblFilterDescription.TextAlign = ContentAlignment.MiddleLeft;
@@ -152,8 +161,14 @@ partial class MainForm : ParratFormBase
         _lblFilterDescription.Text = "";
 
         _btnSelectFiltered = MakeFilterBannerButton("Select all shown", 120);
+        _btnSelectFiltered.AccessibleDescription =
+            "Checks every record the filter is showing, so operations act on them";
+
         _btnEditFilter = MakeFilterBannerButton("Edit…", 55);
+        _btnEditFilter.AccessibleName = "Edit filter";
+
         _btnClearFilter = MakeFilterBannerButton("✕ Clear filter", 100);
+        _btnClearFilter.AccessibleName = "Clear filter";
 
         var filterBar = new FlowLayoutPanel
         {
@@ -341,8 +356,8 @@ partial class MainForm : ParratFormBase
     private Label _lblSearchCount = null!;
     private Button _btnClearSearch = null!;
     private TableLayoutPanel _pnlFilter = null!;
-    private Label _lblFilterText = null!;
-    private Label _lblFilterDescription = null!;
+    private AnnouncingLabel _lblFilterText = null!;
+    private AnnouncingLabel _lblFilterDescription = null!;
     private Button _btnSelectFiltered = null!;
     private Button _btnEditFilter = null!;
     private Button _btnClearFilter = null!;
