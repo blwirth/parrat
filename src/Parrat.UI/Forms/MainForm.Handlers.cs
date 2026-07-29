@@ -986,6 +986,42 @@ public partial class MainForm
         return NavSelectionHelper.GetCheckedIndices(_state.NavTable);
     }
 
+    /// <summary>
+    /// Confirms an operation whose checked records include some the filter is
+    /// hiding, so more records are involved than the grid is showing. Returns
+    /// false when the user backs out.
+    /// </summary>
+    private bool ConfirmSelectionIncludesHiddenRecords(string noun)
+    {
+        int hidden = NavSelectionHelper.GetCheckedHiddenCount(_state.NavTable);
+        if (hidden == 0) return true;
+
+        int total = NavSelectionHelper.GetCheckedCount(_state.NavTable);
+
+        return MessageBox.Show(
+            $"{total:N0} {noun} are checked, but the filter is hiding {hidden:N0} of them.\n\n" +
+            $"All {total:N0} will be included, not just the ones on screen.\n\nContinue?",
+            "Filter Active", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK;
+    }
+
+    /// <summary>
+    /// Confirms an operation that acts on every record while a filter is
+    /// showing only some of them, and points at the way to act on just the
+    /// filtered set. Returns false when the user backs out.
+    /// </summary>
+    private bool ConfirmActingOnEveryRecord(int totalRecords, string noun)
+    {
+        if (!_state.HasActiveFilter) return true;
+
+        return MessageBox.Show(
+            $"A filter is showing {_state.FilteredRecordCount:N0} of {totalRecords:N0} {noun}, "
+            + $"but this exports all {totalRecords:N0}.\n\n"
+            + "To export only what the filter shows, use \"Select all shown\" on the filter banner, "
+            + "then Export Selected.\n\n"
+            + $"Export all {totalRecords:N0} {noun}?",
+            "Filter Active", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK;
+    }
+
     private void OnExportSelectedXml()
     {
         if (_state.Tumors == null || _state.Tumors.Count == 0 || _state.XmlDoc == null || _state.NsMgr == null)
@@ -1001,6 +1037,8 @@ public partial class MainForm
                 "No Tumors Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmSelectionIncludesHiddenRecords("tumors")) return;
 
         try
         {
@@ -1055,6 +1093,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("messages")) return;
+
         try
         {
             using var sfd = new SaveFileDialog
@@ -1108,6 +1148,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("tumors")) return;
+
         RunCsvExport(indices, "selected");
     }
 
@@ -1118,6 +1160,8 @@ public partial class MainForm
             MessageBox.Show("No XML file loaded.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmActingOnEveryRecord(_state.Tumors.Count, "tumors")) return;
 
         var indices = Enumerable.Range(0, _state.Tumors.Count).ToArray();
         RunCsvExport(indices, "all");
@@ -1284,6 +1328,8 @@ public partial class MainForm
             return;
         }
 
+        if (!ConfirmSelectionIncludesHiddenRecords("messages")) return;
+
         RunHl7CsvExport(indices, "selected");
     }
 
@@ -1294,6 +1340,8 @@ public partial class MainForm
             MessageBox.Show("No HL7 file loaded.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+
+        if (!ConfirmActingOnEveryRecord(_state.Hl7Messages.Count, "messages")) return;
 
         RunHl7CsvExport(null, "all");
     }
