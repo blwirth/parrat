@@ -532,7 +532,7 @@ When a reviewed worklist identifies the cases to export — "these 120 patients 
 . Choose the *key field* the list identifies records by (for example `patientIdNumber` or `pathReportNumber1`). The picker opens showing only fields present in the loaded file.
 . Supply the key values, either way:
 * Paste or type them into the values box, one per line or comma-separated.
-* Load them from a CSV: browse to the file, pick the column holding the key values, and optionally restrict to rows where another column holds one of the checked values — a worklist whose status column holds `A`, `B`, and `C` can supply only the rows marked `A`. *Insert values above* then fills the values box, where the list can still be edited.
+* Load them from a CSV or Excel (`.xlsx`) file: browse to the file, pick the column holding the key values, and optionally restrict to rows where another column holds one of the checked values — a worklist whose status column holds `A`, `B`, and `C` can supply only the rows marked `A`. *Insert values above* then fills the values box, where the list can still be edited.
 . *Preview* reports how many values matched how many tumors; values that matched nothing are listed so a typo or a wrong key field is visible before anything is selected.
 . *Select* checks the matching records, either replacing the current selection (the default) or adding to it.
 

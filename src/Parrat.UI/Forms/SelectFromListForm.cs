@@ -12,13 +12,14 @@ namespace Parrat.UI.Forms;
 /// export selection in one step instead of 120 clicks.
 ///
 /// The values can be pasted straight in (one per line, or comma-separated) or
-/// pulled out of a CSV column, optionally keeping only the rows whose status
-/// column holds a chosen value: "export the cases marked A, not B or C".
+/// pulled out of a CSV or Excel column, optionally keeping only the rows whose
+/// status column holds a chosen value: "export the cases marked A, not B or C".
 /// </summary>
 public class SelectFromListForm : ParratFormBase
 {
     private readonly INaaccrDictionary _dictionary;
     private readonly ICsvParserService _csvParser;
+    private readonly IXlsxParserService _xlsxParser;
     private readonly XmlNodeList _tumors;
     private readonly XmlNamespaceManager _nsMgr;
     private readonly IReadOnlyCollection<string>? _presentFieldIds;
@@ -52,6 +53,7 @@ public class SelectFromListForm : ParratFormBase
     public SelectFromListForm(
         INaaccrDictionary dictionary,
         ICsvParserService csvParser,
+        IXlsxParserService xlsxParser,
         XmlNodeList tumors,
         XmlNamespaceManager nsMgr,
         IReadOnlyCollection<string>? presentFieldIds,
@@ -59,6 +61,7 @@ public class SelectFromListForm : ParratFormBase
     {
         _dictionary = dictionary;
         _csvParser = csvParser;
+        _xlsxParser = xlsxParser;
         _tumors = tumors;
         _nsMgr = nsMgr;
         _presentFieldIds = presentFieldIds;
@@ -119,17 +122,17 @@ public class SelectFromListForm : ParratFormBase
 
         var grpCsv = new GroupBox
         {
-            Text = "Load values from a CSV list",
+            Text = "Load values from a CSV or Excel list",
             Location = new Point(12, 216),
             Size = new Size(688, 210)
         };
 
         var btnBrowseCsv = new Button
         {
-            Text = "&Browse CSV...",
+            Text = "&Browse CSV/Excel...",
             Location = new Point(10, 22),
             Size = new Size(130, 26),
-            AccessibleDescription = "Opens a CSV file whose columns supply the key values"
+            AccessibleDescription = "Opens a CSV or Excel file whose columns supply the key values"
         };
         btnBrowseCsv.Click += (_, _) => BrowseCsv();
 
@@ -328,15 +331,16 @@ public class SelectFromListForm : ParratFormBase
         {
             using var ofd = new OpenFileDialog
             {
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-                Title = "Open CSV List"
+                Filter = "List files (*.csv;*.xlsx)|*.csv;*.xlsx|CSV files (*.csv)|*.csv|Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                Title = "Open CSV or Excel List"
             };
             if (ofd.ShowDialog(this) != DialogResult.OK) return;
 
-            var csv = _csvParser.Parse(ofd.FileName);
+            bool isXlsx = Path.GetExtension(ofd.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+            var csv = isXlsx ? _xlsxParser.Parse(ofd.FileName) : _csvParser.Parse(ofd.FileName);
             if (csv.ColumnCount == 0 || csv.RowCount == 0)
             {
-                MessageBox.Show("The CSV file has no data rows.", "Select from List",
+                MessageBox.Show("The file has no data rows.", "Select from List",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -359,8 +363,8 @@ public class SelectFromListForm : ParratFormBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("CSV list load failed", "SELECT_LIST", ex);
-            MessageBox.Show($"Error reading CSV: {ex.Message}", "Select from List",
+            _logger.LogError("List file load failed", "SELECT_LIST", ex);
+            MessageBox.Show($"Error reading list file: {ex.Message}", "Select from List",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -408,7 +412,7 @@ public class SelectFromListForm : ParratFormBase
         }
 
         _txtValues.Text = string.Join(Environment.NewLine, values);
-        _lblPreview.Text = $"Inserted {values.Count:N0} value(s) from the CSV — Preview counts the matches.";
+        _lblPreview.Text = $"Inserted {values.Count:N0} value(s) from the list file — Preview counts the matches.";
     }
 
     // ── Matching ─────────────────────────────────────────────────────────
