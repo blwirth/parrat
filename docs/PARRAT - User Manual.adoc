@@ -504,6 +504,21 @@ To mark variables for removal, select one or more items in the left list and cli
 
 After selecting variables, click *Remove*. A confirmation dialog displays each selected variable with its occurrence count and levels, along with the total number of occurrences to be removed. The original file is not modified; a new file is created with the suffix `-rm{number of variables}v` in the same directory.
 
+=== Restoring Variables from an Original File
+
+When a variable has been overwritten across a file — for example, every record accidentally assigned the same `reportingFacility` even though the file holds cases from several facilities — the correct values can be rescued from the untouched original file. Select *Restore Variable from File...* from the *Edit* menu (enabled for XML files). Because the repair is written as an entirely new XML file, the loaded file is never modified.
+
+. Open the damaged file as the primary file, then open the dialog and *Browse* to the original XML.
+. Choose the *match key* — the field that identifies the same record in both files. A tumor-level key such as `pathReportNumber1` gives a clean one-to-one match; key matching trims whitespace and ignores case by default.
+. Choose the variables to restore (`reportingFacility` is preset; others such as `npiReportingFacility` can be added). Only tumor-level variables can be restored, since values are written per record.
+. *Preview* lists every record's fate before anything is written:
+* *Restore* — the original holds a different value, which will be brought back.
+* *Already correct* — the two files agree; nothing to do.
+* *No match in original* / *Missing key* — the record cannot be matched; it is left alone and counted.
+* *Ambiguous* — the key matches several original records whose values disagree, so no single value can be called "the" original; left alone. Duplicates that agree restore normally.
+* *Empty in original* — the match holds no value; restoring would blank the field rather than rescue it, so it is left alone.
+. *Save Repaired XML...* writes the new file (default suffix `_repaired`). The plan is recomputed at save time, so the file always reflects the current inputs.
+
 === Exporting Records
 
 Export options are available from the *Export* menu. The available items depend on the loaded file type.
