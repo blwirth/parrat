@@ -995,6 +995,7 @@ public partial class MainForm
             using var dialog = new SelectFromListForm(
                 _naaccrDictionary,
                 _csvParserService,
+                _xlsxParserService,
                 _state.Tumors,
                 _state.NsMgr,
                 GetFilterablePresentFields(),
