@@ -54,6 +54,7 @@ public class MenuBuilder
     public ToolStripMenuItem MenuItemFixObx31 { get; private set; } = null!;
     public ToolStripMenuItem MenuItemRemoveEmptyObx5 { get; private set; } = null!;
     public ToolStripMenuItem MenuItemRemoveVariable { get; private set; } = null!;
+    public ToolStripMenuItem MnuRestoreVariable { get; private set; } = null!;
 
     // Reference
     public ToolStripMenuItem MnuOpenReference { get; private set; } = null!;
@@ -267,6 +268,12 @@ public class MenuBuilder
 
         mnuEdit.DropDownItems.Add(MnuModifyXml);
 
+        // Writes a repaired copy as a new file, never the loaded one, so unlike
+        // the Modify XML items it is not gated on being able to modify in place.
+        MnuRestoreVariable = new ToolStripMenuItem("Restore Variable from File...") { Enabled = false };
+        // Click handler wired by MainForm.Handlers.cs
+        mnuEdit.DropDownItems.Add(MnuRestoreVariable);
+
         mnuEdit.DropDownItems.Add(new ToolStripSeparator());
 
         // Deduplicate submenu
@@ -442,6 +449,7 @@ public class MenuBuilder
         bool isXml = fileType == "xml";
         MnuAssign.Enabled = isXml && canModifyInPlace;
         MnuModifyXml.Enabled = isXml && canModifyInPlace;
+        MnuRestoreVariable.Enabled = isXml;
 
         bool isHl7 = fileType == "hl7";
         MnuModifyHl7.Enabled = isHl7 && canModifyInPlace;

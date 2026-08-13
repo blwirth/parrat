@@ -132,7 +132,7 @@ public static class ListSelectionHelper
             var tumor = tumors[i];
             if (tumor == null) continue;
 
-            var value = ReadFieldValue(tumor, fieldId, nsMgr).Trim();
+            var value = TumorFieldReader.ReadValueAnyLevel(tumor, fieldId, nsMgr).Trim();
             if (value.Length == 0 || !matchCounts.ContainsKey(value))
                 continue;
 
@@ -149,37 +149,4 @@ public static class ListSelectionHelper
         };
     }
 
-    /// <summary>
-    /// The field's value for one tumor: the Tumor's own Item, else its
-    /// Patient's, else the file-level NaaccrData's. Child elements are walked
-    /// directly rather than queried by XPath so a field id can never break the
-    /// query text.
-    /// </summary>
-    private static string ReadFieldValue(XmlNode tumor, string fieldId, XmlNamespaceManager nsMgr)
-    {
-        var value = FindItemValue(tumor, fieldId);
-        if (value != null) return value;
-
-        var patient = tumor.SelectSingleNode("ancestor::n:Patient[1]", nsMgr);
-        value = patient != null ? FindItemValue(patient, fieldId) : null;
-        if (value != null) return value;
-
-        var root = tumor.OwnerDocument?.DocumentElement;
-        return (root != null ? FindItemValue(root, fieldId) : null) ?? "";
-    }
-
-    private static string? FindItemValue(XmlNode parent, string fieldId)
-    {
-        foreach (XmlNode child in parent.ChildNodes)
-        {
-            if (child.NodeType == XmlNodeType.Element
-                && child.LocalName == "Item"
-                && child.Attributes?["naaccrId"]?.Value == fieldId)
-            {
-                return child.InnerText;
-            }
-        }
-
-        return null;
-    }
 }

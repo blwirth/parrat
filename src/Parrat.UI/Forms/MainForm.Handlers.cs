@@ -69,6 +69,7 @@ public partial class MainForm
         mb.MenuItemFixObx31.Click += (s, e) => OnFixObx();
         mb.MenuItemRemoveEmptyObx5.Click += (s, e) => OnRemoveEmptyObx5();
         mb.MenuItemRemoveVariable.Click += (s, e) => OnRemoveVariable();
+        mb.MnuRestoreVariable.Click += (s, e) => OnRestoreVariable();
         mb.MenuItemTrueMatches.Click += (s, e) => OnDedupTrueMatches();
         mb.MenuItemPrimaryKey.Click += (s, e) => OnDedupPrimaryKey();
         mb.MenuItemPathReport.Click += (s, e) => OnDedupPathReport();
@@ -974,6 +975,42 @@ public partial class MainForm
         mb.MnuExportSelectedHl7.Enabled = isHl7;
         mb.MnuExportAllCsv.Enabled = isXml || isHl7;
         mb.MnuExportSelectedCsv.Enabled = isXml || isHl7;
+    }
+
+    /// <summary>
+    /// Rescues blanket-overwritten field values by matching each record back to
+    /// the untouched original file and writing a repaired copy as a new XML
+    /// file. The form owns the whole flow and never touches the loaded state.
+    /// </summary>
+    private void OnRestoreVariable()
+    {
+        if (_state.FileType != "xml" || _state.XmlDoc == null || _state.Tumors == null || _state.NsMgr == null)
+        {
+            MessageBox.Show("Restore Variable works on a loaded XML file.", "Restore Variable",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            using var dialog = new RestoreVariableForm(
+                _naaccrDictionary,
+                _xmlFileService,
+                _state.XmlDoc,
+                _state.Tumors,
+                _state.NsMgr,
+                GetFilterablePresentFields(),
+                _state.CurrentFilePath,
+                _logger);
+
+            dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Restore variable failed", "RESTORE_VAR", ex);
+            MessageBox.Show($"Error restoring variable: {ex.Message}", "Restore Variable",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     /// <summary>

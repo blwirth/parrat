@@ -86,6 +86,8 @@ public static class NaaccrXmlTestHelper
             items.Add($@"    <Item naaccrId=""dateOfBirth"">{patient.DateOfBirth}</Item>");
         if (!string.IsNullOrEmpty(patient.PatientIdNumber))
             items.Add($@"    <Item naaccrId=""patientIdNumber"">{patient.PatientIdNumber}</Item>");
+        if (patient.Items != null)
+            items.AddRange(patient.Items.Select(kvp => $@"    <Item naaccrId=""{kvp.Key}"">{kvp.Value}</Item>"));
 
         var tumorElements = string.Join("\n", (patient.Tumors ?? Array.Empty<TumorData>()).Select(BuildTumorElement));
 
@@ -105,6 +107,8 @@ public static class NaaccrXmlTestHelper
             items.Add($@"      <Item naaccrId=""dateOfDiagnosis"">{tumor.DateOfDiagnosis}</Item>");
         if (!string.IsNullOrEmpty(tumor.PathReportNumber1))
             items.Add($@"      <Item naaccrId=""pathReportNumber1"">{tumor.PathReportNumber1}</Item>");
+        if (tumor.Items != null)
+            items.AddRange(tumor.Items.Select(kvp => $@"      <Item naaccrId=""{kvp.Key}"">{kvp.Value}</Item>"));
 
         var itemsStr = items.Count > 0 ? "\n" + string.Join("\n", items) + "\n    " : "";
 
@@ -117,6 +121,10 @@ public static class NaaccrXmlTestHelper
         public string? NameFirst { get; set; }
         public string? DateOfBirth { get; set; }
         public string? PatientIdNumber { get; set; }
+
+        /// <summary>Additional patient-level items by naaccrId.</summary>
+        public Dictionary<string, string>? Items { get; set; }
+
         public TumorData[]? Tumors { get; set; }
     }
 
@@ -125,5 +133,8 @@ public static class NaaccrXmlTestHelper
         public string? PrimarySite { get; set; }
         public string? DateOfDiagnosis { get; set; }
         public string? PathReportNumber1 { get; set; }
+
+        /// <summary>Additional tumor-level items by naaccrId.</summary>
+        public Dictionary<string, string>? Items { get; set; }
     }
 }
