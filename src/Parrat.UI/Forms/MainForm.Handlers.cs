@@ -75,6 +75,7 @@ public partial class MainForm
 
         // ── Export ─────────────────────────────────────────────────────────
         mb.MnuExport.DropDownOpening += OnExportDropDownOpening;
+        mb.MnuSelectFromList.Click += (s, e) => OnSelectFromList();
         mb.MnuExportSelectedXml.Click += (s, e) => OnExportSelectedXml();
         mb.MnuExportSelectedHl7.Click += (s, e) => OnExportSelectedHl7();
         mb.MnuExportAllCsv.Click += (s, e) =>
@@ -968,10 +969,69 @@ public partial class MainForm
         bool isHl7 = fileType == "hl7";
 
         var mb = _menuBuilder;
+        mb.MnuSelectFromList.Enabled = isXml;
         mb.MnuExportSelectedXml.Enabled = isXml;
         mb.MnuExportSelectedHl7.Enabled = isHl7;
         mb.MnuExportAllCsv.Enabled = isXml || isHl7;
         mb.MnuExportSelectedCsv.Enabled = isXml || isHl7;
+    }
+
+    /// <summary>
+    /// Bulk-checks the Selected box from a list of key values — a reviewed
+    /// worklist pasted in or pulled from a CSV — so a hundred cases become an
+    /// export selection without a hundred clicks.
+    /// </summary>
+    private void OnSelectFromList()
+    {
+        if (_state.FileType != "xml" || _state.Tumors == null || _state.NsMgr == null || _state.NavTable == null)
+        {
+            MessageBox.Show("Select from List works on a loaded XML file.", "Select from List",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            using var dialog = new SelectFromListForm(
+                _naaccrDictionary,
+                _csvParserService,
+                _state.Tumors,
+                _state.NsMgr,
+                GetFilterablePresentFields(),
+                _logger);
+
+            if (dialog.ShowDialog(this) != DialogResult.OK || dialog.MatchedIndices.Length == 0)
+                return;
+
+            var navTable = _state.NavTable;
+            var matched = new HashSet<int>(dialog.MatchedIndices);
+
+            _state.SpaceBatchToggling = true;
+            _gridNav.SuspendLayout();
+
+            foreach (DataRow row in navTable.Rows)
+            {
+                int index = Convert.ToInt32(row["Index"]) - 1;
+                if (matched.Contains(index))
+                    row["Selected"] = true;
+                else if (!dialog.AddToSelection)
+                    row["Selected"] = false;
+            }
+
+            _gridNav.ResumeLayout();
+            _state.SpaceBatchToggling = false;
+
+            _navigationService.UpdateSelectedCountLabel();
+
+            _logger.Log("INFO", $"Checked {dialog.MatchedIndices.Length} record(s) from list on {dialog.KeyFieldId}", "SELECT_LIST");
+            SetStatusText($"Checked {dialog.MatchedIndices.Length:N0} record(s) matched on {dialog.KeyFieldId} - use Export > Export Selected.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Select from list failed", "SELECT_LIST", ex);
+            MessageBox.Show($"Error selecting from list: {ex.Message}", "Select from List",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     /// <summary>

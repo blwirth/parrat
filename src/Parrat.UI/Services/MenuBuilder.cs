@@ -60,6 +60,7 @@ public class MenuBuilder
 
     // Export menu
     public ToolStripMenuItem MnuExport { get; private set; } = null!;
+    public ToolStripMenuItem MnuSelectFromList { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedXml { get; private set; } = null!;
     public ToolStripMenuItem MnuExportSelectedHl7 { get; private set; } = null!;
     public ToolStripSeparator MnuExportSeparator { get; private set; } = null!;
@@ -296,6 +297,10 @@ public class MenuBuilder
 
         // Pre-build all items — matches PowerShell pattern where all items
         // are always present and enabled/disabled based on file type
+        MnuSelectFromList = new ToolStripMenuItem("Select Records from List...");
+        MnuExport.DropDownItems.Add(MnuSelectFromList);
+        MnuExport.DropDownItems.Add(new ToolStripSeparator());
+
         MnuExportSelectedXml = new ToolStripMenuItem("Export Selected as XML");
         MnuExport.DropDownItems.Add(MnuExportSelectedXml);
 
