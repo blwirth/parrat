@@ -525,6 +525,24 @@ The JSON files can be regenerated from either an apps.naaccr.org export or an im
 
 `/scripts/generate-dictionary-json.ps1`
 
+==== Selecting Records from a List
+
+When a reviewed worklist identifies the cases to export — "these 120 patients are reportable" — checking each row by hand does not scale. *Export > Select Records from List...* (XML files only) checks the *Selected* column for every record matching a list of key values in one step. The checked records are then exported with the usual *Export Selected* items.
+
+. Choose the *key field* the list identifies records by (for example `patientIdNumber` or `pathReportNumber1`). The picker opens showing only fields present in the loaded file.
+. Supply the key values, either way:
+* Paste or type them into the values box, one per line or comma-separated.
+* Load them from a CSV: browse to the file, pick the column holding the key values, and optionally restrict to rows where another column holds one of the checked values — a worklist whose status column holds `A`, `B`, and `C` can supply only the rows marked `A`. *Insert values above* then fills the values box, where the list can still be edited.
+. *Preview* reports how many values matched how many tumors; values that matched nothing are listed so a typo or a wrong key field is visible before anything is selected.
+. *Select* checks the matching records, either replacing the current selection (the default) or adding to it.
+
+[NOTE]
+====
+A patient-level key such as a medical record number matches every tumor of that patient, including tumors filed under a second `Patient` element for the same person; the preview counts each value that matched more than one tumor. When only one of a patient's tumors should be exported, match on a tumor-level key such as `pathReportNumber1`, or uncheck the extra rows before exporting.
+
+Matching ignores case and surrounding whitespace by default; untick *Ignore case* for exact comparison.
+====
+
 ==== Selecting Variables to Export
 
 The NAACCR dictionary contains hundreds of items, but a given file usually populates only a subset. Rather than checking each variable by hand, the export dialog provides four buttons that build the column list from the data actually present in the file. All four update the live preview, and the resulting CSV columns follow canonical NAACCR order (by item number, with any variable not found in the dictionary placed last).
